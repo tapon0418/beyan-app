@@ -222,6 +222,7 @@ select option{background:var(--bg3)}
     <button class="tpill active" id="tp-notes" onclick="scrollToSec('sec-notes')">記事</button>
     <button class="tpill" id="tp-xposts" onclick="scrollToSec('sec-xposts')">X投稿</button>
     <button class="tpill" id="tp-today" onclick="scrollToSec('sec-today')">今日</button>
+    <button class="tpill" id="tp-settings" onclick="openSettings()">⚙️</button>
   </div>
 </header>
 
@@ -829,28 +830,219 @@ function quickUpdateStatus() {
   toast('ステータスを更新しました');
 }
 
-function buildGemini(n) {
-  return `以下のテーマでnote記事を書くためのリサーチをしてください。
+function getDefaultGeminiTmpl() {
+  return `━━━━━━━━━━━━━━━━━━━━━━━━━━
+【ジミーへの完全版リサーチ指示文 ver.3.0】
+━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-■ 記事タイトル（予定）
+【最優先ミッション】
+読者が読後に「ためになった！」と心から思い、
+リピーターになってくれる記事を作るための
+"生きた情報"を大量に掘り出すこと
+
+【絶対厳守ルール】
+⚠️ 要約するな！深掘り情報を省くな！
+⚠️ 生々しい一次情報は「原文のまま」引用
+⚠️ サンプルは多い方がいい（最低5つ、理想10個）
+⚠️ 「これ使えそう」と思ったら全部出せ
+
+────────────────────
+【テーマ】
 「${n.title}」
+記事タイプ：${n.type||'エッセイ'} / カテゴリ：${n.cat||'未設定'}
+執筆メモ：${n.memo||'なし'}${n.researchNote?'\n特記事項：'+n.researchNote:''}
 
-■ 記事タイプ
-${n.type||'エッセイ'} / カテゴリ: ${n.cat||'未設定'}
+────────────────────
+【Step1: 読者の本音を掘る】
 
-■ 執筆メモ
-${n.memo||'なし'}
-${n.researchNote?'\n■ 特記リサーチ事項\n'+n.researchNote:''}
+・このテーマで悩んでる人が「本当に知りたいこと」は何？
+・表面的な疑問じゃなくて、心の奥底にある不安・欲求を特定
+・「なぜこのテーマが気になるのか？」の深層心理
 
-■ リサーチ内容
-1. 読者が抱える典型的な悩みや失敗パターン
-2. 解決策・改善策の実例（具体的な数字ベース）
-3. 競合記事との差別化ポイント
-4. 副業ライター×3交代勤務の切り口で使える事例・データ
+────────────────────
+【Step2: 生々しい一次情報を大量発掘】
 
-■ 出力形式
+必須ソース（最低5つ以上、理想10個以上）：
+□ Reddit（英語可、DeepL翻訳して原文引用）
+□ 個人note
+□ X（Twitter）
+□ はてなブログ
+□ YouTube コメント欄
+
+追加ソース（テーマに応じて選択）：
+□ Yahoo!知恵袋・教えて!goo
+□ 5ch 専門板
+□ Amebaブログ・FC2ブログ
+□ Medium 日本語記事
+□ Amazon レビュー
+□ Instagram 長文キャプション
+□ その他テーマ特化ソース
+
+検索キーワード例：
+・「〇〇 失敗」「〇〇 後悔」「〇〇 やめた」
+・「〇〇 気づいた」「〇〇 救われた」
+・「〇〇 やってみた」「〇〇 始めて」
+・「〇〇 損した」「〇〇 得した」
+
+優先条件：
+1. 個人の具体的エピソードがある
+2. 感情ワード（失敗・後悔・救われた・焦った等）が含まれる
+3. 数値・時期・状況が具体的
+4. AI生成っぽくない生きた文章
+5. スラング・汚い言葉はフィルタリング（品は保つ）
+
+出力形式：
+【ソース名】URL
+原文引用：「〇〇〇〇〇」（そのまま引用、要約しない）
+感情：失敗/後悔/救われた/気づいた 等
+数値・具体性：〇〇
+
+────────────────────
+【Step3: 「ためになる」要素を抽出】
+
+以下のうち、最低2つ以上を含む情報を優先：
+□ 誰も教えてくれなかった盲点
+□ 失敗から学んだ具体的な改善策
+□ 意外な発見・気づき
+□ 実践してすぐ使える小さなコツ
+□ 避けるべき具体的な地雷
+□ 数値で示せる before → after
+
+────────────────────
+【Step4: 対立構造の明確化】
+
+・「〇〇だと思ってたけど、実は△△だった」
+・読者の思い込みを揺さぶる構造
+・具体例を3つ以上
+
+────────────────────
+【Step5: AI感完全抹消のための特殊収集】
+
+人間の語り口パターンを収集：
+
+1. 個人ブログ・noteから「生きた表現」を抽出
+   ・感情が乗っている部分の言い回し
+   ・失敗を語るときのトーン
+   ・内省的な語尾パターン
+   ・短文と長文のリズム
+
+2. Reddit・Xから「話し言葉」を収集
+   ・「〜なんですよね」「〜だったり」
+   ・「正直〜」「意外と〜」
+   ・「〜かもしれません」
+
+3. AI感のある表現をリスト化（クロが絶対使わないように）
+   ・「効果的です」「重要です」「おすすめです」
+   ・「〜することで」「〜により」「〜するため」
+
+────────────────────
+【Step6: リピーター獲得要素】
+
+読者が読後に感じるべきこと：
+1. 「具体的に得るものがあった」（実践的価値）
+2. 「この人の考え方、好きかも」（人格・共感）
+3. 「次も読みたい」（継続欲求）
+
+そのための要素（最低3つ）：
+□ 読者がすぐ使える小さな一歩（今日できる行動）
+□ 意外な視点・気づき（「そうか！」体験）
+□ 失敗からの学び（共感 + 教訓）
+□ 書き手の人柄が伝わる語り口
+□ 読者の悩みに寄り添う温度感
+
+────────────────────
+【Step7: タイトル案×5】
+
+読者欲求（安心/成長/回避/優越）を明記
+3要素（数字・感情・具体性）を必ず含む
+
+────────────────────
+【文章品質のバランス指示】
+
+生きた人間の語り口を追求するが、以下を守る：
+□ 綺麗で読みやすい日本語
+□ スラング・汚い言葉は使わない
+□ 「親しみやすいけど、きちんとしてる」トーン
+□ 感情は乗せるが、品は保つ
+
+NG例：「マジでヤバい」「クソみたい」
+OK例：「正直、焦りました」「大きな失敗でした」
+
+────────────────────
+【出力形式（note_article_prompt.md準拠）】
+
 出力には必ずコピーボタンを付けてください。コードブロックで囲んでコピーしやすくしてください。
-各項目に見出しをつけて箇条書きで整理してください。`;
+
+## 30秒サマリー
+（読者が得られる具体的価値を3行で）
+
+## 読者の本音
+（このテーマで本当に知りたいこと）
+
+## 生々しい一次情報×5〜10
+（要約せず、原文引用で出せ！）
+
+1. 【ソース名】URL
+   原文引用：「〇〇〇〇〇」
+   感情：〇〇
+   数値・具体性：〇〇
+   
+2. 〜10まで続ける
+
+## 「ためになる」核心ポイント
+・盲点：
+・改善策：
+・小さなコツ：
+・避けるべき地雷：
+
+## 対立構造×3
+1. 〇〇 vs △△
+2. 〇〇 vs △△
+3. 〇〇 vs △△
+
+## 人間の語り口パターン（サンプル10個）
+（生きた表現をそのまま引用）
+
+## AI感のある表現リスト（使用禁止）
+（クロが避けるべき表現）
+
+## タイトル案×5
+【案1】（安心）〇〇〇
+【案2】（成長）〇〇〇
+【案3】（回避）〇〇〇
+【案4】（優越）〇〇〇
+【案5】（複合）〇〇〇
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+【ジミーの4つの掘削原則（再確認）】
+━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. 表面を掘るな深層を掘れ
+   → 一般論・公式見解ではなく、個人の具体的エピソード
+
+2. AIっぽい情報は捨てろ
+   → 企業サイト・まとめサイトより、個人の生の声
+
+3. 感情が乗っている情報を優先
+   → 失敗・後悔・救われた・気づいた等の感情ワード
+
+4. プラスアルファは必ず1つ以上
+   → 指示を超えた独自発掘情報を含める
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+}
+
+function buildGemini(n) {
+  const saved = localStorage.getItem(GEMINI_TMPL_KEY);
+  const tmpl = saved !== null ? saved : getDefaultGeminiTmpl();
+  // ${n.xxx} プレースホルダーを置換
+  return tmpl
+    .replace(/\$\{n\.title\}/g, n.title || '')
+    .replace(/\$\{n\.type\|\|'エッセイ'\}/g, n.type || 'エッセイ')
+    .replace(/\$\{n\.cat\|\|'未設定'\}/g, n.cat || '未設定')
+    .replace(/\$\{n\.memo\|\|'なし'\}/g, n.memo || 'なし')
+    .replace(/\$\{n\.researchNote\?'\\n特記事項：'\+n\.researchNote:''\}/g,
+      n.researchNote ? '\n特記事項：' + n.researchNote : '');
 }
 
 function genChatGPT() {
@@ -859,8 +1051,22 @@ function genChatGPT() {
   if(!result){wrap.style.display='none';return;}
   const n = S.notes.find(x=>x.id===curId); if(!n) return;
   const isYuryou = n.type==='有料note';
-  document.getElementById('mw-chatgpt').textContent =
-`あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。
+  // カスタムテンプレがあればそちらを使う（変数は動的に埋め込む）
+  const claudeSaved = localStorage.getItem(CLAUDE_TMPL_KEY);
+  let claudePrompt;
+  if (claudeSaved !== null) {
+    claudePrompt = claudeSaved
+      .replace(/\$\{n\.title\}/g, n.title || '')
+      .replace(/\$\{n\.memo\|\|'このテーマに関心がある人'\}/g, n.memo || 'このテーマに関心がある人')
+      .replace(/\$\{isYuryou\?'有料記事（1,980円）：具体的ノウハウと再現手順を網羅':'無料記事（X導線用）：共感→気づき→有料記事への自然な導線'\}/g,
+        isYuryou ? '有料記事（1,980円）：具体的ノウハウと再現手順を網羅' : '無料記事（X導線用）：共感→気づき→有料記事への自然な導線')
+      .replace(/\$\{isYuryou\?'3,000〜4,000':'2,000〜2,500'\}/g,
+        isYuryou ? '3,000〜4,000' : '2,000〜2,500')
+      .replace(/\$\{result\}/g, result)
+      .replace(/\$\{n\.nextLink\?`\n   →「\$\{n\.nextLink\}」につながるひと言を最後に入れる`:''}/g,
+        n.nextLink ? '\n   →「' + n.nextLink + '」につながるひと言を最後に入れる' : '');
+  } else {
+    claudePrompt = `あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。
 
 ■ タイトル
 「${n.title}」
@@ -891,6 +1097,8 @@ ${result}
 ・「まとめると」「ポイントは」系の見出しも禁止
 ・# ※ ** などの記号は一切使わない
 ・抽象論・精神論で終わらない。必ず具体で締める`;
+  }
+  document.getElementById('mw-chatgpt').textContent = claudePrompt;
   wrap.style.display='block';
 }
 
@@ -1013,6 +1221,8 @@ document.getElementById('btn-paste-clear').addEventListener('click',()=>{
 // GEMINI API 連携
 // ================================================================
 const GEMINI_KEY_STORAGE = 'beyan_gemini_key';
+const GEMINI_TMPL_KEY = 'beyan_gemini_tmpl';
+const CLAUDE_TMPL_KEY = 'beyan_claude_tmpl';
 
 function loadApiKey() {
   const k = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
@@ -1061,7 +1271,7 @@ async function runGemini() {
 
   try {
     // CORS回避: fetchに直接APIキーをクエリパラメータとして付与
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-latest:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1115,6 +1325,167 @@ renderNotes();
 renderXPosts();
 renderToday();
 loadApiKey();
+
+// ================================================================
+// 設定モーダル
+// ================================================================
+function openSettings() {
+  // ジミー指示文テンプレートをテキストエリアに読み込む
+  const savedGemini = localStorage.getItem(GEMINI_TMPL_KEY);
+  document.getElementById('settings-gemini-tmpl').value =
+    savedGemini !== null ? savedGemini : getDefaultGeminiTmpl();
+
+  // クロ指示文テンプレートをテキストエリアに読み込む（genChatGPT内のテンプレ）
+  const savedClaude = localStorage.getItem(CLAUDE_TMPL_KEY);
+  document.getElementById('settings-claude-tmpl').value =
+    savedClaude !== null ? savedClaude : getDefaultClaudeTmpl();
+
+  switchStab('gemini');
+  document.getElementById('settings-modal').style.display = 'block';
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+
+function switchStab(tab) {
+  document.getElementById('spanel-gemini').style.display = tab === 'gemini' ? '' : 'none';
+  document.getElementById('spanel-claude').style.display = tab === 'claude' ? '' : 'none';
+  document.getElementById('stab-gemini').classList.toggle('active', tab === 'gemini');
+  document.getElementById('stab-claude').classList.toggle('active', tab === 'claude');
+}
+
+function saveGeminiTmpl() {
+  const val = document.getElementById('settings-gemini-tmpl').value;
+  localStorage.setItem(GEMINI_TMPL_KEY, val);
+  const msg = document.getElementById('settings-gemini-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function resetGeminiTmpl() {
+  if (!confirm('デフォルトに戻しますか？')) return;
+  localStorage.removeItem(GEMINI_TMPL_KEY);
+  document.getElementById('settings-gemini-tmpl').value = getDefaultGeminiTmpl();
+  const msg = document.getElementById('settings-gemini-msg');
+  msg.textContent = '🔄 デフォルトに戻しました';
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; msg.textContent = '✅ 保存しました'; }, 2500);
+}
+
+function saveClaudeTmpl() {
+  const val = document.getElementById('settings-claude-tmpl').value;
+  localStorage.setItem(CLAUDE_TMPL_KEY, val);
+  const msg = document.getElementById('settings-claude-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function resetClaudeTmpl() {
+  if (!confirm('デフォルトに戻しますか？')) return;
+  localStorage.removeItem(CLAUDE_TMPL_KEY);
+  document.getElementById('settings-claude-tmpl').value = getDefaultClaudeTmpl();
+  const msg = document.getElementById('settings-claude-msg');
+  msg.textContent = '🔄 デフォルトに戻しました';
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; msg.textContent = '✅ 保存しました'; }, 2500);
+}
+
+function getDefaultClaudeTmpl() {
+  return `あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。
+
+■ タイトル
+「\${n.title}」
+
+■ 読者設定
+・副業ライターとして活動中、または始めたい人
+・\${n.memo||'このテーマに関心がある人'}
+
+■ 記事の方向性
+・\${isYuryou?'有料記事（1,980円）：具体的ノウハウと再現手順を網羅':'無料記事（X導線用）：共感→気づき→有料記事への自然な導線'}
+・文字数：\${isYuryou?'3,000〜4,000':'2,000〜2,500'}文字
+・体験談ベース。具体的な数字・固有名詞を必ず入れる
+
+■ リサーチ結果（ジミー調べ）
+\${result}
+
+■ 構成
+1. 共感リード（「これ自分だ」と思わせる状況描写）
+2. 失敗・壁（具体的なエピソード）
+3. 転機・気づき（何がどう変わったか）
+4. 再現可能な学び（明日から使えること）
+5. まとめ＋次の記事への導線\${n.nextLink?'\n   →「\${n.nextLink}」につながるひと言を最後に入れる':''}
+
+■ 文体の絶対ルール
+・ですます調。親しみやすいが馴れ馴れしすぎない
+・「しみじみ思う。」「笑」など口語表現OK
+・「〜が大切です」「〜を心がけましょう」などAI的な説教口調は禁止
+・「まとめると」「ポイントは」系の見出しも禁止
+・# ※ ** などの記号は一切使わない
+・抽象論・精神論で終わらない。必ず具体で締める`;
+}
+
 </script>
+
+<!-- ===== 設定モーダル ===== -->
+<div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;overflow-y:auto;" onclick="if(event.target===this)closeSettings()">
+  <div style="background:#1a1a2e;margin:16px auto;max-width:640px;border-radius:16px;padding:20px;position:relative;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <span style="font-weight:700;font-size:1.1rem;">⚙️ 設定</span>
+      <button onclick="closeSettings()" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+    </div>
+
+    <!-- タブ -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px;">
+      <button id="stab-gemini" class="stab active" onclick="switchStab('gemini')">🔍 ジミー指示文</button>
+      <button id="stab-claude" class="stab" onclick="switchStab('claude')">✍️ クロ執筆指示文</button>
+    </div>
+
+    <!-- ジミー指示文 -->
+    <div id="spanel-gemini">
+      <p style="color:#aaa;font-size:.82rem;margin-bottom:8px;">
+        ※ <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.title}</code>
+        <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.type}</code>
+        <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.memo}</code>
+        <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.researchNote}</code>
+        は記事情報が自動挿入されます
+      </p>
+      <textarea id="settings-gemini-tmpl" rows="28"
+        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"
+      ></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button onclick="saveGeminiTmpl()" style="flex:1;background:#7c3aed;border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;">💾 保存</button>
+        <button onclick="resetGeminiTmpl()" style="background:#333;border:none;color:#aaa;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;">リセット</button>
+      </div>
+      <div id="settings-gemini-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
+    </div>
+
+    <!-- クロ執筆指示文 -->
+    <div id="spanel-claude" style="display:none;">
+      <p style="color:#aaa;font-size:.82rem;margin-bottom:8px;">
+        ※ <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.title}</code>
+        <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.memo}</code>
+        等は記事情報が自動挿入されます
+      </p>
+      <textarea id="settings-claude-tmpl" rows="28"
+        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"
+      ></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button onclick="saveClaudeTmpl()" style="flex:1;background:#7c3aed;border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;">💾 保存</button>
+        <button onclick="resetClaudeTmpl()" style="background:#333;border:none;color:#aaa;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;">リセット</button>
+      </div>
+      <div id="settings-claude-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
+    </div>
+  </div>
+</div>
+
+<style>
+.stab {
+  background: #333; border: none; color: #aaa; padding: 7px 14px;
+  border-radius: 20px; cursor: pointer; font-size: .82rem; transition: all .15s;
+}
+.stab.active { background: #7c3aed; color: #fff; }
+</style>
+
 </body>
 </html>
