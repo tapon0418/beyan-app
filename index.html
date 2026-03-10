@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>べーやん 司令塔</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#07090f;--bg2:#0d1117;--bg3:#131a24;--bg4:#1a2335;--bg5:#1f2d42;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.11);
+  --accent:#00c8f0;--accent-dim:rgba(0,200,240,0.12);
+  --orange:#ff6b2b;--orange-dim:rgba(255,107,43,0.12);
+  --blue:#4a8fff;--green:#00d488;--yellow:#ffc53d;--red:#ff4d5e;
+  --text:#dce8f5;--text2:#7a90b0;--text3:#3d5070;
+  --r:12px;--r2:18px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px}
+body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);
+  min-height:100vh;padding-bottom:calc(20px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color:transparent}
+
+/* ===== TOPBAR ===== */
+.topbar{position:sticky;top:0;z-index:100;background:rgba(7,9,15,0.97);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
+  height:50px;display:flex;align-items:center;padding:0 16px;gap:8px}
+.brand{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--accent);flex:1}
+.topbar-pills{display:flex;gap:6px}
+.tpill{font-size:11px;padding:3px 10px;border-radius:12px;font-weight:700;border:none;
+  background:var(--bg4);color:var(--text2);cursor:pointer;font-family:inherit}
+.tpill.active{background:var(--accent-dim);color:var(--accent)}
+
+/* ===== MAIN ===== */
+.main{padding:12px;max-width:680px;margin:0 auto}
+
+/* ===== STATS ROW ===== */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px}
+.stat-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+  padding:10px 8px;text-align:center}
+.stat-num{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;line-height:1}
+.stat-lbl{font-size:9px;color:var(--text2);margin-top:3px}
+
+/* ===== SECTION HEADER（折りたたみ） ===== */
+.sec-head{display:flex;align-items:center;gap:8px;padding:10px 0 8px;cursor:pointer;
+  user-select:none;-webkit-user-select:none}
+.sec-head-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;
+  letter-spacing:.5px;flex:1}
+.sec-head-count{font-size:11px;color:var(--text3)}
+.sec-chevron{transition:transform .2s;color:var(--text3)}
+.sec-chevron.open{transform:rotate(180deg)}
+.sec-body{overflow:hidden;transition:max-height .25s ease}
+
+/* ===== FILTER CHIPS ===== */
+.filter-bar{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;
+  margin-bottom:10px;scrollbar-width:none}
+.filter-bar::-webkit-scrollbar{display:none}
+.chip{font-size:11px;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);
+  background:var(--bg4);color:var(--text2);cursor:pointer;white-space:nowrap;flex-shrink:0;
+  font-family:inherit}
+.chip.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
+
+/* ===== SEARCH ===== */
+.search-wrap{position:relative;margin-bottom:10px}
+.search-wrap input{width:100%;background:var(--bg4);border:1px solid var(--border2);
+  border-radius:10px;padding:10px 12px 10px 36px;color:var(--text);font-size:16px;
+  font-family:inherit;outline:none;transition:border-color .2s}
+.search-wrap input:focus{border-color:var(--accent)}
+.search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3)}
+
+/* ===== NOTE ITEM ===== */
+.note-item{background:var(--bg4);border:1px solid var(--border);border-radius:10px;
+  padding:12px;margin-bottom:7px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;
+  transition:border-color .15s}
+.note-item:active{background:var(--bg5)}
+.note-bar{width:3px;border-radius:2px;flex-shrink:0;align-self:stretch;min-height:36px}
+.note-body{flex:1;min-width:0}
+.note-title{font-size:13px;font-weight:600;line-height:1.45;margin-bottom:5px}
+.note-meta{display:flex;gap:4px;flex-wrap:wrap;align-items:center}
+.badge{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;white-space:nowrap}
+.badge-type{background:var(--bg5);color:var(--text2)}
+.badge-cat{background:var(--bg5);color:var(--text3)}
+.badge-date{background:var(--accent-dim);color:var(--accent)}
+.badge-rakuten{background:rgba(204,0,0,.15);color:#ff6b6b}
+.note-memo{font-size:11px;color:var(--text3);margin-top:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.note-status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+/* ステータスカラー */
+.s-idea .note-bar{background:var(--text3)}
+.s-idea .note-status-dot{background:var(--text3)}
+.s-writing .note-bar{background:var(--yellow)}
+.s-writing .note-status-dot{background:var(--yellow)}
+.s-review .note-bar{background:var(--blue)}
+.s-review .note-status-dot{background:var(--blue)}
+.s-xprep .note-bar{background:var(--orange)}
+.s-xprep .note-status-dot{background:var(--orange)}
+.s-done .note-bar{background:var(--green)}
+.s-done .note-status-dot{background:var(--green)}
+
+/* ===== X POSTS ===== */
+.xpost-item{background:var(--bg4);border:1px solid var(--border);border-radius:10px;
+  padding:12px;margin-bottom:7px}
+.xpost-type-badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;
+  border-radius:4px;margin-bottom:6px}
+.type-a{background:rgba(0,200,240,.15);color:var(--accent)}
+.type-b{background:rgba(255,107,43,.15);color:var(--orange)}
+.xpost-content{font-size:13px;line-height:1.65;white-space:pre-wrap;word-break:break-all}
+.xpost-footer{display:flex;align-items:center;gap:6px;margin-top:8px;flex-wrap:wrap}
+.xpost-date{font-size:10px;color:var(--text3)}
+.char-ok{color:var(--green)}.char-warn{color:var(--yellow)}.char-over{color:var(--red)}
+
+/* ===== TODAY SLOTS ===== */
+.slot{background:var(--bg4);border:1px solid var(--border);border-radius:10px;
+  padding:11px 13px;margin-bottom:7px}
+.slot-time{font-size:10px;color:var(--accent);font-weight:700;margin-bottom:3px}
+.slot-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.slot-desc{font-size:12px;color:var(--text2);line-height:1.5}
+
+/* ===== THEME PASTE ===== */
+.paste-card{background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--r2);
+  padding:14px;margin-bottom:12px}
+.paste-card-head{font-size:12px;color:var(--text2);font-weight:700;margin-bottom:8px;
+  display:flex;align-items:center;gap:6px}
+
+/* ===== BUTTONS ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  padding:12px 20px;border-radius:var(--r);border:none;cursor:pointer;
+  font-size:15px;font-weight:700;font-family:inherit;transition:all .15s;
+  width:100%;min-height:50px}
+.btn-accent{background:var(--accent);color:#000}
+.btn-accent:active{background:#00a0c0}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-ghost{background:var(--bg4);color:var(--text2);border:1px solid var(--border2)}
+.btn-ghost:active{background:var(--bg5)}
+.btn-green{background:var(--green);color:#000}
+.btn-red{background:rgba(255,77,94,.15);color:var(--red);border:1px solid rgba(255,77,94,.2)}
+.btn-sm{min-height:38px;padding:8px 14px;font-size:13px}
+.btn-row{display:flex;gap:8px}.btn-row .btn{flex:1}
+
+/* ===== INPUTS ===== */
+input[type=text],textarea,select{
+  width:100%;background:var(--bg4);border:1px solid var(--border2);
+  border-radius:var(--r);padding:12px 14px;color:var(--text);
+  font-size:16px;font-family:inherit;outline:none;transition:border-color .2s;
+  -webkit-appearance:none}
+input:focus,textarea:focus,select:focus{border-color:var(--accent);background:var(--bg5)}
+textarea{resize:vertical;line-height:1.7;min-height:90px}
+select option{background:var(--bg3)}
+.input-label{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;display:block;margin-bottom:5px}
+.input-group{margin-bottom:12px}
+.input-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+
+/* ===== COPY BOX ===== */
+.copy-box{background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);
+  padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-all;
+  max-height:200px;overflow-y:auto;color:var(--text2);margin-bottom:6px}
+.copy-btn{display:flex;align-items:center;gap:6px;background:var(--bg5);
+  border:1px solid var(--border2);border-radius:8px;padding:8px 14px;
+  color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;
+  width:100%;justify-content:center;font-family:inherit}
+.copy-btn:active{background:var(--accent-dim);color:var(--accent)}
+
+/* ===== HINT ===== */
+.hint{background:var(--accent-dim);border:1px solid rgba(0,200,240,.2);border-radius:10px;
+  padding:10px 12px;font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:12px}
+
+/* ===== MODAL ===== */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);
+  z-index:500;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+.modal{background:var(--bg3);border:1px solid var(--border2);
+  border-radius:20px 20px 0 0;
+  padding:16px 16px calc(24px + env(safe-area-inset-bottom));
+  width:100%;max-width:680px;max-height:92vh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch}
+.modal-handle{width:36px;height:4px;background:var(--border2);
+  border-radius:2px;margin:0 auto 14px}
+.modal-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;
+  margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+/* ===== FLOW TABS ===== */
+.flow-tabs{display:flex;gap:5px;margin-bottom:14px;overflow-x:auto;scrollbar-width:none}
+.flow-tabs::-webkit-scrollbar{display:none}
+.ftab{flex-shrink:0;padding:7px 14px;border-radius:20px;
+  border:1px solid var(--border2);background:var(--bg4);
+  color:var(--text2);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit}
+.ftab.active{background:var(--accent);color:#000;border-color:var(--accent)}
+.fpanel{display:none}
+.fpanel.active{display:block}
+
+/* ===== TYPE TOGGLE ===== */
+.type-toggle{display:flex;gap:8px;margin-bottom:12px}
+.type-btn{flex:1;padding:10px;border-radius:var(--r);border:2px solid var(--border2);
+  background:var(--bg4);color:var(--text3);font-family:inherit;font-size:12px;
+  font-weight:700;cursor:pointer;line-height:1.4;text-align:center}
+.sel-a{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+.sel-b{border-color:var(--orange);background:var(--orange-dim);color:var(--orange)}
+
+/* ===== FAB ===== */
+.fab{position:fixed;right:16px;bottom:calc(24px + env(safe-area-inset-bottom));
+  width:52px;height:52px;border-radius:50%;background:var(--accent);border:none;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 4px 20px rgba(0,200,240,.35);z-index:150}
+.fab:active{transform:scale(.9)}
+
+/* ===== TOAST ===== */
+#toast{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));left:50%;
+  transform:translateX(-50%) translateY(20px);background:var(--bg5);
+  border:1px solid var(--border2);border-radius:20px;padding:9px 18px;
+  font-size:13px;color:var(--text);white-space:nowrap;opacity:0;transition:all .25s;z-index:999}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@keyframes pbar{from{width:0%}to{width:92%}}
+
+/* ===== 設定ボタン ===== */
+.settings-fab{
+  position:fixed;right:16px;bottom:calc(84px + env(safe-area-inset-bottom));
+  width:48px;height:48px;border-radius:50%;background:#7c3aed;border:none;
+  color:#fff;font-size:1.3rem;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;box-shadow:0 4px 16px rgba(124,58,237,.5);z-index:200;
+  transition:transform .15s;
+}
+.settings-fab:active{transform:scale(.9)}
+
+/* ===== 設定モーダル ===== */
+.stab{background:#333;border:none;color:#aaa;padding:7px 14px;
+  border-radius:20px;cursor:pointer;font-size:.82rem;transition:all .15s;}
+.stab.active{background:#7c3aed;color:#fff;}
+</style>
+</head>
+<body>
+
+<!-- 設定FABボタン -->
+<button class="settings-fab" onclick="openSettings()" aria-label="設定">⚙️</button>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="brand">べーやん 司令塔</div>
+  <div class="topbar-pills">
+    <button class="tpill active" id="tp-notes" onclick="scrollToSec('sec-notes')">記事</button>
+    <button class="tpill" id="tp-xposts" onclick="scrollToSec('sec-xposts')">X投稿</button>
+    <button class="tpill" id="tp-today" onclick="scrollToSec('sec-today')">今日</button>
+  </div>
+</header>
+
+
+<!-- ===== 設定モーダル ===== -->
+<div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;overflow-y:auto;" onclick="if(event.target===this)closeSettings()">
+  <div style="background:#1a1a2e;margin:16px auto;max-width:640px;border-radius:16px;padding:20px;position:relative;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <span style="font-weight:700;font-size:1.1rem;">⚙️ 設定</span>
+      <button onclick="closeSettings()" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
+    </div>
+
+    <!-- タブ -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px;">
+      <button id="stab-gemini" class="stab active" onclick="switchStab('gemini')">🔍 ジミー指示文</button>
+      <button id="stab-claude" class="stab" onclick="switchStab('claude')">✍️ クロ執筆指示文</button>
+    </div>
+
+    <!-- ジミー指示文 -->
+    <div id="spanel-gemini">
+      <p style="color:#aaa;font-size:.82rem;margin-bottom:8px;">
+        ※ <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.title}</code>
+        <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.type}</code>
+        <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.memo}</code>
+        <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.researchNote}</code>
+        は記事情報が自動挿入されます
+      </p>
+      <textarea id="settings-gemini-tmpl" rows="28"
+        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"
+      ></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button onclick="saveGeminiTmpl()" style="flex:1;background:#7c3aed;border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;">💾 保存</button>
+        <button onclick="resetGeminiTmpl()" style="background:#333;border:none;color:#aaa;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;">リセット</button>
+      </div>
+      <div id="settings-gemini-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
+    </div>
+
+    <!-- クロ執筆指示文 -->
+    <div id="spanel-claude" style="display:none;">
+      <p style="color:#aaa;font-size:.82rem;margin-bottom:8px;">
+        ※ <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.title}</code>
+        <code style="background:#333;padding:2px 5px;border-radius:4px;">${n.memo}</code>
+        等は記事情報が自動挿入されます
+      </p>
+      <textarea id="settings-claude-tmpl" rows="28"
+        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"
+      ></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button onclick="saveClaudeTmpl()" style="flex:1;background:#7c3aed;border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;">💾 保存</button>
+        <button onclick="resetClaudeTmpl()" style="background:#333;border:none;color:#aaa;padding:10px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;">リセット</button>
+      </div>
+      <div id="settings-claude-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
+    </div>
+  </div>
+</div>
+
+
+<div class="main">
+
+  <!-- ===== 統計 ===== -->
+  <div class="stats-row" style="margin-top:4px">
+    <div class="stat-box">
+      <div class="stat-num" style="color:var(--green)" id="st-done">0</div>
+      <div class="stat-lbl">公開済み</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="color:var(--yellow)" id="st-wip">0</div>
+      <div class="stat-lbl">執筆中</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="color:var(--orange)" id="st-xprep">0</div>
+      <div class="stat-lbl">X準備中</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="color:var(--text2)" id="st-idea">0</div>
+      <div class="stat-lbl">アイデア</div>
+    </div>
+  </div>
+
+  <!-- ===== 今日の予定 ===== -->
+  <div id="sec-today">
+    <div class="sec-head" onclick="toggleSec('today')">
+      <div class="sec-head-title">📅 今日の予定</div>
+      <div class="sec-head-count" id="today-date-label"></div>
+      <svg class="sec-chevron open" id="chev-today" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-today">
+      <div id="today-routine"></div>
+    </div>
+  </div>
+
+  <!-- ===== note進捗表 ===== -->
+  <div id="sec-notes">
+    <div class="sec-head" onclick="toggleSec('notes')">
+      <div class="sec-head-title">📝 note進捗表</div>
+      <div class="sec-head-count" id="notes-count-label"></div>
+      <svg class="sec-chevron open" id="chev-notes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-notes">
+      <div class="filter-bar" id="filter-bar"></div>
+      <div class="search-wrap">
+        <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="note-search" type="text" placeholder="タイトル・メモで絞り込み" oninput="renderNotes()">
+      </div>
+      <div id="note-list"></div>
+
+      <!-- テーマ一括登録 -->
+      <div class="paste-card" style="margin-top:8px">
+        <div class="paste-card-head">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          テーマをまとめて登録（ClaudeのJSON出力をペースト）
+        </div>
+        <textarea id="theme-paste-input" rows="3" placeholder='[{"title":"タイトル","type":"エッセイ(A)","cat":"ライティング","status":"idea","memo":"","prevLink":"","nextLink":"","researchNote":""}]'></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button class="btn btn-accent" id="btn-paste-themes" style="min-height:42px;font-size:13px">登録する</button>
+          <button class="btn btn-ghost btn-sm" id="btn-paste-clear" style="width:auto;min-width:60px">クリア</button>
+        </div>
+        <div id="theme-paste-result" style="margin-top:6px;font-size:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== X投稿管理 ===== -->
+  <div id="sec-xposts">
+    <div class="sec-head" onclick="toggleSec('xposts')">
+      <div class="sec-head-title">𝕏 X投稿ストック</div>
+      <div class="sec-head-count" id="xposts-count-label"></div>
+      <svg class="sec-chevron open" id="chev-xposts" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-xposts">
+      <div class="filter-bar">
+        <button class="chip active" data-xf="all" onclick="setXf(this,'all')">すべて</button>
+        <button class="chip" data-xf="stock" onclick="setXf(this,'stock')">ストック</button>
+        <button class="chip" data-xf="A" onclick="setXf(this,'A')">タイプA（朝）</button>
+        <button class="chip" data-xf="B" onclick="setXf(this,'B')">タイプB（夜）</button>
+        <button class="chip" data-xf="posted" onclick="setXf(this,'posted')">投稿済み</button>
+      </div>
+      <div id="xpost-list"></div>
+      <button class="btn btn-ghost" style="margin-top:4px;font-size:13px;min-height:44px" onclick="openAddXPost()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        投稿を追加
+      </button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- ============================= MODAL: 作業フロー ============================= -->
+<div class="overlay" id="modal-work">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div id="mw-info" style="background:var(--bg4);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div id="mw-title" style="font-size:14px;font-weight:700;line-height:1.5;margin-bottom:6px"></div>
+      <div id="mw-badges" style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px"></div>
+      <div id="mw-sub" style="font-size:12px;color:var(--text2);line-height:1.6"></div>
+    </div>
+
+    <!-- ステータス変更 -->
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <label class="input-label" style="margin:0;white-space:nowrap">ステータス</label>
+      <select id="mw-status" style="flex:1" onchange="quickUpdateStatus()"></select>
+    </div>
+
+    <!-- 作業フロータブ -->
+    <div class="flow-tabs">
+      <button class="ftab active" data-tab="gemini" onclick="switchTab(this,'gemini')">① Gemini</button>
+      <button class="ftab" data-tab="chatgpt" onclick="switchTab(this,'chatgpt')">② クロ執筆</button>
+      <button class="ftab" data-tab="format" onclick="switchTab(this,'format')">③ 整形</button>
+      <button class="ftab" data-tab="xgen" onclick="switchTab(this,'xgen')">④ X投稿</button>
+    </div>
+
+    <!-- ① Gemini (API連携) -->
+    <div class="fpanel active" id="fp-gemini">
+
+      <div id="gemini-key-section" style="margin-bottom:12px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="gemini-api-key" placeholder="Gemini APIキー（AIStudioで取得）"
+            style="flex:1;font-size:14px" oninput="onKeyInput()">
+          <button class="btn btn-ghost btn-sm" style="width:auto;min-width:56px;flex-shrink:0"
+            id="btn-save-key" onclick="saveApiKey()">保存</button>
+        </div>
+        <div id="key-status" style="font-size:11px;margin-top:5px;color:var(--text3)"></div>
+      </div>
+
+      <button class="btn btn-accent" id="btn-run-gemini" onclick="runGemini()"
+        style="margin-bottom:12px;min-height:48px;font-size:14px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        ジミーにリサーチを依頼する
+      </button>
+
+      <div id="gemini-loading" style="display:none;text-align:center;padding:16px 0">
+        <div style="font-size:13px;color:var(--accent)">🔍 ジミーがリサーチ中...</div>
+        <div style="width:100%;height:3px;background:var(--bg5);border-radius:2px;margin-top:10px;overflow:hidden">
+          <div id="gemini-pbar" style="height:100%;width:0%;background:var(--accent);border-radius:2px;animation:pbar 8s linear forwards"></div>
+        </div>
+      </div>
+
+      <div id="gemini-result-section" style="display:none">
+        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ リサーチ完了 → ②クロ執筆タブへ自動入力済み</div>
+        <div class="copy-box" id="mw-gemini-output" style="max-height:220px"></div>
+        <button class="copy-btn" onclick="cp('mw-gemini-output')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
+          結果をコピー
+        </button>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:12px;width:100%"
+          onclick="switchTabByName('chatgpt')">② クロ執筆 へ進む →</button>
+      </div>
+
+      <details style="margin-top:12px">
+        <summary style="font-size:11px;color:var(--text3);cursor:pointer">APIキーなしで手動コピーする</summary>
+        <div style="margin-top:8px">
+          <div class="copy-box" id="mw-gemini"></div>
+          <button class="copy-btn" onclick="cp('mw-gemini')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
+            指示文をコピー
+          </button>
+        </div>
+      </details>
+
+    </div>
+
+    <!-- ② クロ執筆 -->
+    <div class="fpanel" id="fp-chatgpt">
+      <div class="hint">Geminiのリサーチ結果を貼り付け → <strong>クロ（Claude）用の執筆指示文</strong>が自動生成されます。</div>
+      <div class="input-group">
+        <label class="input-label">Geminiのリサーチ結果を貼り付け</label>
+        <textarea id="mw-gemini-result" rows="4" placeholder="Geminiの出力をここに…" oninput="genChatGPT()"></textarea>
+      </div>
+      <div id="mw-chatgpt-wrap" style="display:none">
+        <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:700">↓ クロ（Claude）用 執筆指示文</div>
+        <div class="copy-box" id="mw-chatgpt"></div>
+        <button class="copy-btn" onclick="cp('mw-chatgpt')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー（クロに貼り付け）
+        </button>
+      </div>
+    </div>
+
+    <!-- ③ 整形 -->
+    <div class="fpanel" id="fp-format">
+      <div class="hint">クロの草稿を貼り付け → AI記号（# ※ **）を除去してnote入稿用に整形します。</div>
+      <div class="input-group">
+        <textarea id="mw-draft" rows="5" placeholder="クロの草稿をここに…"></textarea>
+      </div>
+      <button class="btn btn-orange" style="min-height:44px;font-size:14px;margin-bottom:8px" onclick="doFormat()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/></svg>
+        AI記号を除去して整形
+      </button>
+      <div id="mw-formatted-wrap" style="display:none">
+        <div class="copy-box" id="mw-formatted"></div>
+        <button class="copy-btn" onclick="cp('mw-formatted')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー（note用）
+        </button>
+      </div>
+    </div>
+
+    <!-- ④ X投稿生成 -->
+    <div class="fpanel" id="fp-xgen">
+      <div class="hint">ベース案をタップすると編集欄にコピーされます。編集後にストックへ保存。</div>
+      <div id="mw-xbases"></div>
+      <div class="input-group" style="margin-top:10px">
+        <label class="input-label">投稿文を編集</label>
+        <textarea id="mw-xedit" rows="5" oninput="updateXcc()"></textarea>
+        <div style="text-align:right;margin-top:3px;font-size:11px"><span id="mw-xcc" class="char-ok">0 / 140字</span></div>
+      </div>
+      <div class="type-toggle">
+        <button class="type-btn sel-a" id="mw-tpa" onclick="setWorkType('A')">タイプA<br><span style="font-size:10px;font-weight:400">朝7時・拡散</span></button>
+        <button class="type-btn" id="mw-tpb" onclick="setWorkType('B')">タイプB<br><span style="font-size:10px;font-weight:400">夜21時・note導線</span></button>
+      </div>
+      <button class="btn btn-accent" onclick="saveFromWork()">ストックに追加</button>
+    </div>
+
+    <!-- フッターボタン -->
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-ghost btn-sm" onclick="openEditModal()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>詳細編集
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="closeOverlay('modal-work')" style="width:auto;min-width:60px">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= MODAL: 記事詳細編集 ============================= -->
+<div class="overlay" id="modal-edit">
+  <div class="modal" style="max-height:90vh">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      記事を編集
+    </div>
+    <input type="hidden" id="me-id">
+    <div class="input-group"><label class="input-label">タイトル</label><input type="text" id="me-title"></div>
+    <div class="input-2col">
+      <div><label class="input-label">タイプ</label>
+        <select id="me-type"><option>エッセイ(A)</option><option>ハウツー(B)</option><option>AI活用</option><option>有料note</option><option>振り返り</option></select></div>
+      <div><label class="input-label">カテゴリ</label>
+        <select id="me-cat"><option>ライティング</option><option>副業</option><option>楽天</option><option>AI活用</option><option>振り返り</option><option>その他</option></select></div>
+    </div>
+    <div class="input-2col">
+      <div><label class="input-label">ステータス</label>
+        <select id="me-status"><option value="idea">📝 アイデア</option><option value="writing">✍️ 執筆中</option><option value="review">🔍 確認中</option><option value="xprep">📣 X準備中</option><option value="done">✅ 公開済み</option></select></div>
+      <div><label class="input-label">公開日</label><input type="text" id="me-pubdate" placeholder="例: 3月5日"></div>
+    </div>
+    <div class="input-group"><label class="input-label">執筆メモ</label><textarea id="me-memo" rows="2"></textarea></div>
+    <div class="input-group"><label class="input-label">既存記事との接続</label><input type="text" id="me-prevlink"></div>
+    <div class="input-group"><label class="input-label">次の記事への引き継ぎ</label><input type="text" id="me-nextlink"></div>
+    <div class="input-group"><label class="input-label">リサーチ依頼</label><input type="text" id="me-research" placeholder="例: ジミー：腱鞘炎対策グッズ"></div>
+    <div class="btn-row" style="margin-top:4px">
+      <button class="btn btn-ghost" onclick="closeOverlay('modal-edit')">キャンセル</button>
+      <button class="btn btn-accent" id="me-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= MODAL: X投稿追加・編集 ============================= -->
+<div class="overlay" id="modal-xpost">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="mx-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      投稿を追加
+    </div>
+    <input type="hidden" id="mx-id">
+    <div class="type-toggle">
+      <button class="type-btn sel-a" id="mx-tpa" onclick="setMxType('A')">タイプA<br><span style="font-size:10px;font-weight:400">朝7時・拡散</span></button>
+      <button class="type-btn" id="mx-tpb" onclick="setMxType('B')">タイプB<br><span style="font-size:10px;font-weight:400">夜21時・note導線</span></button>
+    </div>
+    <div class="input-group">
+      <label class="input-label">投稿内容</label>
+      <textarea id="mx-content" rows="6" oninput="updateMxcc()"></textarea>
+      <div style="text-align:right;margin-top:3px;font-size:11px"><span id="mx-cc" class="char-ok">0 / 140字</span></div>
+    </div>
+    <div class="input-group">
+      <label class="input-label">ステータス</label>
+      <select id="mx-status"><option value="stock">ストック</option><option value="posted">投稿済み</option></select>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeOverlay('modal-xpost')">キャンセル</button>
+      <button class="btn btn-accent" id="mx-save">保存</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ================================================================
+// STATE
+// ================================================================
+const KEY = 'beyan_v5';
+let S = (() => {
+  const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (s) return s;
+  // v4 / v2 からの移行
+  const old = JSON.parse(localStorage.getItem('beyan_v4') || localStorage.getItem('beyan_v2') || 'null');
+  return {
+    xf: 'all',
+    xposts: old?.xposts || [
+      {id:1,type:'A',content:'✨副業ライター始める前「実績ないし無理かも」って思ってた。\n実際やってみたら、実績より提案文の書き方だった。\n実績ゼロで2件受注できた。\n始める前の不安って、案外ただの思い込み。',status:'stock',createdAt:'2026-03-10'},
+      {id:2,type:'B',content:'📝提案文47件送って返信2件。\nでもその2件が今につながってる。\n実績ゼロから案件取るまでの全過程をnoteにまとめた。\n同じ状況の人が前に進むきっかけになれば✨',status:'stock',createdAt:'2026-03-10'},
+    ],
+    notes: [
+    { id:101, title:'副業ライターが「腱鞘炎」で詰んだ話→楽天で揃えた神ガジェット5選', type:'ハウツー(B)', cat:'ライティング', status:'done', publishDate:'10月', rakuten:true, memo:'エルゴノミクスマウス、リストレスト。健康×仕事。', prevLink:'', nextLink:'体を大事にする', researchNote:'ジミー：腱鞘炎対策グッズ' },
+    { id:102, title:'noteとクラウドワークス、どっちで稼ぐべきか　1年検証の結論', type:'エッセイ(A)', cat:'ライティング', status:'done', publishDate:'10月', rakuten:false, memo:'', prevLink:'', nextLink:'どっちで稼ぐべきか3ヶ月検証の1年版', researchNote:'バディ：note vs CW最新動向' },
+    { id:103, title:'有料楽天経済圏×副業ライター【入門編】年間10万円ポイント獲得の全財', type:'エッセイ(A)', cat:'ライティング', status:'done', publishDate:'11月', rakuten:true, memo:'', prevLink:'', nextLink:'', researchNote:'' },
+    { id:104, title:'副業ライター1年目の総まとめ　0部から→1部に変えた全記録', type:'エッセイ(A)', cat:'振り返り', status:'done', publishDate:'11月', rakuten:false, memo:'', prevLink:'', nextLink:'', researchNote:'' },
+    { id:105, title:'副業ライター1年目、楽天経済圏で暮らしてて気がついたこと', type:'タイプ', cat:'カテゴリ', status:'done', publishDate:'2月', rakuten:true, memo:'', prevLink:'', nextLink:'', researchNote:'' },
+    { id:106, title:'note、ノウハウより人柄が大事だと言われた話　戦略を変えてみる', type:'エッセイ(A)', cat:'副業', status:'done', publishDate:'3月', rakuten:false, memo:'戦略を変えてみる：ノウハウより人柄が大事', prevLink:'', nextLink:'', researchNote:'' },
+    { id:107, title:'副業ライター、1週間の振り返り　やってよかったこと・失敗したこと', type:'エッセイ(A)', cat:'楽天', status:'done', publishDate:'3月', rakuten:true, memo:'副業ライター1週間振り返り：成功と失敗', prevLink:'', nextLink:'', researchNote:'' },
+    { id:108, title:'副業と本業、どうバランス取ってる？　1週間のリアルなスケジュール公開', type:'エッセイ(A)', cat:'楽天', status:'done', publishDate:'3月', rakuten:true, memo:'副業と本業のバランス：リアルなスケジュール', prevLink:'', nextLink:'', researchNote:'' },
+    { id:109, title:'ChatGPTとClaudeを1週間使い分けてみた　気づいた3つの違い', type:'AI活用', cat:'楽天', status:'done', publishDate:'3月', rakuten:true, memo:'ChatGPT vs Claude：1週間使い分けの3つの違い', prevLink:'', nextLink:'', researchNote:'' },
+    { id:110, title:'Aiに投げて失敗した記事、5本振り返ってみる', type:'エッセイ(A)', cat:'楽天', status:'idea', publishDate:'3月', rakuten:true, memo:'AIで失敗した記事5本の振り返り', prevLink:'', nextLink:'', researchNote:'' },
+    { id:111, title:'note記事、公開1週間の数字をまとめてみた　予想と違った3つのこと', type:'エッセイ(A)', cat:'楽天', status:'idea', publishDate:'3月', rakuten:true, memo:'公開1週間の数字：予想外の3つのこと', prevLink:'', nextLink:'', researchNote:'' },
+    { id:112, title:'300円vs500円vs980円のnote、どれが一番売れた？　note価格テスト全記録', type:'エッセイ(A)', cat:'ライティング', status:'idea', publishDate:'3月', rakuten:true, memo:'note価格テスト：300円/500円/980円の比較', prevLink:'', nextLink:'', researchNote:'' },
+    { id:113, title:'索引記事：副業ライター×AI活用、30本の記事どれから読む？', type:'AI活用', cat:'ライティング', status:'idea', publishDate:'3月', rakuten:true, memo:'索引記事：30本の記事ロードマップ', prevLink:'', nextLink:'', researchNote:'' },
+    { id:114, title:'副業ライター、2週間の振り返り　数字と気持ちの記録', type:'エッセイ(A)', cat:'楽天', status:'idea', publishDate:'3月', rakuten:true, memo:'副業ライター2週間振り返り：数字とメンタル', prevLink:'', nextLink:'', researchNote:'' },
+    { id:115, title:'副業ライター提案文テンプレ作ってみた　通過率が上がった書き方', type:'ハウツー(B)', cat:'楽天', status:'idea', publishDate:'3月', rakuten:true, memo:'提案文テンプレ：通過率アップの書き方', prevLink:'', nextLink:'', researchNote:'' },
+    { id:116, title:'情報を読みすぎて助けなかった私、環境を変えるようになった話', type:'エッセイ(A)', cat:'ライティング', status:'idea', publishDate:'4月', rakuten:true, memo:'環境改善グッズで変わった体験。情報過多からの脱却。', prevLink:'「情報を読みすぎて…」の解決編', nextLink:'', researchNote:'ジミー：集中力を高める環境改善グッズ' },
+    { id:117, title:'クラウドワークスの報酬、楽天銀行で受け取る3ステップ', type:'ハウツー(B)', cat:'楽天', status:'idea', publishDate:'4月', rakuten:true, memo:'振込手数料の最適化、図解多め。1500文字以内。', prevLink:'「月3万円のロードマップ」の実務編', nextLink:'', researchNote:'ジミー：楽天銀行ハッピープログラム最新情報' },
+    { id:118, title:'確定申告で詰んだ→楽天マネーフォワード連携で解決', type:'ハウツー(B)', cat:'楽天', status:'idea', publishDate:'5月', rakuten:true, memo:'失敗談→解決策。楽天カード・銀行の連携で自動化。', prevLink:'「副業ライターのリアルな思考ログ」の延長', nextLink:'', researchNote:'ジミー：マネーフォワード連携方法' },
+    { id:119, title:'「いつか始める」をやめて、今すぐ動くために買った3つのもの', type:'エッセイ(A)', cat:'楽天', status:'idea', publishDate:'6月', rakuten:true, memo:'タイマー、タスク管理ツール、環境改善グッズ。', prevLink:'「いつか始める、はなぜ永遠に来ないのか」の解決編', nextLink:'', researchNote:'ジミー：行動を促すための楽天グッズ' },
+    { id:120, title:'文字単価0.5円から2円→3円に上げるために投資した楽天の書籍・ツール10選', type:'ハウツー(B)', cat:'楽天', status:'idea', publishDate:'6月', rakuten:true, memo:'回収シミュレーション付き。投資の正当化。', prevLink:'「単価0.5円から抜け出した」の続き', nextLink:'', researchNote:'ジミー：ライター向けスキルアップ書籍' },
+    { id:121, title:'AIに依存しすぎると実力が落ちる、は本当か？1年間使い続けて分かったこと', type:'エッセイ(A)', cat:'AI活用', status:'idea', publishDate:'8月', rakuten:true, memo:'AI学習用の書籍紹介。1年の振り返り。', prevLink:'「AIに依存しすぎると…」の1年後レビュー', nextLink:'', researchNote:'バディ：AI活用と実力の関係' },
+    { id:122, title:'副業ライターの防災マニュアル　月5万円の経費を実質ゼロにする全手順', type:'ハウツー(B)', cat:'楽天', status:'idea', publishDate:'9月', rakuten:true, memo:'ポータブル電源、モバイルWi-Fi。高額ガジェット狙い。', prevLink:'「何でも書けます、をやめた日」の流れ', nextLink:'', researchNote:'バディ：防災用ポータブル電源最新情報' },
+    { id:123, title:'売れなかった理由はプロンプトだった、その0部→20部に変えた全記録', type:'エッセイ(A)', cat:'AI活用', status:'idea', publishDate:'10月', rakuten:true, memo:'プロンプト改善の具体例。ライティング書籍の紹介。', prevLink:'「売れなかった理由はプロンプトだった」の続編', nextLink:'', researchNote:'バディ：プロンプト最新トレンド' },
+    { id:124, title:'有料楽天経済圏×副業ライター　月5万円の経費を実質ゼロにする全手順', type:'有料note', cat:'楽天', status:'idea', publishDate:'11月', rakuten:true, memo:'体系化＋独自ノウハウ。価格680円。', prevLink:'第1サイクルの総まとめ', nextLink:'', researchNote:'ジミー：SPU最大化の方法' },
+    { id:125, title:'副業ライター半年の振り返り　失敗10本から学んだこと', type:'エッセイ(A)', cat:'振り返り', status:'idea', publishDate:'12月', rakuten:false, memo:'半年間の成長記録。次のステージへの布石。', prevLink:'「0部記事を5部に変えた」の延長', nextLink:'', researchNote:'なし' },
+    { id:126, title:'楽天ポイントを使った「自己投資の回し方」　ライター業の複利効果', type:'エッセイ(A)', cat:'楽天', status:'idea', publishDate:'13月', rakuten:true, memo:'ポイントを書籍に再投資→スキルアップ。', prevLink:'「時間がない人ほど…」の応用編', nextLink:'', researchNote:'ジミー：楽天ポイント活用術' },
+    { id:127, title:'提案文150件送って刻達した、文字単価3円に到達した声', type:'エッセイ(A)', cat:'ライティング', status:'idea', publishDate:'14月', rakuten:false, memo:'成長の軌跡の最新版。単価3円到達までの道。', prevLink:'「提案文60件」の続編', nextLink:'', researchNote:'バディ：高単価案件獲得のノウハウ' },
+  
+    ],
+  };
+})();
+const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+
+const SL = {idea:'📝 アイデア',writing:'✍️ 執筆中',review:'🔍 確認中',xprep:'📣 X準備中',done:'✅ 公開済み'};
+const SC = {idea:'var(--text3)',writing:'var(--yellow)',review:'var(--blue)',xprep:'var(--orange)',done:'var(--green)'};
+const SCL = {idea:'s-idea',writing:'s-writing',review:'s-review',xprep:'s-xprep',done:'s-done'};
+
+let curId = null;       // 現在開いている記事ID
+let workType = 'A';     // 作業モーダルのXタイプ
+let mxType = 'A';       // X追加モーダルのXタイプ
+let nf = 'all';         // noteフィルター
+let xfilt = 'all';      // Xフィルター
+
+// ================================================================
+// UTILS
+// ================================================================
+const toast = msg => {
+  const e = document.getElementById('toast');
+  e.textContent = msg; e.classList.add('show');
+  setTimeout(() => e.classList.remove('show'), 2200);
+};
+const openOverlay = id => document.getElementById(id).classList.add('open');
+const closeOverlay = id => document.getElementById(id).classList.remove('open');
+document.querySelectorAll('.overlay').forEach(o =>
+  o.addEventListener('click', e => { if (e.target === o) closeOverlay(o.id); })
+);
+const cp = id => navigator.clipboard.writeText(document.getElementById(id).textContent.trim())
+  .then(() => toast('コピーしました ✓'));
+
+// ================================================================
+// SECTION COLLAPSE
+// ================================================================
+const secState = {today:true, notes:true, xposts:true};
+function toggleSec(name) {
+  secState[name] = !secState[name];
+  const body = document.getElementById('body-'+name);
+  const chev = document.getElementById('chev-'+name);
+  if (secState[name]) {
+    body.style.maxHeight = body.scrollHeight + 4000 + 'px';
+    chev.classList.add('open');
+  } else {
+    body.style.maxHeight = '0';
+    chev.classList.remove('open');
+  }
+}
+function initSec() {
+  Object.entries(secState).forEach(([k, open]) => {
+    const body = document.getElementById('body-'+k);
+    const chev = document.getElementById('chev-'+k);
+    if (open) { body.style.maxHeight = '9999px'; chev.classList.add('open'); }
+    else { body.style.maxHeight = '0'; chev.classList.remove('open'); }
+  });
+}
+function scrollToSec(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  // セクションが閉じてたら開く
+  const name = id.replace('sec-','');
+  if (!secState[name]) toggleSec(name);
+  setTimeout(() => el.scrollIntoView({behavior:'smooth', block:'start'}), 80);
+}
+
+// ================================================================
+// STATS
+// ================================================================
+function updateStats() {
+  document.getElementById('st-done').textContent  = S.notes.filter(n=>n.status==='done').length;
+  document.getElementById('st-wip').textContent   = S.notes.filter(n=>n.status==='writing').length;
+  document.getElementById('st-xprep').textContent = S.notes.filter(n=>n.status==='xprep').length;
+  document.getElementById('st-idea').textContent  = S.notes.filter(n=>n.status==='idea').length;
+  document.getElementById('notes-count-label').textContent = S.notes.length + '本';
+  const stk = S.xposts.filter(p=>p.status==='stock').length;
+  document.getElementById('xposts-count-label').textContent = `ストック${stk}本`;
+}
+
+// ================================================================
+// NOTE LIST
+// ================================================================
+function renderNotes() {
+  updateStats();
+  const counts = {all:S.notes.length};
+  Object.keys(SL).forEach(k => counts[k] = S.notes.filter(n=>n.status===k).length);
+
+  document.getElementById('filter-bar').innerHTML =
+    [['all','すべて'],['idea','アイデア'],['writing','執筆中'],['review','確認中'],['xprep','X準備中'],['done','公開済み']]
+      .map(([v,l]) => `<button class="chip${nf===v?' active':''}" onclick="setNf('${v}')">${l} ${counts[v]||0}</button>`)
+      .join('');
+
+  const q = (document.getElementById('note-search')?.value||'').toLowerCase();
+  let list = [...S.notes];
+  if (nf !== 'all') list = list.filter(n => n.status === nf);
+  if (q) list = list.filter(n => (n.title+' '+(n.memo||'')).toLowerCase().includes(q));
+
+  document.getElementById('note-list').innerHTML = list.length === 0
+    ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">該当する記事がありません</div>`
+    : list.map(n => `
+      <div class="note-item ${SCL[n.status]||'s-idea'}" onclick="openWork(${n.id})">
+        <div class="note-bar"></div>
+        <div class="note-body">
+          <div class="note-title">${n.title}</div>
+          <div class="note-meta">
+            ${n.type?`<span class="badge badge-type">${n.type}</span>`:''}
+            ${n.cat?`<span class="badge badge-cat">${n.cat}</span>`:''}
+            ${n.publishDate?`<span class="badge badge-date">📅 ${n.publishDate}</span>`:''}
+            ${n.rakuten?'<span class="badge badge-rakuten">楽天</span>':''}
+          </div>
+          ${n.memo?`<div class="note-memo">📌 ${n.memo}</div>`:''}
+        </div>
+        <div class="note-status-dot"></div>
+      </div>`).join('');
+
+  // セクション高さを再計算
+  const body = document.getElementById('body-notes');
+  if (secState.notes) body.style.maxHeight = body.scrollHeight + 4000 + 'px';
+}
+function setNf(v) { nf = v; renderNotes(); }
+
+// ================================================================
+// TODAY
+// ================================================================
+function renderToday() {
+  const now = new Date();
+  const dow = ['日','月','火','水','木','金','土'];
+  document.getElementById('today-date-label').textContent =
+    `${now.getMonth()+1}月${now.getDate()}日（${dow[now.getDay()]}）`;
+  const h = now.getHours();
+  const slots = [
+    {time:'🌅 朝7時',title:'タイプA投稿',desc:'拡散狙い・noteリンクなし。ストックから選んで投稿。',done:h>=7},
+    {time:'☀️ 日中',title:'リプ周り 10件',desc:'フォロワー100〜1,000の副業垢にコメント・いいね。',done:h>=12},
+    {time:'🌙 夜21時',title:'タイプB投稿',desc:'信頼構築・noteリンクあり。ストックから選んで投稿。',done:h>=21},
+  ];
+  const writing = S.notes.filter(n=>n.status==='writing').slice(0,2);
+  const xprep   = S.notes.filter(n=>n.status==='xprep').slice(0,2);
+  document.getElementById('today-routine').innerHTML = [
+    ...slots.map(s => `<div class="slot" style="${s.done?'opacity:.5':''}">
+      <div class="slot-time">${s.time}${s.done?' ✅':''}</div>
+      <div class="slot-title">${s.title}</div>
+      <div class="slot-desc">${s.desc}</div>
+    </div>`),
+    writing.length ? `<div style="font-size:11px;color:var(--text3);margin:10px 0 5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">✍️ 執筆中</div>` +
+      writing.map(n=>`<div class="slot" style="cursor:pointer" onclick="openWork(${n.id})">
+        <div class="slot-title">${n.title}</div>
+        <div class="slot-desc">${n.memo||'執筆メモなし'}</div>
+      </div>`).join('') : '',
+    xprep.length ? `<div style="font-size:11px;color:var(--text3);margin:10px 0 5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">📣 X準備中</div>` +
+      xprep.map(n=>`<div class="slot" style="cursor:pointer" onclick="openWork(${n.id})">
+        <div class="slot-title">${n.title}</div>
+        <div class="slot-desc">${n.memo||''}</div>
+      </div>`).join('') : '',
+  ].join('');
+}
+
+// ================================================================
+// X POSTS
+// ================================================================
+let xfEl = 'all';
+function setXf(el, v) {
+  xfEl = v;
+  document.querySelectorAll('[data-xf]').forEach(b => b.classList.toggle('active', b.dataset.xf===v));
+  renderXPosts();
+}
+function renderXPosts() {
+  updateStats();
+  let list = [...S.xposts];
+  if (xfEl==='stock')  list = list.filter(p=>p.status==='stock');
+  if (xfEl==='posted') list = list.filter(p=>p.status==='posted');
+  if (xfEl==='A')      list = list.filter(p=>p.type==='A');
+  if (xfEl==='B')      list = list.filter(p=>p.type==='B');
+  document.getElementById('xpost-list').innerHTML = list.length === 0
+    ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">投稿がありません</div>`
+    : list.map(p => {
+      const cc = p.content.replace(/\n/g,'').length;
+      const ccCls = cc>140?'char-over':cc>120?'char-warn':'char-ok';
+      return `<div class="xpost-item">
+        <div class="xpost-type-badge ${p.type==='A'?'type-a':'type-b'}">${p.type==='A'?'タイプA — 朝7時':'タイプB — 夜21時'}</div>
+        <div class="xpost-content">${p.content}</div>
+        <div class="xpost-footer">
+          <span class="xpost-date">${p.createdAt||''}</span>
+          <span class="${ccCls}" style="font-size:11px">${cc}字</span>
+          <div style="margin-left:auto;display:flex;gap:5px">
+            ${p.status==='stock'
+              ? `<button class="btn btn-green btn-sm" style="width:auto" onclick="markPosted(${p.id})">✅ 投稿済</button>`
+              : `<span style="font-size:11px;color:var(--green)">投稿済み</span>`}
+            <button class="btn btn-ghost btn-sm" style="width:auto" onclick="editXPost(${p.id})">編集</button>
+            <button class="btn btn-red btn-sm" style="width:auto" onclick="delXPost(${p.id})">削除</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  const body = document.getElementById('body-xposts');
+  if (secState.xposts) body.style.maxHeight = body.scrollHeight + 4000 + 'px';
+}
+
+function markPosted(id){const p=S.xposts.find(x=>x.id===id);if(p){p.status='posted';save();renderXPosts();toast('投稿済みにしました ✓');}}
+function delXPost(id){S.xposts=S.xposts.filter(x=>x.id!==id);save();renderXPosts();toast('削除しました');}
+function openAddXPost(){ document.getElementById('mx-id').value=''; document.getElementById('mx-content').value=''; document.getElementById('mx-status').value='stock'; setMxType('A'); updateMxcc(); openOverlay('modal-xpost'); }
+function editXPost(id){
+  const p=S.xposts.find(x=>x.id===id); if(!p) return;
+  document.getElementById('mx-id').value=p.id;
+  document.getElementById('mx-content').value=p.content;
+  document.getElementById('mx-status').value=p.status;
+  setMxType(p.type); updateMxcc();
+  openOverlay('modal-xpost');
+}
+function setMxType(t){ mxType=t; document.getElementById('mx-tpa').className='type-btn'+(t==='A'?' sel-a':''); document.getElementById('mx-tpb').className='type-btn'+(t==='B'?' sel-b':''); }
+function updateMxcc(){
+  const v = document.getElementById('mx-content').value.replace(/\n/g,'').length;
+  const e = document.getElementById('mx-cc');
+  e.textContent=`${v} / 140字`; e.className=v>140?'char-over':v>120?'char-warn':'char-ok';
+}
+document.getElementById('mx-save').addEventListener('click',()=>{
+  const id = document.getElementById('mx-id').value;
+  const content = document.getElementById('mx-content').value.trim();
+  const status = document.getElementById('mx-status').value;
+  if(!content){toast('内容を入力してください');return;}
+  if(id){const p=S.xposts.find(x=>x.id===parseInt(id));if(p){p.content=content;p.type=mxType;p.status=status;}toast('更新しました');}
+  else{S.xposts.unshift({id:Date.now(),type:mxType,content,status,createdAt:new Date().toISOString().slice(0,10)});toast('追加しました');}
+  save(); renderXPosts(); closeOverlay('modal-xpost');
+});
+
+// ================================================================
+// 作業フローモーダル
+// ================================================================
+function openWork(id) {
+  const n = S.notes.find(x=>x.id===id); if(!n) return;
+  curId = id;
+  document.getElementById('mw-title').textContent = n.title;
+  document.getElementById('mw-badges').innerHTML = [
+    n.type?`<span class="badge badge-type">${n.type}</span>`:'',
+    n.cat?`<span class="badge badge-cat">${n.cat}</span>`:'',
+    n.publishDate?`<span class="badge badge-date">📅 ${n.publishDate}</span>`:'',
+    n.rakuten?'<span class="badge badge-rakuten">楽天</span>':'',
+  ].join('');
+  document.getElementById('mw-sub').textContent = [
+    n.memo?`📌 ${n.memo}`:'',
+    n.researchNote?`🔬 ${n.researchNote}`:'',
+  ].filter(Boolean).join('\n');
+  const sel = document.getElementById('mw-status');
+  sel.innerHTML = Object.entries(SL).map(([v,l])=>`<option value="${v}"${n.status===v?' selected':''}>${l}</option>`).join('');
+  // Gemini指示文
+  document.getElementById('mw-gemini').textContent = buildGemini(n);
+  // リセット
+  document.getElementById('mw-gemini-result').value='';
+  document.getElementById('mw-chatgpt').textContent='';
+  document.getElementById('mw-chatgpt-wrap').style.display='none';
+  document.getElementById('mw-draft').value='';
+  document.getElementById('mw-formatted').textContent='';
+  document.getElementById('mw-formatted-wrap').style.display='none';
+  document.getElementById('mw-xedit').value='';
+  document.getElementById('mw-xbases').innerHTML = buildXBases(n);
+  setWorkType('A'); updateXcc();
+  switchTabByName('gemini');
+  openOverlay('modal-work');
+}
+
+function switchTab(el, name) {
+  document.querySelectorAll('.ftab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.fpanel').forEach(p=>p.classList.toggle('active',p.id==='fp-'+name));
+}
+function switchTabByName(name) {
+  document.querySelectorAll('.ftab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.fpanel').forEach(p=>p.classList.toggle('active',p.id==='fp-'+name));
+}
+function quickUpdateStatus() {
+  const n = S.notes.find(x=>x.id===curId); if(!n) return;
+  n.status = document.getElementById('mw-status').value;
+  save(); renderNotes(); renderToday();
+  toast('ステータスを更新しました');
+}
+
+function getDefaultGeminiTmpl() {
+  return '━━━━━━━━━━━━━━━━━━━━━━━━━━\n【ジミーへの完全版リサーチ指示文 ver.3.0】\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n【最優先ミッション】\n読者が読後に「ためになった！」と心から思い、\nリピーターになってくれる記事を作るための\n"生きた情報"を大量に掘り出すこと\n\n【絶対厳守ルール】\n⚠️ 要約するな！深掘り情報を省くな！\n⚠️ 生々しい一次情報は「原文のまま」引用\n⚠️ サンプルは多い方がいい（最低5つ、理想10個）\n⚠️ 「これ使えそう」と思ったら全部出せ\n\n────────────────────\n【テーマ】\n「${n.title}」\n記事タイプ：${n.type||\'エッセイ\'} / カテゴリ：${n.cat||\'未設定\'}\n執筆メモ：${n.memo||\'なし\'}${n.researchNote?\'\\n特記事項：\'+n.researchNote:\'\'}\n\n────────────────────\n【Step1: 読者の本音を掘る】\n\n・このテーマで悩んでる人が「本当に知りたいこと」は何？\n・表面的な疑問じゃなくて、心の奥底にある不安・欲求を特定\n・「なぜこのテーマが気になるのか？」の深層心理\n\n────────────────────\n【Step2: 生々しい一次情報を大量発掘】\n\n必須ソース（最低5つ以上、理想10個以上）：\n□ Reddit（英語可、DeepL翻訳して原文引用）\n□ 個人note\n□ X（Twitter）\n□ はてなブログ\n□ YouTube コメント欄\n\n追加ソース（テーマに応じて選択）：\n□ Yahoo!知恵袋・教えて!goo\n□ 5ch 専門板\n□ Amebaブログ・FC2ブログ\n□ Medium 日本語記事\n□ Amazon レビュー\n□ Instagram 長文キャプション\n□ その他テーマ特化ソース\n\n検索キーワード例：\n・「〇〇 失敗」「〇〇 後悔」「〇〇 やめた」\n・「〇〇 気づいた」「〇〇 救われた」\n・「〇〇 やってみた」「〇〇 始めて」\n・「〇〇 損した」「〇〇 得した」\n\n優先条件：\n1. 個人の具体的エピソードがある\n2. 感情ワード（失敗・後悔・救われた・焦った等）が含まれる\n3. 数値・時期・状況が具体的\n4. AI生成っぽくない生きた文章\n5. スラング・汚い言葉はフィルタリング（品は保つ）\n\n出力形式：\n【ソース名】URL\n原文引用：「〇〇〇〇〇」（そのまま引用、要約しない）\n感情：失敗/後悔/救われた/気づいた 等\n数値・具体性：〇〇\n\n────────────────────\n【Step3: 「ためになる」要素を抽出】\n\n以下のうち、最低2つ以上を含む情報を優先：\n□ 誰も教えてくれなかった盲点\n□ 失敗から学んだ具体的な改善策\n□ 意外な発見・気づき\n□ 実践してすぐ使える小さなコツ\n□ 避けるべき具体的な地雷\n□ 数値で示せる before → after\n\n────────────────────\n【Step4: 対立構造の明確化】\n\n・「〇〇だと思ってたけど、実は△△だった」\n・読者の思い込みを揺さぶる構造\n・具体例を3つ以上\n\n────────────────────\n【Step5: AI感完全抹消のための特殊収集】\n\n人間の語り口パターンを収集：\n\n1. 個人ブログ・noteから「生きた表現」を抽出\n   ・感情が乗っている部分の言い回し\n   ・失敗を語るときのトーン\n   ・内省的な語尾パターン\n   ・短文と長文のリズム\n\n2. Reddit・Xから「話し言葉」を収集\n   ・「〜なんですよね」「〜だったり」\n   ・「正直〜」「意外と〜」\n   ・「〜かもしれません」\n\n3. AI感のある表現をリスト化（クロが絶対使わないように）\n   ・「効果的です」「重要です」「おすすめです」\n   ・「〜することで」「〜により」「〜するため」\n\n────────────────────\n【Step6: リピーター獲得要素】\n\n読者が読後に感じるべきこと：\n1. 「具体的に得るものがあった」（実践的価値）\n2. 「この人の考え方、好きかも」（人格・共感）\n3. 「次も読みたい」（継続欲求）\n\nそのための要素（最低3つ）：\n□ 読者がすぐ使える小さな一歩（今日できる行動）\n□ 意外な視点・気づき（「そうか！」体験）\n□ 失敗からの学び（共感 + 教訓）\n□ 書き手の人柄が伝わる語り口\n□ 読者の悩みに寄り添う温度感\n\n────────────────────\n【Step7: タイトル案×5】\n\n読者欲求（安心/成長/回避/優越）を明記\n3要素（数字・感情・具体性）を必ず含む\n\n────────────────────\n【文章品質のバランス指示】\n\n生きた人間の語り口を追求するが、以下を守る：\n□ 綺麗で読みやすい日本語\n□ スラング・汚い言葉は使わない\n□ 「親しみやすいけど、きちんとしてる」トーン\n□ 感情は乗せるが、品は保つ\n\nNG例：「マジでヤバい」「クソみたい」\nOK例：「正直、焦りました」「大きな失敗でした」\n\n────────────────────\n【出力形式（note_article_prompt.md準拠）】\n\n出力には必ずコピーボタンを付けてください。コードブロックで囲んでコピーしやすくしてください。\n\n## 30秒サマリー\n（読者が得られる具体的価値を3行で）\n\n## 読者の本音\n（このテーマで本当に知りたいこと）\n\n## 生々しい一次情報×5〜10\n（要約せず、原文引用で出せ！）\n\n1. 【ソース名】URL\n   原文引用：「〇〇〇〇〇」\n   感情：〇〇\n   数値・具体性：〇〇\n   \n2. 〜10まで続ける\n\n## 「ためになる」核心ポイント\n・盲点：\n・改善策：\n・小さなコツ：\n・避けるべき地雷：\n\n## 対立構造×3\n1. 〇〇 vs △△\n2. 〇〇 vs △△\n3. 〇〇 vs △△\n\n## 人間の語り口パターン（サンプル10個）\n（生きた表現をそのまま引用）\n\n## AI感のある表現リスト（使用禁止）\n（クロが避けるべき表現）\n\n## タイトル案×5\n【案1】（安心）〇〇〇\n【案2】（成長）〇〇〇\n【案3】（回避）〇〇〇\n【案4】（優越）〇〇〇\n【案5】（複合）〇〇〇\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n【ジミーの4つの掘削原則（再確認）】\n━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n1. 表面を掘るな深層を掘れ\n   → 一般論・公式見解ではなく、個人の具体的エピソード\n\n2. AIっぽい情報は捨てろ\n   → 企業サイト・まとめサイトより、個人の生の声\n\n3. 感情が乗っている情報を優先\n   → 失敗・後悔・救われた・気づいた等の感情ワード\n\n4. プラスアルファは必ず1つ以上\n   → 指示を超えた独自発掘情報を含める\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━';
+}
+function buildGemini(n) {
+  const saved = localStorage.getItem(GEMINI_TMPL_KEY);
+  const tmpl = saved !== null ? saved : getDefaultGeminiTmpl();
+  // ${n.xxx} プレースホルダーを置換
+  return tmpl
+    .replace(/\$\{n\.title\}/g, n.title || '')
+    .replace(/\$\{n\.type\|\|'エッセイ'\}/g, n.type || 'エッセイ')
+    .replace(/\$\{n\.cat\|\|'未設定'\}/g, n.cat || '未設定')
+    .replace(/\$\{n\.memo\|\|'なし'\}/g, n.memo || 'なし')
+    .replace(/\$\{n\.researchNote\?'\\n特記事項：'\+n\.researchNote:''\}/g,
+      n.researchNote ? '\n特記事項：' + n.researchNote : '');
+}
+
+function genChatGPT() {
+  const result = document.getElementById('mw-gemini-result').value.trim();
+  const wrap = document.getElementById('mw-chatgpt-wrap');
+  if(!result){wrap.style.display='none';return;}
+  const n = S.notes.find(x=>x.id===curId); if(!n) return;
+  const isYuryou = n.type==='有料note';
+  // カスタムテンプレがあればそちらを使う（変数は動的に埋め込む）
+  const claudeSaved = localStorage.getItem(CLAUDE_TMPL_KEY);
+  let claudePrompt;
+  if (claudeSaved !== null) {
+    claudePrompt = claudeSaved
+      .replace(/\$\{n\.title\}/g, n.title || '')
+      .replace(/\$\{n\.memo\|\|'このテーマに関心がある人'\}/g, n.memo || 'このテーマに関心がある人')
+      .replace(/\$\{isYuryou\?'有料記事（1,980円）：具体的ノウハウと再現手順を網羅':'無料記事（X導線用）：共感→気づき→有料記事への自然な導線'\}/g,
+        isYuryou ? '有料記事（1,980円）：具体的ノウハウと再現手順を網羅' : '無料記事（X導線用）：共感→気づき→有料記事への自然な導線')
+      .replace(/\$\{isYuryou\?'3,000〜4,000':'2,000〜2,500'\}/g,
+        isYuryou ? '3,000〜4,000' : '2,000〜2,500')
+      .replace(/\$\{result\}/g, result)
+      .replace(/\$\{n\.nextLink\?`\n   →「\$\{n\.nextLink\}」につながるひと言を最後に入れる`:''}/g,
+        n.nextLink ? '\n   →「' + n.nextLink + '」につながるひと言を最後に入れる' : '');
+  } else {
+    claudePrompt = `あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。
+
+■ タイトル
+「${n.title}」
+
+■ 読者設定
+・副業ライターとして活動中、または始めたい人
+・${n.memo||'このテーマに関心がある人'}
+
+■ 記事の方向性
+・${isYuryou?'有料記事（1,980円）：具体的ノウハウと再現手順を網羅':'無料記事（X導線用）：共感→気づき→有料記事への自然な導線'}
+・文字数：${isYuryou?'3,000〜4,000':'2,000〜2,500'}文字
+・体験談ベース。具体的な数字・固有名詞を必ず入れる
+
+■ リサーチ結果（ジミー調べ）
+${result}
+
+■ 構成
+1. 共感リード（「これ自分だ」と思わせる状況描写）
+2. 失敗・壁（具体的なエピソード）
+3. 転機・気づき（何がどう変わったか）
+4. 再現可能な学び（明日から使えること）
+5. まとめ＋次の記事への導線${n.nextLink?`\n   →「${n.nextLink}」につながるひと言を最後に入れる`:''}
+
+■ 文体の絶対ルール
+・ですます調。親しみやすいが馴れ馴れしすぎない
+・「しみじみ思う。」「笑」など口語表現OK
+・「〜が大切です」「〜を心がけましょう」などAI的な説教口調は禁止
+・「まとめると」「ポイントは」系の見出しも禁止
+・# ※ ** などの記号は一切使わない
+・抽象論・精神論で終わらない。必ず具体で締める`;
+  }
+  document.getElementById('mw-chatgpt').textContent = claudePrompt;
+  wrap.style.display='block';
+}
+
+function doFormat() {
+  const raw = document.getElementById('mw-draft').value;
+  if(!raw.trim()){toast('草稿を貼り付けてください');return;}
+  const cleaned = raw.replace(/#{1,6}\s*/g,'').replace(/\*\*/g,'')
+    .replace(/※/g,'').replace(/^\s*[-・]\s*/gm,'')
+    .replace(/\n{3,}/g,'\n\n').trim();
+  const box = document.getElementById('mw-formatted');
+  box.textContent = cleaned;
+  document.getElementById('mw-formatted-wrap').style.display='block';
+  toast('整形しました');
+}
+
+function buildXBases(n) {
+  const ta = `✨${n.title.slice(0,18)}…の話。\n\n${n.memo?n.memo.slice(0,40)+'…':'リアルな体験をまとめました。'}\n\n同じ状況の人に届いてほしい。`;
+  const tb = `📝${n.title.slice(0,30)}…\n\n${n.memo?n.memo.slice(0,40)+'…':'詳しくnoteにまとめました。'}\n\n[noteリンク]`;
+  return [['A','type-a','タイプA（朝）',ta],['B','type-b','タイプB（夜）',tb]].map(([t,cls,lbl,txt]) =>
+    `<div style="background:var(--bg5);border-radius:8px;padding:10px;margin-bottom:6px;
+      cursor:pointer;border:1px solid var(--border2)"
+      onclick="document.getElementById('mw-xedit').value=this.querySelector('.xbase-txt').textContent;updateXcc()">
+      <span class="xpost-type-badge ${cls}" style="margin-bottom:4px">${lbl}</span>
+      <div class="xbase-txt" style="font-size:12px;line-height:1.6;color:var(--text2)">${txt}</div>
+    </div>`
+  ).join('');
+}
+
+function setWorkType(t) {
+  workType = t;
+  document.getElementById('mw-tpa').className='type-btn'+(t==='A'?' sel-a':'');
+  document.getElementById('mw-tpb').className='type-btn'+(t==='B'?' sel-b':'');
+}
+function updateXcc() {
+  const v = document.getElementById('mw-xedit').value.replace(/\n/g,'').length;
+  const e = document.getElementById('mw-xcc');
+  e.textContent=`${v} / 140字`; e.className=v>140?'char-over':v>120?'char-warn':'char-ok';
+}
+function saveFromWork() {
+  const content = document.getElementById('mw-xedit').value.trim();
+  if(!content){toast('投稿文を入力してください');return;}
+  S.xposts.unshift({id:Date.now(),type:workType,content,status:'stock',
+    createdAt:new Date().toISOString().slice(0,10)});
+  save(); renderXPosts();
+  document.getElementById('mw-xedit').value=''; updateXcc();
+  toast('ストックに追加しました ✓');
+}
+
+// ================================================================
+// 記事詳細編集モーダル
+// ================================================================
+function openEditModal() {
+  const n = S.notes.find(x=>x.id===curId); if(!n) return;
+  document.getElementById('me-id').value=n.id;
+  document.getElementById('me-title').value=n.title||'';
+  document.getElementById('me-type').value=n.type||'エッセイ(A)';
+  document.getElementById('me-cat').value=n.cat||'ライティング';
+  document.getElementById('me-status').value=n.status||'idea';
+  document.getElementById('me-pubdate').value=n.publishDate||'';
+  document.getElementById('me-memo').value=n.memo||'';
+  document.getElementById('me-prevlink').value=n.prevLink||'';
+  document.getElementById('me-nextlink').value=n.nextLink||'';
+  document.getElementById('me-research').value=n.researchNote||'';
+  openOverlay('modal-edit');
+}
+document.getElementById('me-save').addEventListener('click',()=>{
+  const id = parseInt(document.getElementById('me-id').value);
+  const title = document.getElementById('me-title').value.trim();
+  if(!title){toast('タイトルを入力してください');return;}
+  const n = S.notes.find(x=>x.id===id); if(!n) return;
+  Object.assign(n,{
+    title, type:document.getElementById('me-type').value,
+    cat:document.getElementById('me-cat').value,
+    status:document.getElementById('me-status').value,
+    publishDate:document.getElementById('me-pubdate').value.trim(),
+    memo:document.getElementById('me-memo').value.trim(),
+    prevLink:document.getElementById('me-prevlink').value.trim(),
+    nextLink:document.getElementById('me-nextlink').value.trim(),
+    researchNote:document.getElementById('me-research').value.trim(),
+  });
+  save(); renderNotes(); renderToday(); closeOverlay('modal-edit');
+  if(curId===id) openWork(id);  // 作業モーダルも更新
+  toast('保存しました');
+});
+
+// ================================================================
+// テーマ一括登録
+// ================================================================
+document.getElementById('btn-paste-themes').addEventListener('click',()=>{
+  const raw = document.getElementById('theme-paste-input').value.trim();
+  if(!raw){toast('JSON出力を貼り付けてください');return;}
+  let themes;
+  try{
+    const clean = raw.replace(/```json|```/g,'').trim();
+    const p = JSON.parse(clean);
+    themes = Array.isArray(p)?p:[p];
+  }catch(e){
+    document.getElementById('theme-paste-result').innerHTML='<span style="color:var(--red)">⚠️ JSON形式が正しくありません</span>';
+    return;
+  }
+  if(!themes.length){toast('データが空です');return;}
+  [...themes].reverse().forEach(t=>{
+    S.notes.unshift({id:Date.now()+Math.random(),
+      title:t.title||'（未設定）',type:t.type||'エッセイ(A)',cat:t.cat||'その他',
+      status:t.status||'idea',publishDate:t.publishDate||'',memo:t.memo||'',
+      prevLink:t.prevLink||'',nextLink:t.nextLink||'',researchNote:t.researchNote||''});
+  });
+  save(); renderNotes();
+  document.getElementById('theme-paste-input').value='';
+  document.getElementById('theme-paste-result').innerHTML=`<span style="color:var(--green)">✅ ${themes.length}件を登録しました</span>`;
+  setTimeout(()=>{document.getElementById('theme-paste-result').innerHTML='';},3000);
+  toast(`${themes.length}件のテーマを登録しました`);
+});
+document.getElementById('btn-paste-clear').addEventListener('click',()=>{
+  document.getElementById('theme-paste-input').value='';
+  document.getElementById('theme-paste-result').innerHTML='';
+});
+
+// ================================================================
+// GEMINI API 連携
+// ================================================================
+const GEMINI_KEY_STORAGE = 'beyan_gemini_key';
+const GEMINI_TMPL_KEY = 'beyan_gemini_tmpl';
+const CLAUDE_TMPL_KEY = 'beyan_claude_tmpl';
+
+function getDefaultClaudeTmpl() {
+  return 'あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。\n\n■ タイトル\n「${n.title}」\n\n■ 読者設定\n・副業ライターとして活動中、または始めたい人\n・${n.memo}\n\n■ 記事の方向性\n・文字数：2,000〜4,000文字\n・体験談ベース。具体的な数字・固有名詞を必ず入れる\n\n■ リサーチ結果（ジミー調べ）\n${result}\n\n■ 構成\n1. 共感リード（「これ自分だ」と思わせる状況描写）\n2. 失敗・壁（具体的なエピソード）\n3. 転機・気づき（何がどう変わったか）\n4. 再現可能な学び（明日から使えること）\n5. まとめ＋次の記事への導線\n\n■ 文体の絶対ルール\n・ですます調。親しみやすいが馴れ馴れしすぎない\n・「しみじみ思う。」「笑」など口語表現OK\n・AI的な説教口調は禁止\n・# ※ ** などの記号は一切使わない\n・抽象論・精神論で終わらない。必ず具体で締める';
+}
+
+function loadApiKey() {
+  const k = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  if (k) {
+    document.getElementById('gemini-api-key').value = k;
+    document.getElementById('key-status').innerHTML =
+      '<span style="color:var(--green)">✅ APIキー保存済み</span>';
+  }
+}
+function onKeyInput() {
+  document.getElementById('key-status').textContent = '';
+}
+function saveApiKey() {
+  const k = document.getElementById('gemini-api-key').value.trim();
+  if (!k) { toast('APIキーを入力してください'); return; }
+  localStorage.setItem(GEMINI_KEY_STORAGE, k);
+  document.getElementById('key-status').innerHTML =
+    '<span style="color:var(--green)">✅ 保存しました</span>';
+  toast('APIキーを保存しました');
+}
+
+async function runGemini() {
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE)
+    || document.getElementById('gemini-api-key').value.trim();
+  if (!apiKey) {
+    toast('先にAPIキーを保存してください');
+    document.getElementById('gemini-api-key').focus();
+    return;
+  }
+  const n = S.notes.find(x => x.id === curId);
+  if (!n) return;
+
+  const prompt = buildGemini(n);
+
+  // UI: ローディング開始
+  document.getElementById('btn-run-gemini').disabled = true;
+  document.getElementById('gemini-loading').style.display = 'block';
+  document.getElementById('gemini-result-section').style.display = 'none';
+  const pbar = document.getElementById('gemini-pbar');
+  pbar.style.width = '0%';
+  let pct = 0;
+  const pTimer = setInterval(() => {
+    pct = Math.min(pct + (pct < 70 ? 3 : 0.5), 92);
+    pbar.style.width = pct + '%';
+  }, 300);
+
+  try {
+    // CORS回避: fetchに直接APIキーをクエリパラメータとして付与
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+      })
+    });
+
+    clearInterval(pTimer);
+    pbar.style.width = '100%';
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!text) throw new Error('レスポンスが空でした');
+
+    // 結果を表示
+    document.getElementById('mw-gemini-output').textContent = text;
+    document.getElementById('gemini-result-section').style.display = 'block';
+
+    // ②クロ執筆タブに自動入力
+    document.getElementById('mw-gemini-result').value = text;
+    genChatGPT();
+
+    toast('✅ ジミーのリサーチ完了！');
+  } catch (e) {
+    clearInterval(pTimer);
+    const errMsg = e.message.includes('API_KEY') || e.message.includes('key')
+      ? 'APIキーが無効です。確認して再保存してください。'
+      : `エラー: ${e.message}`;
+    document.getElementById('key-status').innerHTML =
+      `<span style="color:var(--red)">⚠️ ${errMsg}</span>`;
+    toast('エラーが発生しました');
+  } finally {
+    document.getElementById('gemini-loading').style.display = 'none';
+    document.getElementById('btn-run-gemini').disabled = false;
+  }
+}
+
+// ================================================================
+// INIT
+// ================================================================
+initSec();
+renderNotes();
+renderXPosts();
+renderToday();
+loadApiKey();
+
+// ================================================================
+// 設定モーダル
+// ================================================================
+function openSettings() {
+  // ジミー指示文テンプレートをテキストエリアに読み込む
+  const savedGemini = localStorage.getItem(GEMINI_TMPL_KEY);
+  document.getElementById('settings-gemini-tmpl').value =
+    savedGemini !== null ? savedGemini : getDefaultGeminiTmpl();
+
+  // クロ指示文テンプレートをテキストエリアに読み込む（genChatGPT内のテンプレ）
+  const savedClaude = localStorage.getItem(CLAUDE_TMPL_KEY);
+  document.getElementById('settings-claude-tmpl').value =
+    savedClaude !== null ? savedClaude : getDefaultClaudeTmpl();
+
+  switchStab('gemini');
+  document.getElementById('settings-modal').style.display = 'block';
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').style.display = 'none';
+}
+
+function switchStab(tab) {
+  document.getElementById('spanel-gemini').style.display = tab === 'gemini' ? '' : 'none';
+  document.getElementById('spanel-claude').style.display = tab === 'claude' ? '' : 'none';
+  document.getElementById('stab-gemini').classList.toggle('active', tab === 'gemini');
+  document.getElementById('stab-claude').classList.toggle('active', tab === 'claude');
+}
+
+function saveGeminiTmpl() {
+  const val = document.getElementById('settings-gemini-tmpl').value;
+  localStorage.setItem(GEMINI_TMPL_KEY, val);
+  const msg = document.getElementById('settings-gemini-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function resetGeminiTmpl() {
+  if (!confirm('デフォルトに戻しますか？')) return;
+  localStorage.removeItem(GEMINI_TMPL_KEY);
+  document.getElementById('settings-gemini-tmpl').value = getDefaultGeminiTmpl();
+  const msg = document.getElementById('settings-gemini-msg');
+  msg.textContent = '🔄 デフォルトに戻しました';
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; msg.textContent = '✅ 保存しました'; }, 2500);
+}
+
+function saveClaudeTmpl() {
+  const val = document.getElementById('settings-claude-tmpl').value;
+  localStorage.setItem(CLAUDE_TMPL_KEY, val);
+  const msg = document.getElementById('settings-claude-msg');
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; }, 2500);
+}
+
+function resetClaudeTmpl() {
+  if (!confirm('デフォルトに戻しますか？')) return;
+  localStorage.removeItem(CLAUDE_TMPL_KEY);
+  document.getElementById('settings-claude-tmpl').value = getDefaultClaudeTmpl();
+  const msg = document.getElementById('settings-claude-msg');
+  msg.textContent = '🔄 デフォルトに戻しました';
+  msg.style.display = 'block';
+  setTimeout(() => { msg.style.display = 'none'; msg.textContent = '✅ 保存しました'; }, 2500);
+}
+
+
+</script>
+
+</body>
+</html>
