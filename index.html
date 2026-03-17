@@ -790,9 +790,10 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <textarea id="settings-gemini-tmpl" rows="12"
         style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;min-height:180px;"
       ></textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button onclick="saveGeminiTmpl()" style="flex:1;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;">💾 保存</button>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button onclick="saveGeminiTmpl()" style="flex:1;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;min-width:80px">💾 保存</button>
         <button onclick="resetGeminiTmpl()" style="background:var(--bg4);border:none;color:var(--text2);padding:10px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;">リセット</button>
+        <button onclick="openTmplInGemini()" style="background:#1a73e8;border:none;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.82rem;white-space:nowrap">🔗 ジミーで開く</button>
       </div>
       <div id="settings-gemini-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
     </div>
@@ -807,9 +808,10 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <textarea id="settings-claude-tmpl" rows="12"
         style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;min-height:180px;"
       ></textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;">
-        <button onclick="saveClaudeTmpl()" style="flex:1;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;">💾 保存</button>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button onclick="saveClaudeTmpl()" style="flex:1;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;min-width:80px">💾 保存</button>
         <button onclick="resetClaudeTmpl()" style="background:var(--bg4);border:none;color:var(--text2);padding:10px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;">リセット</button>
+        <button onclick="openTmplInClaude()" style="background:#7c3aed;border:none;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.82rem;white-space:nowrap">🔗 クロで開く</button>
       </div>
       <div id="settings-claude-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
     </div>
@@ -1031,10 +1033,15 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <summary style="font-size:11px;color:var(--text3);cursor:pointer">APIキーなしで手動コピーする</summary>
         <div style="margin-top:8px">
           <div class="copy-box" id="mw-gemini"></div>
-          <button class="copy-btn" onclick="cp('mw-gemini')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
-            指示文をコピー
-          </button>
+          <div style="display:flex;gap:6px;margin-top:0">
+            <button class="copy-btn" style="flex:1" onclick="cp('mw-gemini')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
+              指示文をコピー
+            </button>
+            <button class="copy-btn" style="flex:1;background:#e8f0fe;color:#1a73e8;border-color:#1a73e8" onclick="openInGemini(document.getElementById('mw-gemini').textContent)">
+              🔗 ジミーで開く
+            </button>
+          </div>
         </div>
       </details>
 
@@ -1050,9 +1057,14 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div id="mw-chatgpt-wrap" style="display:none">
         <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:700">↓ クロ（Claude）用 執筆指示文</div>
         <div class="copy-box" id="mw-chatgpt"></div>
-        <button class="copy-btn" onclick="cp('mw-chatgpt')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー（クロに貼り付け）
-        </button>
+        <div style="display:flex;gap:6px">
+          <button class="copy-btn" style="flex:1" onclick="cp('mw-chatgpt')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー
+          </button>
+          <button class="copy-btn" style="flex:1;background:#f3e8ff;color:#7c3aed;border-color:#7c3aed" onclick="openInClaude(document.getElementById('mw-chatgpt').textContent)">
+            🔗 クロで開く
+          </button>
+        </div>
       </div>
     </div>
 
@@ -1398,10 +1410,11 @@ function renderXPosts() {
         <div class="xpost-footer">
           <span class="xpost-date">${p.createdAt||''}</span>
           <span class="${ccCls}" style="font-size:11px">${cc}字</span>
-          <div style="margin-left:auto;display:flex;gap:5px">
+          <div style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap">
+            <button class="btn btn-ghost btn-sm" style="width:auto;font-weight:700" onclick="openXPost(${p.id})">𝕏 投稿する</button>
             ${p.status==='stock'
               ? `<button class="btn btn-green btn-sm" style="width:auto" onclick="markPosted(${p.id})">✅ 投稿済</button>`
-              : `<span style="font-size:11px;color:var(--green)">投稿済み</span>`}
+              : `<span style="font-size:11px;color:var(--green);align-self:center">投稿済み</span>`}
             <button class="btn btn-ghost btn-sm" style="width:auto" onclick="editXPost(${p.id})">編集</button>
             <button class="btn btn-red btn-sm" style="width:auto" onclick="delXPost(${p.id})">削除</button>
           </div>
@@ -2019,6 +2032,37 @@ function secretaryRoute() {
   input.value = '';
   input.blur();
   if (dest) setTimeout(() => scrollToSec(dest), 120);
+}
+
+// ================================================================
+// 外部連携ヘルパー
+// ================================================================
+function openInGemini(text) {
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    toast('コピーしました。Geminiが開きます');
+    window.open('https://gemini.google.com', '_blank');
+  });
+}
+function openInClaude(text) {
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    toast('コピーしました。Claudeが開きます');
+    window.open('https://claude.ai', '_blank');
+  });
+}
+function openTmplInGemini() {
+  openInGemini(document.getElementById('settings-gemini-tmpl').value);
+}
+function openTmplInClaude() {
+  openInClaude(document.getElementById('settings-claude-tmpl').value);
+}
+function openXPost(id) {
+  const p = S.xposts.find(x => x.id === id);
+  if (!p) return;
+  navigator.clipboard.writeText(p.content).then(() => {
+    toast('コピーしました。X投稿画面が開きます');
+    window.open('https://x.com/compose/post', '_blank');
+    if (p.status !== 'posted') { p.status = 'posted'; save(); renderXPosts(); }
+  });
 }
 
 // ================================================================
