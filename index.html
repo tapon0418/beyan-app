@@ -41,6 +41,32 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   font-size:13px;color:var(--text2);line-height:1.6;border-left:3px solid var(--accent);
   display:none}
 
+/* ===== RESEARCH TOGGLE ===== */
+.research-btn{font-size:10px;padding:3px 10px;border-radius:20px;
+  border:1px solid var(--border2);background:var(--bg5);color:var(--text3);
+  cursor:pointer;font-family:inherit;margin-top:5px;white-space:nowrap;line-height:1.6}
+.research-btn.done{background:rgba(122,154,106,.15);color:var(--green);
+  border-color:rgba(122,154,106,.3)}
+
+/* ===== NETA / WEEKLY ===== */
+.neta-item{display:flex;align-items:center;gap:8px;padding:9px 11px;
+  background:var(--bg4);border:1px solid var(--border);border-radius:8px;margin-bottom:6px}
+.neta-item.used{opacity:.45}
+.neta-text{flex:1;font-size:13px;line-height:1.5}
+.neta-text.used{text-decoration:line-through;color:var(--text3)}
+.neta-toggle{font-size:10px;padding:3px 8px;border-radius:20px;
+  border:1px solid var(--border2);background:var(--bg5);color:var(--text3);
+  cursor:pointer;white-space:nowrap;font-family:inherit}
+.neta-toggle.done{border-color:rgba(122,154,106,.4);background:rgba(122,154,106,.12);color:var(--green)}
+.neta-del{background:none;border:none;color:var(--text3);font-size:16px;
+  cursor:pointer;padding:2px 4px;line-height:1;flex-shrink:0}
+.wr-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.wr-row input{font-size:15px}
+.wr-item{background:var(--bg4);border:1px solid var(--border);border-radius:8px;
+  padding:9px 11px;margin-bottom:6px;font-size:12px;display:flex;flex-wrap:wrap;
+  align-items:center;gap:8px}
+.wr-date{font-size:10px;color:var(--text3);font-weight:700}
+
 /* ===== TOPBAR ===== */
 .topbar{position:sticky;top:0;z-index:100;background:rgba(253,246,238,0.97);
   backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
@@ -825,6 +851,19 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
     </div>
     <div class="sec-body" id="body-today">
       <div id="today-routine"></div>
+
+      <!-- 週次レビュー -->
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 週次レビュー</div>
+        <div class="wr-row">
+          <input type="number" id="wr-followers" placeholder="フォロワー数" min="0">
+          <input type="number" id="wr-imp" placeholder="週間インプレ" min="0">
+          <input type="number" id="wr-likes" placeholder="週間いいね数" min="0">
+          <input type="text" id="wr-memo" placeholder="一言メモ" style="font-size:16px">
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="saveWeeklyReview()" style="width:100%;min-height:42px;font-size:13px">📝 記録する</button>
+        <div id="wr-list" style="margin-top:10px"></div>
+      </div>
     </div>
   </div>
 
@@ -867,6 +906,32 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <svg class="sec-chevron open" id="chev-xposts" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="sec-body" id="body-xposts">
+
+      <!-- ネタストック（折りたたみ） -->
+      <div id="neta-wrap" style="margin-bottom:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none" onclick="toggleNetaSection()">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);flex:1">📋 ネタストック</div>
+          <div id="neta-count-lbl" style="font-size:11px;color:var(--text3)"></div>
+          <svg id="neta-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--text3)"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div id="neta-body" style="max-height:0;overflow:hidden;transition:max-height .3s ease">
+          <div style="padding-top:10px">
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <input type="text" id="neta-input" placeholder="ネタを1件入力" style="flex:1;font-size:16px" onkeydown="if(event.key==='Enter')addSingleNeta()">
+              <button class="btn btn-accent btn-sm" style="width:auto;min-width:56px;flex-shrink:0" onclick="addSingleNeta()">追加</button>
+            </div>
+            <details style="margin-bottom:10px">
+              <summary style="font-size:11px;color:var(--text3);cursor:pointer;padding:3px 0">一括入力（1行1ネタ）</summary>
+              <div style="margin-top:8px">
+                <textarea id="neta-bulk-input" rows="4" placeholder="ネタ1&#10;ネタ2&#10;ネタ3" style="font-size:15px"></textarea>
+                <button class="btn btn-ghost btn-sm" style="margin-top:6px;font-size:12px" onclick="addBulkNeta()">まとめて追加</button>
+              </div>
+            </details>
+            <div id="neta-list"></div>
+          </div>
+        </div>
+      </div>
+
       <div class="filter-bar">
         <button class="chip active" data-xf="all" onclick="setXf(this,'all')">すべて</button>
         <button class="chip" data-xf="stock" onclick="setXf(this,'stock')">ストック</button>
@@ -1085,14 +1150,19 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 // ================================================================
 // STATE
 // ================================================================
-const KEY = 'beyan_v5';
+const KEY = 'beyan_v6';
 let S = (() => {
-  const s = JSON.parse(localStorage.getItem(KEY) || 'null');
-  if (s) return s;
+  const s6 = JSON.parse(localStorage.getItem('beyan_v6') || 'null');
+  if (s6) { if(!s6.weeklyReviews) s6.weeklyReviews=[]; if(!s6.neta) s6.neta=[]; return s6; }
+  // v5からの移行
+  const s5 = JSON.parse(localStorage.getItem('beyan_v5') || 'null');
+  if (s5) return { ...s5, weeklyReviews: [], neta: [] };
   // v4 / v2 からの移行
   const old = JSON.parse(localStorage.getItem('beyan_v4') || localStorage.getItem('beyan_v2') || 'null');
   return {
     xf: 'all',
+    weeklyReviews: [],
+    neta: [],
     xposts: old?.xposts || [
       {id:1,type:'A',content:'✨副業ライター始める前「実績ないし無理かも」って思ってた。\n実際やってみたら、実績より提案文の書き方だった。\n実績ゼロで2件受注できた。\n始める前の不安って、案外ただの思い込み。',status:'stock',createdAt:'2026-03-10'},
       {id:2,type:'B',content:'📝提案文47件送って返信2件。\nでもその2件が今につながってる。\n実績ゼロから案件取るまでの全過程をnoteにまとめた。\n同じ状況の人が前に進むきっかけになれば✨',status:'stock',createdAt:'2026-03-10'},
@@ -1236,6 +1306,9 @@ function renderNotes() {
             ${n.rakuten?'<span class="badge badge-rakuten">楽天</span>':''}
           </div>
           ${n.memo?`<div class="note-memo">📌 ${n.memo}</div>`:''}
+          <button class="research-btn${n.researchDone?' done':''}" onclick="toggleResearch(${n.id},event)">
+            ${n.researchDone?`✅ リサーチ済み <span style="font-size:9px;opacity:.8">${n.researchDate||''}</span>`:'🔬 リサーチ未依頼'}
+          </button>
         </div>
         <div class="note-status-dot"></div>
       </div>`).join('');
@@ -1702,6 +1775,8 @@ initSec();
 renderNotes();
 renderXPosts();
 renderToday();
+renderWeeklyReviews();
+renderNetaList();
 loadApiKey();
 // sec-bodyのoverflow修正（ホバーアニメーションで切れないよう）
 ['notes','xposts','today'].forEach(function(name){
@@ -1910,6 +1985,135 @@ function secretaryRoute() {
   input.value = '';
   input.blur();
   if (dest) setTimeout(() => scrollToSec(dest), 120);
+}
+
+// ================================================================
+// 機能1: リサーチ済みフラグ
+// ================================================================
+function toggleResearch(id, event) {
+  event.stopPropagation();
+  const n = S.notes.find(x => x.id === id);
+  if (!n) return;
+  if (n.researchDone) {
+    n.researchDone = false;
+    n.researchDate = '';
+  } else {
+    n.researchDone = true;
+    const now = new Date();
+    n.researchDate = `${now.getMonth()+1}/${now.getDate()}済み`;
+  }
+  save();
+  renderNotes();
+}
+
+// ================================================================
+// 機能2: 週次レビュー
+// ================================================================
+function saveWeeklyReview() {
+  const followers = parseInt(document.getElementById('wr-followers').value) || 0;
+  const imp       = parseInt(document.getElementById('wr-imp').value)       || 0;
+  const likes     = parseInt(document.getElementById('wr-likes').value)     || 0;
+  const memo      = document.getElementById('wr-memo').value.trim();
+  if (!followers && !imp && !likes && !memo) { toast('数値かメモを入力してください'); return; }
+  const now = new Date();
+  const date = `${now.getMonth()+1}/${now.getDate()}`;
+  S.weeklyReviews.unshift({ date, followers, imp, likes, memo });
+  if (S.weeklyReviews.length > 20) S.weeklyReviews = S.weeklyReviews.slice(0, 20);
+  save();
+  ['wr-followers','wr-imp','wr-likes','wr-memo'].forEach(id => document.getElementById(id).value = '');
+  renderWeeklyReviews();
+  toast('週次レビューを記録しました ✓');
+  // todayセクション高さ再計算
+  const body = document.getElementById('body-today');
+  if (secState.today) body.style.maxHeight = body.scrollHeight + 4000 + 'px';
+}
+function renderWeeklyReviews() {
+  const list = (S.weeklyReviews || []).slice(0, 5);
+  const el = document.getElementById('wr-list');
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">まだ記録がありません</div>';
+    return;
+  }
+  el.innerHTML = list.map(r => `
+    <div class="wr-item">
+      <span class="wr-date">${r.date}</span>
+      ${r.followers ? `<span>👥 ${Number(r.followers).toLocaleString()}</span>` : ''}
+      ${r.imp       ? `<span>👁 ${Number(r.imp).toLocaleString()}</span>`       : ''}
+      ${r.likes     ? `<span>❤️ ${Number(r.likes).toLocaleString()}</span>`     : ''}
+      ${r.memo      ? `<span style="color:var(--text2)">💬 ${r.memo}</span>`    : ''}
+    </div>`).join('');
+}
+
+// ================================================================
+// 機能3: ネタストック
+// ================================================================
+let netaOpen = false;
+function toggleNetaSection() {
+  netaOpen = !netaOpen;
+  const body = document.getElementById('neta-body');
+  const chev = document.getElementById('neta-chev');
+  if (netaOpen) {
+    body.style.maxHeight = body.scrollHeight + 2000 + 'px';
+    chev.style.transform = 'rotate(180deg)';
+  } else {
+    body.style.maxHeight = '0';
+    chev.style.transform = '';
+  }
+  // xpostsセクション高さ再計算
+  const xb = document.getElementById('body-xposts');
+  if (secState.xposts) setTimeout(() => { xb.style.maxHeight = xb.scrollHeight + 4000 + 'px'; }, 320);
+}
+function addSingleNeta() {
+  const input = document.getElementById('neta-input');
+  const text = input.value.trim();
+  if (!text) { toast('ネタを入力してください'); return; }
+  S.neta.unshift({ id: Date.now(), text, used: false });
+  input.value = '';
+  save();
+  renderNetaList();
+  toast('ネタを追加しました ✓');
+}
+function addBulkNeta() {
+  const raw = document.getElementById('neta-bulk-input').value;
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l);
+  if (!lines.length) { toast('ネタを入力してください'); return; }
+  const ts = Date.now();
+  lines.forEach((text, i) => S.neta.unshift({ id: ts + i, text, used: false }));
+  document.getElementById('neta-bulk-input').value = '';
+  save();
+  renderNetaList();
+  toast(`${lines.length}件のネタを追加しました ✓`);
+}
+function toggleNetaUsed(id) {
+  const item = S.neta.find(x => x.id === id);
+  if (item) { item.used = !item.used; save(); renderNetaList(); }
+}
+function deleteNeta(id) {
+  S.neta = S.neta.filter(x => x.id !== id);
+  save(); renderNetaList();
+}
+function renderNetaList() {
+  const list = S.neta || [];
+  const countEl = document.getElementById('neta-count-lbl');
+  if (countEl) countEl.textContent = `${list.filter(n=>!n.used).length}件未使用`;
+  const el = document.getElementById('neta-list');
+  if (!el) return;
+  if (!list.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">ネタがありません</div>';
+    return;
+  }
+  el.innerHTML = list.map(item => `
+    <div class="neta-item${item.used?' used':''}">
+      <span class="neta-text${item.used?' used':''}">${item.text}</span>
+      <button class="neta-toggle${item.used?' done':''}" onclick="toggleNetaUsed(${item.id})">${item.used?'✅ 使用済み':'未使用'}</button>
+      <button class="neta-del" onclick="deleteNeta(${item.id})">✕</button>
+    </div>`).join('');
+  // neta-bodyの高さ再計算
+  if (netaOpen) {
+    const body = document.getElementById('neta-body');
+    body.style.maxHeight = body.scrollHeight + 500 + 'px';
+  }
 }
 
 </script>
