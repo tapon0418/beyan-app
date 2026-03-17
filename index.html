@@ -22,6 +22,24 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   min-height:100vh;padding-bottom:calc(20px + env(safe-area-inset-bottom));
   -webkit-tap-highlight-color:transparent}
 
+/* ===== SECRETARY ===== */
+.secretary-bar{background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);
+  border:1.5px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:14px;
+  box-shadow:0 2px 12px rgba(180,120,80,.1)}
+.secretary-label{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;
+  letter-spacing:.8px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.secretary-input-row{display:flex;gap:8px}
+.secretary-input{flex:1;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;
+  padding:10px 14px;color:var(--text);font-size:15px;font-family:inherit;outline:none;
+  transition:border-color .2s}
+.secretary-input:focus{border-color:var(--accent)}
+.secretary-send{background:var(--accent);border:none;border-radius:10px;
+  padding:0 16px;color:#fff;font-size:18px;cursor:pointer;transition:all .15s;flex-shrink:0}
+.secretary-send:active{transform:scale(.93)}
+.secretary-reply{margin-top:10px;padding:9px 12px;background:var(--bg2);border-radius:8px;
+  font-size:13px;color:var(--text2);line-height:1.6;border-left:3px solid var(--accent);
+  display:none}
+
 /* ===== TOPBAR ===== */
 .topbar{position:sticky;top:0;z-index:100;background:rgba(253,246,238,0.97);
   backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
@@ -766,6 +784,18 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 
 
 <div class="main">
+
+  <!-- ===== 秘書 ===== -->
+  <div class="secretary-bar">
+    <div class="secretary-label">🤵 秘書 — なにをしましょうか？</div>
+    <div class="secretary-input-row">
+      <input class="secretary-input" id="sec-input" type="text"
+        placeholder="「記事追加したい」「X投稿確認」「今日の予定」など"
+        onkeydown="if(event.key==='Enter')secretaryRoute()">
+      <button class="secretary-send" onclick="secretaryRoute()">→</button>
+    </div>
+    <div class="secretary-reply" id="sec-reply"></div>
+  </div>
 
   <!-- ===== 統計 ===== -->
   <div class="stats-row" style="margin-top:4px">
@@ -1843,6 +1873,41 @@ function resetClaudeTmpl() {
   setTimeout(() => { msg.style.display = 'none'; msg.textContent = '✅ 保存しました'; }, 2500);
 }
 
+
+// ================================================================
+// SECRETARY ROUTING
+// ================================================================
+function secretaryRoute() {
+  const input = document.getElementById('sec-input');
+  const reply = document.getElementById('sec-reply');
+  const text = input.value.trim();
+  if (!text) return;
+
+  const t = text.toLowerCase();
+  let dest = null, msg = '';
+
+  if (/記事|note|執筆|書く|ネタ|アイデア|ブログ|下書き|公開/.test(t)) {
+    dest = 'sec-notes';
+    msg = '📝 note進捗表に移動しました。';
+  } else if (/^x$|x投稿|ツイート|ツイ|ポスト|投稿|x |xpost/.test(t)) {
+    dest = 'sec-xposts';
+    msg = '𝕏 X投稿ストックに移動しました。';
+  } else if (/今日|予定|タスク|スケジュール|ルーティン|朝|夜|作業/.test(t)) {
+    dest = 'sec-today';
+    msg = '📅 今日の予定に移動しました。';
+  } else if (/リサーチ|調べ|ジミー|gemini|research|調査/.test(t)) {
+    dest = 'sec-notes';
+    msg = '🔍 リサーチは記事カードから「作業」ボタンで開始できます。記事一覧に移動しました。';
+  } else {
+    msg = '🤵 キーワードを認識できませんでした。「記事」「X投稿」「今日」「リサーチ」などを含めてみてください。';
+  }
+
+  reply.textContent = msg;
+  reply.style.display = 'block';
+  input.value = '';
+  input.blur();
+  if (dest) setTimeout(() => scrollToSec(dest), 120);
+}
 
 </script>
 
