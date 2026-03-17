@@ -40,6 +40,16 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .secretary-reply{margin-top:10px;padding:9px 12px;background:var(--bg2);border-radius:8px;
   font-size:13px;color:var(--text2);line-height:1.6;border-left:3px solid var(--accent);
   display:none}
+.sec-btns{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 4px;margin-top:10px;
+  scrollbar-width:none}
+.sec-btns::-webkit-scrollbar{display:none}
+.sec-btn{flex-shrink:0;padding:10px 16px;border-radius:20px;
+  border:1.5px solid var(--border2);background:var(--bg2);
+  color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;
+  font-family:inherit;white-space:nowrap;transition:all .15s}
+.sec-btn:active{transform:scale(.95)}
+.sec-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);
+  box-shadow:0 2px 8px rgba(212,98,42,.3)}
 
 /* ===== RESEARCH TOGGLE ===== */
 .research-btn{font-size:10px;padding:3px 10px;border-radius:20px;
@@ -811,10 +821,17 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 
   <!-- ===== 秘書 ===== -->
   <div class="secretary-bar">
-    <div class="secretary-label">🤵 秘書 — なにをしましょうか？</div>
-    <div class="secretary-input-row">
+    <div class="secretary-label">🤵 秘書 — どこに行きますか？</div>
+    <div class="sec-btns">
+      <button class="sec-btn" id="secbtn-notes"    onclick="secBtnClick('notes')">📝 note書く</button>
+      <button class="sec-btn" id="secbtn-xposts"   onclick="secBtnClick('xposts')">𝕏 X投稿</button>
+      <button class="sec-btn" id="secbtn-today"    onclick="secBtnClick('today')">📅 今日の予定</button>
+      <button class="sec-btn" id="secbtn-settings" onclick="secBtnClick('settings')">📋 指示文</button>
+      <button class="sec-btn" id="secbtn-config"   onclick="secBtnClick('config')">⚙️ 設定</button>
+    </div>
+    <div class="secretary-input-row" style="margin-top:10px">
       <input class="secretary-input" id="sec-input" type="text"
-        placeholder="「記事追加したい」「X投稿確認」「今日の予定」など"
+        placeholder="またはここに入力してEnter"
         enterkeyhint="send"
         onkeydown="if(event.key==='Enter')secretaryRoute()">
       <button class="secretary-send" onclick="secretaryRoute()">→</button>
@@ -1955,6 +1972,17 @@ function resetClaudeTmpl() {
 // ================================================================
 // SECRETARY ROUTING
 // ================================================================
+function secBtnClick(target) {
+  document.querySelectorAll('.sec-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('secbtn-' + target);
+  if (btn) btn.classList.add('active');
+  if      (target === 'notes')    scrollToSec('sec-notes');
+  else if (target === 'xposts')   scrollToSec('sec-xposts');
+  else if (target === 'today')    scrollToSec('sec-today');
+  else if (target === 'settings') { openSettings(); switchStab('gemini'); }
+  else if (target === 'config')   { openSettings(); switchStab('claude'); }
+}
+
 function secretaryRoute() {
   const input = document.getElementById('sec-input');
   const reply = document.getElementById('sec-reply');
@@ -1964,22 +1992,28 @@ function secretaryRoute() {
   const t = text.toLowerCase();
   let dest = null, msg = '';
 
+  let btnId = null;
   if (/記事|note|執筆|書く|ネタ|アイデア|ブログ|下書き|公開/.test(t)) {
-    dest = 'sec-notes';
+    dest = 'sec-notes'; btnId = 'notes';
     msg = '📝 note進捗表に移動しました。';
   } else if (/^x$|x投稿|ツイート|ツイ|ポスト|投稿|x |xpost/.test(t)) {
-    dest = 'sec-xposts';
+    dest = 'sec-xposts'; btnId = 'xposts';
     msg = '𝕏 X投稿ストックに移動しました。';
   } else if (/今日|予定|タスク|スケジュール|ルーティン|朝|夜|作業/.test(t)) {
-    dest = 'sec-today';
+    dest = 'sec-today'; btnId = 'today';
     msg = '📅 今日の予定に移動しました。';
   } else if (/リサーチ|調べ|ジミー|gemini|research|調査/.test(t)) {
-    dest = 'sec-notes';
+    dest = 'sec-notes'; btnId = 'notes';
     msg = '🔍 リサーチは記事カードから「作業」ボタンで開始できます。記事一覧に移動しました。';
   } else {
-    msg = '🤵 キーワードを認識できませんでした。「記事」「X投稿」「今日」「リサーチ」などを含めてみてください。';
+    msg = '🤵 キーワードを認識できませんでした。「記事」「X投稿」「今日」などを含めてみてください。';
   }
 
+  if (btnId) {
+    document.querySelectorAll('.sec-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('secbtn-' + btnId);
+    if (btn) btn.classList.add('active');
+  }
   reply.textContent = msg;
   reply.style.display = 'block';
   input.value = '';
