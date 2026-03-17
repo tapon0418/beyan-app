@@ -30,11 +30,12 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   letter-spacing:.8px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
 .secretary-input-row{display:flex;gap:8px}
 .secretary-input{flex:1;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;
-  padding:10px 14px;color:var(--text);font-size:15px;font-family:inherit;outline:none;
-  transition:border-color .2s}
+  padding:10px 14px;color:var(--text);font-size:16px;font-family:inherit;outline:none;
+  transition:border-color .2s;min-height:48px}
 .secretary-input:focus{border-color:var(--accent)}
 .secretary-send{background:var(--accent);border:none;border-radius:10px;
-  padding:0 16px;color:#fff;font-size:18px;cursor:pointer;transition:all .15s;flex-shrink:0}
+  padding:0 18px;color:#fff;font-size:18px;cursor:pointer;transition:all .15s;flex-shrink:0;
+  min-height:48px;min-width:48px}
 .secretary-send:active{transform:scale(.93)}
 .secretary-reply{margin-top:10px;padding:9px 12px;background:var(--bg2);border-radius:8px;
   font-size:13px;color:var(--text2);line-height:1.6;border-left:3px solid var(--accent);
@@ -238,7 +239,7 @@ select option{background:var(--bg3)}
 @keyframes pbar{from{width:0%}to{width:92%}}
 
 /* ===== 設定ボタン ===== */
-.settings-fab{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);width:auto;min-width:160px;height:52px;border-radius:26px;background:var(--accent);border:none;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 28px;box-shadow:0 4px 20px rgba(212,98,42,.35);z-index:200;transition:all .2s;white-space:nowrap;}
+.settings-fab{position:fixed;bottom:calc(28px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:auto;min-width:160px;height:52px;border-radius:26px;background:var(--accent);border:none;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 28px;box-shadow:0 4px 20px rgba(212,98,42,.35);z-index:200;transition:all .2s;white-space:nowrap;}
 .settings-fab:active{transform:scale(.9)}
 
 /* ===== 設定モーダル ===== */
@@ -791,6 +792,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
     <div class="secretary-input-row">
       <input class="secretary-input" id="sec-input" type="text"
         placeholder="「記事追加したい」「X投稿確認」「今日の予定」など"
+        enterkeyhint="send"
         onkeydown="if(event.key==='Enter')secretaryRoute()">
       <button class="secretary-send" onclick="secretaryRoute()">→</button>
     </div>
@@ -915,7 +917,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div id="gemini-key-section" style="margin-bottom:12px">
         <div style="display:flex;gap:8px;align-items:center">
           <input type="password" id="gemini-api-key" placeholder="Gemini APIキー（AIStudioで取得）"
-            style="flex:1;font-size:14px" oninput="onKeyInput()">
+            style="flex:1;font-size:16px" oninput="onKeyInput()">
           <button class="btn btn-ghost btn-sm" style="width:auto;min-width:56px;flex-shrink:0"
             id="btn-save-key" onclick="saveApiKey()">保存</button>
         </div>
@@ -1381,6 +1383,7 @@ function openWork(id) {
   document.getElementById('mw-xedit').value='';
   document.getElementById('mw-xbases').innerHTML = buildXBases(n);
   setWorkType('A'); updateXcc();
+  loadApiKey();
   switchTabByName('gemini');
   openOverlay('modal-work');
 }
@@ -1620,13 +1623,16 @@ function saveApiKey() {
 }
 
 async function runGemini() {
-  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE)
-    || document.getElementById('gemini-api-key').value.trim();
+  const typed = document.getElementById('gemini-api-key').value.trim();
+  if (typed) localStorage.setItem(GEMINI_KEY_STORAGE, typed); // 入力済みなら即保存
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
   if (!apiKey) {
-    toast('先にAPIキーを保存してください');
+    toast('先にAPIキーを入力して保存してください');
     document.getElementById('gemini-api-key').focus();
     return;
   }
+  document.getElementById('key-status').innerHTML =
+    '<span style="color:var(--green)">✅ APIキー保存済み</span>';
   const n = S.notes.find(x => x.id === curId);
   if (!n) return;
 
@@ -1646,7 +1652,7 @@ async function runGemini() {
 
   try {
     // CORS回避: fetchに直接APIキーをクエリパラメータとして付与
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
