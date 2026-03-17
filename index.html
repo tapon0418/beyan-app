@@ -732,8 +732,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 </div>
 
 <!-- ===== 設定モーダル ===== -->
-<div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;overflow-y:auto;" onclick="if(event.target===this)closeSettings()">
-  <div style="background:#1a1a2e;margin:16px auto;max-width:640px;border-radius:16px;padding:20px;position:relative;">
+<div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:max(16px,env(safe-area-inset-top)) 12px max(16px,env(safe-area-inset-bottom));box-sizing:border-box;" onclick="if(event.target===this)closeSettings()">
+  <div style="background:#1a1a2e;margin:0 auto;width:100%;max-width:640px;border-radius:16px;padding:20px;position:relative;box-sizing:border-box;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <span style="font-weight:700;font-size:1.1rem;">⚙️ 設定</span>
       <button onclick="closeSettings()" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
@@ -754,8 +754,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <code style="background:var(--bg5);padding:2px 5px;border-radius:4px;color:var(--text);">${n.researchNote}</code>
         は記事情報が自動挿入されます
       </p>
-      <textarea id="settings-gemini-tmpl" rows="28"
-        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"
+      <textarea id="settings-gemini-tmpl" rows="12"
+        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;min-height:180px;"
       ></textarea>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button onclick="saveGeminiTmpl()" style="flex:1;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;">💾 保存</button>
@@ -771,8 +771,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <code style="background:var(--bg5);padding:2px 5px;border-radius:4px;color:var(--text);">${n.memo}</code>
         等は記事情報が自動挿入されます
       </p>
-      <textarea id="settings-claude-tmpl" rows="28"
-        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"
+      <textarea id="settings-claude-tmpl" rows="12"
+        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;min-height:180px;"
       ></textarea>
       <div style="display:flex;gap:8px;margin-top:10px;">
         <button onclick="saveClaudeTmpl()" style="flex:1;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;">💾 保存</button>
