@@ -1232,6 +1232,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
             <div id="claude-pbar" style="height:100%;width:0%;background:#7c3aed;border-radius:2px;transition:width .4s"></div>
           </div>
         </div>
+        <!-- API成功時の結果 -->
         <div id="claude-result-section" style="display:none">
           <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ 執筆完了 → ③整形タブへ自動入力済み</div>
           <div class="copy-box" id="mw-claude-output" style="max-height:280px;overflow-y:auto;white-space:pre-wrap"></div>
@@ -1241,6 +1242,25 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
             </button>
             <button class="copy-btn" style="flex:1;background:var(--bg3)" onclick="switchTabByName('format');toast('③整形タブへ移動')">
               ③ 整形へ →
+            </button>
+          </div>
+        </div>
+
+        <!-- フォールバック時：手動ペーストパネル -->
+        <div id="claude-manual-panel" style="display:none;background:#1e1233;border:1px solid #7c3aed55;border-radius:12px;padding:14px;margin-top:4px">
+          <div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:10px">📋 Claudeで執筆後、ここに貼り付けてください</div>
+          <div style="font-size:12px;color:#aaa;margin-bottom:12px;line-height:1.7">
+            ① Claudeが開きます → ② 自動でプロンプトが送信されます<br>
+            ③ Claudeの回答を全コピー → ④ 下の「貼り付けて保存」を押す
+          </div>
+          <textarea id="claude-manual-input" rows="6" placeholder="Claudeの回答をここに貼り付け…"
+            style="width:100%;background:#111;color:#e8e8e8;border:1px solid #555;border-radius:8px;padding:10px;font-size:15px;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button onclick="pasteFromClipboardToManual()" style="flex:1;min-height:48px;background:#3b1f6e;border:1px solid #7c3aed;color:#c4b5fd;border-radius:10px;font-size:14px;cursor:pointer;font-family:inherit;">
+              📋 クリップボードから貼り付け
+            </button>
+            <button onclick="saveManualClaudeResult()" style="flex:1;min-height:48px;background:#7c3aed;border:none;color:#fff;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+              ✅ 保存して③整形へ
             </button>
           </div>
         </div>
@@ -1673,6 +1693,8 @@ function openWork(id) {
   } else {
     document.getElementById('mw-claude-output').textContent = '';
     document.getElementById('claude-result-section').style.display = 'none';
+    document.getElementById('claude-manual-panel').style.display = 'none';
+    document.getElementById('claude-manual-input').value = '';
     document.getElementById('mw-draft').value = '';
   }
   document.getElementById('mw-formatted').textContent='';
@@ -2026,16 +2048,44 @@ async function runClaude() {
 
   } catch(e) {
     clearInterval(pTimer);
-    // ネットワーク系エラー → 自動フォールバック（プロンプトをコピーしてクロで開く）
-    navigator.clipboard.writeText(prompt).catch(() => {});
+    // フォールバック：プロンプトをURLエンコードしてClaude.aiに渡す
     document.getElementById('claude-key-status').innerHTML =
-      '<span style="color:var(--yellow)">⚠️ ネット制限のため手動モードに切り替え。プロンプトをコピーしてクロが開きます</span>';
-    window.open('https://claude.ai', '_blank');
-    toast('プロンプトをコピー → Claudeが開きました。貼り付けてください');
+      '<span style="color:var(--yellow)">⚠️ API接続不可 → 手動モード。下に貼り付けてください</span>';
+    document.getElementById('claude-manual-panel').style.display = 'block';
+    // Claude.aiにプロンプトをURLパラメータで渡して開く（自動送信を試みる）
+    const encoded = encodeURIComponent(prompt);
+    // URLが長すぎる場合は先頭2000文字までで開く（残りはクリップボードから）
+    const shortPrompt = prompt.length > 2000 ? prompt.slice(0, 2000) + '\n\n（続きはクリップボードから貼り付けてください）' : prompt;
+    navigator.clipboard.writeText(prompt).catch(() => {});
+    window.open('https://claude.ai/new?q=' + encodeURIComponent(shortPrompt), '_blank');
+    toast('Claudeが開きました。回答が完成したら下に貼り付けてください');
   } finally {
     document.getElementById('claude-loading').style.display = 'none';
     document.getElementById('btn-run-claude').disabled = false;
   }
+}
+
+function pasteFromClipboardToManual() {
+  navigator.clipboard.readText().then(t => {
+    document.getElementById('claude-manual-input').value = t;
+    toast('貼り付けました');
+  }).catch(() => toast('クリップボードへのアクセスを許可してください'));
+}
+
+function saveManualClaudeResult() {
+  const text = document.getElementById('claude-manual-input').value.trim();
+  if (!text) { toast('Claudeの回答を貼り付けてください'); return; }
+  // 結果表示エリアにも反映
+  document.getElementById('mw-claude-output').textContent = text;
+  document.getElementById('claude-result-section').style.display = 'block';
+  document.getElementById('claude-manual-panel').style.display = 'none';
+  // ③整形タブに自動入力
+  document.getElementById('mw-draft').value = text;
+  // S.notesに保存
+  const n = S.notes.find(x => x.id === curId);
+  if (n) { n.claudeResult = text; save(); }
+  switchTabByName('format');
+  toast('✅ 保存して③整形タブへ移動しました');
 }
 
 // ================================================================
