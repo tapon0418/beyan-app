@@ -932,6 +932,15 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 
     <!-- クロ執筆指示文 -->
     <div id="spanel-claude" style="display:none;">
+      <!-- Claude APIキー -->
+      <div style="background:#1e1233;border:1px solid #7c3aed44;border-radius:10px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:.78rem;color:#c4b5fd;font-weight:700;margin-bottom:8px;">🔑 Claude APIキー</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="settings-claude-api-key" placeholder="sk-ant-..." style="flex:1;font-size:16px;background:#111;color:#e8e8e8;border:1px solid #555;border-radius:8px;padding:10px;">
+          <button onclick="saveClaudeApiKeyFromSettings()" style="background:#7c3aed;border:none;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap;min-height:44px;">💾 保存</button>
+        </div>
+        <div id="settings-claude-api-msg" style="margin-top:6px;font-size:.78rem;color:#4ade80;min-height:16px;"></div>
+      </div>
       <p style="color:#aaa;font-size:.82rem;margin-bottom:8px;">
         ※ <code style="background:var(--bg5);padding:2px 5px;border-radius:4px;color:var(--text);">${n.title}</code>
         <code style="background:var(--bg5);padding:2px 5px;border-radius:4px;color:var(--text);">${n.memo}</code>
@@ -2139,8 +2148,27 @@ function openSettings() {
   document.getElementById('settings-claude-tmpl').value =
     savedClaude !== null ? savedClaude : getDefaultClaudeTmpl();
 
+  // Claude APIキーを読み込む
+  const savedClaudeApi = localStorage.getItem(CLAUDE_API_KEY_STORAGE) || '';
+  document.getElementById('settings-claude-api-key').value = savedClaudeApi;
+  document.getElementById('settings-claude-api-msg').textContent =
+    savedClaudeApi ? '✅ APIキー保存済み' : '';
+
   switchStab('gemini');
   document.getElementById('settings-modal').style.display = 'block';
+}
+
+function saveClaudeApiKeyFromSettings() {
+  const k = document.getElementById('settings-claude-api-key').value.trim();
+  if (!k) { toast('APIキーを入力してください'); return; }
+  localStorage.setItem(CLAUDE_API_KEY_STORAGE, k);
+  document.getElementById('settings-claude-api-msg').textContent = '✅ 保存しました';
+  // ワークモーダルのフィールドも即反映
+  const el = document.getElementById('claude-api-key');
+  if (el) { el.value = k; }
+  const st = document.getElementById('claude-key-status');
+  if (st) st.innerHTML = '<span style="color:var(--green)">✅ APIキー保存済み</span>';
+  toast('Claude APIキーを保存しました');
 }
 
 function closeSettings() {
