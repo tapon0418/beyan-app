@@ -1003,10 +1003,11 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           テーマをまとめて登録（ClaudeのJSON出力をペースト）
         </div>
-        <textarea id="theme-paste-input" rows="3" placeholder='[{"title":"タイトル","type":"エッセイ(A)","cat":"ライティング","status":"idea","memo":"","prevLink":"","nextLink":"","researchNote":""}]'></textarea>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn btn-accent" id="btn-paste-themes" style="min-height:42px;font-size:13px">登録する</button>
-          <button class="btn btn-ghost btn-sm" id="btn-paste-clear" style="width:auto;min-width:60px">クリア</button>
+        <textarea id="theme-paste-input" rows="8" placeholder='[{"title":"タイトル","type":"エッセイ(A)","cat":"ライティング","status":"idea","memo":"","prevLink":"","nextLink":"","researchNote":""}]' style="font-size:15px;line-height:1.6"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-ghost" id="btn-clipboard-paste" onclick="navigator.clipboard.readText().then(t=>{document.getElementById('theme-paste-input').value=t;toast('クリップボードから貼り付けました');}).catch(()=>toast('クリップボードへのアクセスを許可してください'))" style="flex:1;min-height:48px;font-size:14px">📋 貼り付け</button>
+          <button class="btn btn-accent" id="btn-paste-themes" style="flex:1;min-height:48px;font-size:14px;font-weight:700">✅ 登録する</button>
+          <button class="btn btn-ghost btn-sm" id="btn-paste-clear" style="width:auto;min-width:60px;min-height:48px">クリア</button>
         </div>
         <div id="theme-paste-result" style="margin-top:6px;font-size:12px"></div>
       </div>
@@ -1569,8 +1570,16 @@ function openWork(id) {
   sel.innerHTML = Object.entries(SL).map(([v,l])=>`<option value="${v}"${n.status===v?' selected':''}>${l}</option>`).join('');
   // Gemini指示文
   document.getElementById('mw-gemini').textContent = buildGemini(n);
-  // リセット
-  document.getElementById('mw-gemini-result').value='';
+  // 保存済みGeminiリサーチ結果を復元（なければリセット）
+  const savedResult = n.geminiResult || '';
+  document.getElementById('mw-gemini-result').value = savedResult;
+  if (savedResult) {
+    document.getElementById('mw-gemini-output').textContent = savedResult;
+    document.getElementById('gemini-result-section').style.display = 'block';
+  } else {
+    document.getElementById('mw-gemini-output').textContent = '';
+    document.getElementById('gemini-result-section').style.display = 'none';
+  }
   document.getElementById('mw-chatgpt').textContent='';
   document.getElementById('mw-chatgpt-wrap').style.display='none';
   document.getElementById('mw-draft').value='';
@@ -1878,6 +1887,10 @@ async function runGemini() {
     // ②クロ執筆タブに自動入力
     document.getElementById('mw-gemini-result').value = text;
     genChatGPT();
+
+    // ③結果をS.notesに保存（モーダルを閉じても消えないように）
+    const n2 = S.notes.find(x => x.id === curId);
+    if (n2) { n2.geminiResult = text; save(); }
 
     toast('✅ ジミーのリサーチ完了！');
   } catch (e) {
