@@ -799,6 +799,30 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   .xpost-footer { flex-wrap:wrap; gap:6px; }
 }
 
+/* ===== RESEARCH WORKFLOW ===== */
+.rw-steps{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.rw-step{display:flex;align-items:center;gap:5px;padding:8px 14px;border-radius:20px;
+  border:1.5px solid var(--border2);background:var(--bg2);cursor:pointer;
+  font-size:13px;font-weight:600;color:var(--text3);transition:all .15s;flex-shrink:0}
+.rw-step.active{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+.rw-step.done{border-color:var(--green);background:rgba(122,154,106,.1);color:var(--green)}
+.rw-step:active{transform:scale(.95)}
+.rw-step-num{display:flex;align-items:center;justify-content:center;width:20px;height:20px;
+  border-radius:50%;background:currentColor;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
+.rw-step.active .rw-step-num,.rw-step.done .rw-step-num{background:currentColor}
+.rw-step-lbl{font-size:12px}
+.rw-step-arrow{color:var(--text3);font-size:14px;flex-shrink:0}
+.rw-panel{background:var(--bg2);border:1.5px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:2px}
+.rw-panel-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.rw-badge{font-size:10px;font-weight:700;color:#fff;border-radius:6px;padding:2px 8px;flex-shrink:0;letter-spacing:.04em}
+.rw-panel-title{font-size:13px;font-weight:700;color:var(--text)}
+.rw-hint{font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6}
+@media(max-width:480px){
+  .rw-steps{gap:4px}
+  .rw-step{padding:7px 10px;font-size:12px}
+  .rw-step-arrow{font-size:12px}
+}
+
 </style>
 </head>
 <body>
@@ -832,6 +856,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
     <button class="tpill" id="tp-xposts" onclick="scrollToSec('sec-xposts')"><span class="tpill-icon">𝕏</span><span class="tpill-label"> X投稿</span></button>
     <button class="tpill" id="tp-today"  onclick="scrollToSec('sec-today')"><span class="tpill-icon">📅</span><span class="tpill-label"> 今日</span></button>
     <button class="tpill" id="tp-tmpl"   onclick="openSettings();switchStab('gemini')"><span class="tpill-icon">📋</span><span class="tpill-label"> 指示文</span></button>
+    <button class="tpill" id="tp-research" onclick="scrollToSec('sec-research')"><span class="tpill-icon">🔍</span><span class="tpill-label"> リサーチ</span></button>
   </div>
   <button class="topbar-gear" onclick="openSettings()" aria-label="設定">⚙️</button>
 </header>
@@ -1106,6 +1131,126 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         投稿を追加
       </button>
+    </div>
+  </div>
+
+  <!-- ===== AI副業リサーチワークフロー ===== -->
+  <div id="sec-research">
+    <div class="sec-head" onclick="toggleSec('research')">
+      <div class="sec-head-title">🔍 AI副業リサーチワークフロー</div>
+      <div class="sec-head-count" style="font-size:11px;color:var(--text3)">パペ → ジミィ → クロ</div>
+      <svg class="sec-chevron open" id="chev-research" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-research">
+
+      <!-- ステップインジケーター -->
+      <div class="rw-steps">
+        <div class="rw-step active" id="rws-1" onclick="showRwStep(1)"><span class="rw-step-num">1</span><span class="rw-step-lbl">パペ</span></div>
+        <div class="rw-step-arrow">→</div>
+        <div class="rw-step" id="rws-2" onclick="showRwStep(2)"><span class="rw-step-num">2</span><span class="rw-step-lbl">ジミィ</span></div>
+        <div class="rw-step-arrow">→</div>
+        <div class="rw-step" id="rws-3" onclick="showRwStep(3)"><span class="rw-step-num">3</span><span class="rw-step-lbl">クロ</span></div>
+      </div>
+
+      <!-- STEP 1: パペ -->
+      <div class="rw-panel" id="rw-panel-1">
+        <div class="rw-panel-head">
+          <div class="rw-badge" style="background:#0ea5e9">STEP 1</div>
+          <div class="rw-panel-title">🔵 パペ（Perplexity）用プロンプト生成</div>
+        </div>
+        <div class="rw-hint">テーマと期間を設定して、Perplexityに渡すリサーチプロンプトを生成します。</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:160px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">テーマ</div>
+            <input type="text" id="rw-theme" value="AI副業・AI×副収入" style="width:100%;font-size:16px">
+          </div>
+          <div style="min-width:140px">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">期間</div>
+            <select id="rw-period" style="width:100%;font-size:16px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit">
+              <option value="直近1週間">直近1週間</option>
+              <option value="直近1〜2週間" selected>直近1〜2週間</option>
+              <option value="直近1ヶ月">直近1ヶ月</option>
+              <option value="直近3ヶ月">直近3ヶ月</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn btn-accent" style="width:100%;min-height:48px;font-size:14px;margin-bottom:12px" onclick="genRwStep1()">
+          ✨ STEP1プロンプトを生成
+        </button>
+        <div id="rw-out-1" style="display:none">
+          <div class="copy-box" id="rw-result-1" style="white-space:pre-wrap;max-height:320px;overflow-y:auto;font-size:13px;line-height:1.75"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="copy-btn" style="flex:1" onclick="rwCopy(1)">📋 コピー</button>
+            <button class="copy-btn" style="flex:1;background:#0ea5e920;color:#0ea5e9;border-color:#0ea5e9" onclick="window.open('https://www.perplexity.ai','_blank');toast('Perplexityが開きます')">🔵 パペで開く</button>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px;min-height:44px" onclick="showRwStep(2)">
+            結果をコピーしたら → STEP 2へ進む ▶
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: ジミィ -->
+      <div class="rw-panel" id="rw-panel-2" style="display:none">
+        <div class="rw-panel-head">
+          <div class="rw-badge" style="background:#f59e0b">STEP 2</div>
+          <div class="rw-panel-title">🟡 ジミィ（Gemini）用プロンプト生成</div>
+        </div>
+        <div class="rw-hint">パペのリサーチ結果を貼り付けて、Geminiに渡す分析プロンプトを生成します。</div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">パペの結果を貼り付け</div>
+          <textarea id="rw-pape-result" rows="5" placeholder="Perplexityの回答をここに貼り付けてください…" style="width:100%;font-size:15px;line-height:1.6;resize:vertical"></textarea>
+          <button onclick="rwPasteFromClipboard('rw-pape-result')" style="margin-top:6px;background:none;border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-size:12px;color:var(--text2);cursor:pointer;font-family:inherit">📋 クリップボードから貼り付け</button>
+        </div>
+        <button class="btn btn-accent" style="width:100%;min-height:48px;font-size:14px;margin-bottom:12px;background:#f59e0b;border-color:#f59e0b" onclick="genRwStep2()">
+          ✨ STEP2プロンプトを生成
+        </button>
+        <div id="rw-out-2" style="display:none">
+          <div class="copy-box" id="rw-result-2" style="white-space:pre-wrap;max-height:320px;overflow-y:auto;font-size:13px;line-height:1.75"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="copy-btn" style="flex:1" onclick="rwCopy(2)">📋 コピー</button>
+            <button class="copy-btn" style="flex:1;background:#f59e0b20;color:#d97706;border-color:#f59e0b" onclick="openInGemini(document.getElementById('rw-result-2').textContent)">🟡 ジミィで開く</button>
+          </div>
+          <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px;min-height:44px" onclick="showRwStep(3)">
+            結果をコピーしたら → STEP 3へ進む ▶
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 3: クロ -->
+      <div class="rw-panel" id="rw-panel-3" style="display:none">
+        <div class="rw-panel-head">
+          <div class="rw-badge" style="background:#7c3aed">STEP 3</div>
+          <div class="rw-panel-title">🟣 クロ（Claude）用プロンプト生成</div>
+        </div>
+        <div class="rw-hint">ジミィの分析結果を貼り付けて、Claudeに渡す構成作成プロンプトを生成します。</div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">ジミィの結果を貼り付け</div>
+          <textarea id="rw-jimmy-result" rows="5" placeholder="Geminiの回答をここに貼り付けてください…" style="width:100%;font-size:15px;line-height:1.6;resize:vertical"></textarea>
+          <button onclick="rwPasteFromClipboard('rw-jimmy-result')" style="margin-top:6px;background:none;border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-size:12px;color:var(--text2);cursor:pointer;font-family:inherit">📋 クリップボードから貼り付け</button>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">記事の種類</div>
+          <select id="rw-article-type" style="width:100%;font-size:16px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit">
+            <option value="無料note記事">無料note記事</option>
+            <option value="有料note記事">有料note記事</option>
+            <option value="X投稿（ツイートスレッド）">X投稿（ツイートスレッド）</option>
+          </select>
+        </div>
+        <button class="btn btn-accent" style="width:100%;min-height:48px;font-size:14px;margin-bottom:12px;background:#7c3aed;border-color:#7c3aed" onclick="genRwStep3()">
+          ✨ STEP3プロンプトを生成
+        </button>
+        <div id="rw-out-3" style="display:none">
+          <div class="copy-box" id="rw-result-3" style="white-space:pre-wrap;max-height:320px;overflow-y:auto;font-size:13px;line-height:1.75"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="copy-btn" style="flex:1" onclick="rwCopy(3)">📋 コピー</button>
+            <button class="copy-btn" style="flex:1;background:#7c3aed20;color:#7c3aed;border-color:#7c3aed" onclick="openInClaude(document.getElementById('rw-result-3').textContent)">🟣 クロで開く</button>
+          </div>
+          <div style="margin-top:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--green);font-weight:600;text-align:center">
+            ✅ 3ステップ完了！Claudeで構成案が出たらnote記事カードに追加しましょう。
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1458,7 +1603,7 @@ const cp = id => navigator.clipboard.writeText(document.getElementById(id).textC
 // ================================================================
 // SECTION COLLAPSE
 // ================================================================
-const secState = {today:true, notes:true, xposts:true};
+const secState = {today:true, notes:true, xposts:true, research:true};
 function toggleSec(name) {
   secState[name] = !secState[name];
   const body = document.getElementById('body-'+name);
@@ -2065,6 +2210,105 @@ async function runClaude() {
   }
 }
 
+// ================================================================
+// AI副業リサーチワークフロー
+// ================================================================
+function showRwStep(n) {
+  [1,2,3].forEach(i => {
+    document.getElementById('rw-panel-'+i).style.display = i===n ? 'block' : 'none';
+    const s = document.getElementById('rws-'+i);
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    else if (i === n) s.classList.add('active');
+  });
+}
+
+function rwPasteFromClipboard(id) {
+  navigator.clipboard.readText().then(t => {
+    document.getElementById(id).value = t;
+    toast('貼り付けました');
+  }).catch(() => toast('クリップボードへのアクセスを許可してください'));
+}
+
+function rwCopy(step) {
+  const el = document.getElementById('rw-result-'+step);
+  const text = el.textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    toast('📋 コピーしました');
+    // ステップ完了マーク
+    document.getElementById('rws-'+step).classList.remove('active');
+    document.getElementById('rws-'+step).classList.add('done');
+    if (step < 3) document.getElementById('rws-'+(step+1)).classList.remove('done');
+  }).catch(() => toast('コピーに失敗しました'));
+}
+
+function genRwStep1() {
+  const theme = document.getElementById('rw-theme').value.trim() || 'AI副業・AI×副収入';
+  const period = document.getElementById('rw-period').value;
+  const prompt = `以下の条件でリサーチしてください。
+
+【テーマ】${theme}の最新動向
+【期間】${period}
+【対象】X（旧Twitter）・note・Webメディア
+
+【調べること】
+1. バズっている投稿・記事のタイトルと要点
+2. 繰り返し出てくるキーワードやフレーズ
+3. 批判・失敗・本音系の投稿の傾向
+4. 先週と比べて新しく出てきたトピック
+
+【出力形式】
+- 媒体別に分けて箇条書き
+- 実在するURLがあれば添付
+- 不明な場合は「傾向のみ」と明記`;
+  document.getElementById('rw-result-1').textContent = prompt;
+  document.getElementById('rw-out-1').style.display = 'block';
+  document.getElementById('rws-1').classList.add('active');
+}
+
+function genRwStep2() {
+  const papeResult = document.getElementById('rw-pape-result').value.trim();
+  if (!papeResult) { toast('パペの結果を貼り付けてください'); return; }
+  const prompt = `以下はパペ（Perplexity）のリサーチ結果です。
+
+${papeResult}
+
+上記を分析して、以下を出力してください。
+
+1. noteネタとして使えるインサイトを3〜5個
+2. 各インサイトの「正直・本音ポジション」での切り口提案
+3. 実在確認できない情報は「傾向のみ」と明記
+4. 架空のタイトルや事例は絶対に生成しないこと`;
+  document.getElementById('rw-result-2').textContent = prompt;
+  document.getElementById('rw-out-2').style.display = 'block';
+  document.getElementById('rws-1').classList.remove('active');
+  document.getElementById('rws-1').classList.add('done');
+  document.getElementById('rws-2').classList.add('active');
+}
+
+function genRwStep3() {
+  const jimmyResult = document.getElementById('rw-jimmy-result').value.trim();
+  if (!jimmyResult) { toast('ジミィの結果を貼り付けてください'); return; }
+  const type = document.getElementById('rw-article-type').value;
+  const prompt = `以下はリサーチ結果と分析です。
+
+${jimmyResult}
+
+このインサイトをもとに、${type}の構成案を作成してください。
+
+条件：
+- 「正直・本音」ポジションで書く
+- ハイプ（誇大な表現）は使わない
+- 読者が「自分のことだ」と感じる導入にする
+- 見出し構成＋各セクションの要点を出力`;
+  document.getElementById('rw-result-3').textContent = prompt;
+  document.getElementById('rw-out-3').style.display = 'block';
+  document.getElementById('rws-2').classList.remove('active');
+  document.getElementById('rws-2').classList.add('done');
+  document.getElementById('rws-3').classList.add('active');
+}
+// ================================================================
+
 function pasteFromClipboardToManual() {
   navigator.clipboard.readText().then(t => {
     document.getElementById('claude-manual-input').value = t;
@@ -2487,6 +2731,7 @@ function secBtnClick(target) {
   else if (target === 'today')    scrollToSec('sec-today');
   else if (target === 'settings') { openSettings(); switchStab('gemini'); }
   else if (target === 'config')   { openSettings(); switchStab('claude'); }
+  else if (target === 'research') { scrollToSec('sec-research'); }
   else if (target === 'share')    { openShareModal(); }
 }
 
