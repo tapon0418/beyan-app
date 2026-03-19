@@ -1921,6 +1921,46 @@ function saveClaudeApiKey() {
   toast('Claude APIキーを保存しました');
 }
 
+// Anthropic API呼び出し（直接→プロキシ順に試行）
+async function fetchClaudeApi(apiKey, prompt) {
+  const body = JSON.stringify({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8192,
+    messages: [{ role: 'user', content: prompt }]
+  });
+  const headers = {
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+    'content-type': 'application/json'
+  };
+
+  // 試すエンドポイント（直接 → プロキシ1 → プロキシ2）
+  const endpoints = [
+    'https://api.anthropic.com/v1/messages',
+    'https://corsproxy.io/?https://api.anthropic.com/v1/messages',
+    'https://api.allorigins.win/post?url=' + encodeURIComponent('https://api.anthropic.com/v1/messages')
+  ];
+
+  let lastErr = null;
+  for (const url of endpoints) {
+    try {
+      const res = await fetch(url, { method: 'POST', headers, body });
+      // alloriginsはレスポンスをラップするので展開
+      if (url.includes('allorigins')) {
+        if (!res.ok) continue;
+        const wrapper = await res.json();
+        const inner = JSON.parse(wrapper.contents || '{}');
+        if (inner?.content?.[0]?.text) return { ok: true, data: inner };
+        continue;
+      }
+      return { ok: res.ok, res };
+    } catch(e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('接続できませんでした');
+}
+
 async function runClaude() {
   const typed = document.getElementById('claude-api-key').value.trim();
   if (typed) localStorage.setItem(CLAUDE_API_KEY_STORAGE, typed);
@@ -1932,14 +1972,9 @@ async function runClaude() {
   }
 
   // 指示文が未生成なら生成する
-  if (document.getElementById('mw-chatgpt-wrap').style.display === 'none') {
-    genChatGPT();
-  }
+  if (document.getElementById('mw-chatgpt-wrap').style.display === 'none') genChatGPT();
   const prompt = document.getElementById('mw-chatgpt').textContent.trim();
-  if (!prompt) {
-    toast('先にGeminiのリサーチ結果を入力してください');
-    return;
-  }
+  if (!prompt) { toast('先にGeminiのリサーチ結果を入力してください'); return; }
 
   document.getElementById('btn-run-claude').disabled = true;
   document.getElementById('claude-loading').style.display = 'block';
@@ -1953,56 +1988,50 @@ async function runClaude() {
   }, 400);
 
   try {
-    // GitHub Pages など静的サイトから Anthropic API を呼ぶには CORS プロキシが必要
-    const res = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 8192,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
+    const result = await fetchClaudeApi(apiKey, prompt);
+    clearInterval(pTimer); pbar.style.width = '100%';
 
-    clearInterval(pTimer);
-    pbar.style.width = '100%';
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      const msg = err?.error?.message || `HTTP ${res.status}`;
-      throw new Error(msg);
+    let text = '';
+    if (result.data) {
+      // alloriginsラップ済み
+      text = result.data?.content?.[0]?.text || '';
+    } else {
+      const { res } = result;
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        // 認証エラーはAPIキー問題
+        if (res.status === 401 || res.status === 403) {
+          document.getElementById('claude-key-status').innerHTML =
+            '<span style="color:var(--red)">⚠️ APIキーが無効です。設定から確認してください</span>';
+          toast('APIキーを確認してください');
+          return;
+        }
+        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      text = data?.content?.[0]?.text || '';
     }
 
-    const data = await res.json();
-    const text = data?.content?.[0]?.text || '';
     if (!text) throw new Error('レスポンスが空でした');
 
     // 結果表示
     document.getElementById('mw-claude-output').textContent = text;
     document.getElementById('claude-result-section').style.display = 'block';
     document.getElementById('claude-key-status').innerHTML =
-      '<span style="color:var(--green)">✅ APIキー保存済み</span>';
-
-    // ③整形タブに自動入力
+      '<span style="color:var(--green)">✅ 執筆完了</span>';
     document.getElementById('mw-draft').value = text;
-
-    // S.notesに保存
     const n = S.notes.find(x => x.id === curId);
     if (n) { n.claudeResult = text; save(); }
-
     toast('✅ クロの執筆完了！');
+
   } catch(e) {
     clearInterval(pTimer);
-    const msg = (e.message.includes('auth') || e.message.includes('key') || e.message.includes('401'))
-      ? 'APIキーが無効です。確認して再保存してください。'
-      : `エラー: ${e.message}`;
+    // ネットワーク系エラー → 自動フォールバック（プロンプトをコピーしてクロで開く）
+    navigator.clipboard.writeText(prompt).catch(() => {});
     document.getElementById('claude-key-status').innerHTML =
-      `<span style="color:var(--red)">⚠️ ${msg}</span>`;
-    toast('エラーが発生しました');
+      '<span style="color:var(--yellow)">⚠️ ネット制限のため手動モードに切り替え。プロンプトをコピーしてクロが開きます</span>';
+    window.open('https://claude.ai', '_blank');
+    toast('プロンプトをコピー → Claudeが開きました。貼り付けてください');
   } finally {
     document.getElementById('claude-loading').style.display = 'none';
     document.getElementById('btn-run-claude').disabled = false;
