@@ -1713,6 +1713,8 @@ function genChatGPT() {
   const wrap = document.getElementById('mw-chatgpt-wrap');
   if(!result){wrap.style.display='none';return;}
   const n = S.notes.find(x=>x.id===curId); if(!n) return;
+  // 手動ペースト分も含めてgeminiResultとして保存
+  if (n.geminiResult !== result) { n.geminiResult = result; save(); }
   const isYuryou = n.type==='有料note';
   // カスタムテンプレがあればそちらを使う（変数は動的に埋め込む）
   const claudeSaved = localStorage.getItem(CLAUDE_TMPL_KEY);
