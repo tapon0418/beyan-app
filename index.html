@@ -1200,6 +1200,42 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
           </button>
         </div>
       </div>
+
+      <!-- Claude API 実行セクション -->
+      <div style="border-top:1px solid var(--border2);margin-top:14px;padding-top:14px">
+        <div style="font-size:11px;font-weight:700;color:#c4b5fd;margin-bottom:10px;letter-spacing:.04em">✍️ Claude API で直接執筆させる</div>
+        <div id="claude-key-section" style="margin-bottom:10px">
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="password" id="claude-api-key" placeholder="Claude APIキー（console.anthropic.com で取得）"
+              style="flex:1;font-size:16px" oninput="onClaudeKeyInput()">
+            <button class="btn btn-ghost btn-sm" style="width:auto;min-width:56px;flex-shrink:0"
+              onclick="saveClaudeApiKey()">保存</button>
+          </div>
+          <div id="claude-key-status" style="font-size:11px;margin-top:5px;color:var(--text3)"></div>
+        </div>
+        <button class="btn btn-accent" id="btn-run-claude" onclick="runClaude()"
+          style="width:100%;margin-bottom:12px;min-height:48px;font-size:15px;font-weight:700;background:#7c3aed;border-color:#7c3aed">
+          ✍️ クロに執筆させる
+        </button>
+        <div id="claude-loading" style="display:none;text-align:center;padding:12px 0">
+          <div style="font-size:13px;color:#c4b5fd">✍️ クロが執筆中...</div>
+          <div style="width:100%;height:3px;background:var(--bg5);border-radius:2px;margin-top:10px;overflow:hidden">
+            <div id="claude-pbar" style="height:100%;width:0%;background:#7c3aed;border-radius:2px;transition:width .4s"></div>
+          </div>
+        </div>
+        <div id="claude-result-section" style="display:none">
+          <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ 執筆完了 → ③整形タブへ自動入力済み</div>
+          <div class="copy-box" id="mw-claude-output" style="max-height:280px;overflow-y:auto;white-space:pre-wrap"></div>
+          <div style="display:flex;gap:6px;margin-top:8px">
+            <button class="copy-btn" style="flex:1" onclick="cp('mw-claude-output')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー
+            </button>
+            <button class="copy-btn" style="flex:1;background:var(--bg3)" onclick="switchTabByName('format');toast('③整形タブへ移動')">
+              ③ 整形へ →
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ③ 整形 -->
@@ -1619,13 +1655,24 @@ function openWork(id) {
   }
   document.getElementById('mw-chatgpt').textContent='';
   document.getElementById('mw-chatgpt-wrap').style.display='none';
-  document.getElementById('mw-draft').value='';
+  // 保存済みClaudeResult復元
+  const savedClaudeResult = n.claudeResult || '';
+  if (savedClaudeResult) {
+    document.getElementById('mw-claude-output').textContent = savedClaudeResult;
+    document.getElementById('claude-result-section').style.display = 'block';
+    document.getElementById('mw-draft').value = savedClaudeResult;
+  } else {
+    document.getElementById('mw-claude-output').textContent = '';
+    document.getElementById('claude-result-section').style.display = 'none';
+    document.getElementById('mw-draft').value = '';
+  }
   document.getElementById('mw-formatted').textContent='';
   document.getElementById('mw-formatted-wrap').style.display='none';
   document.getElementById('mw-xedit').value='';
   document.getElementById('mw-xbases').innerHTML = buildXBases(n);
   setWorkType('A'); updateXcc();
   loadApiKey();
+  loadClaudeApiKey();
   switchTabByName('gemini');
   openOverlay('modal-work');
 }
@@ -1835,6 +1882,122 @@ document.getElementById('btn-paste-clear').addEventListener('click',()=>{
 
 // ================================================================
 // GEMINI API 連携
+// ================================================================
+// ================================================================
+// CLAUDE API 連携
+// ================================================================
+const CLAUDE_API_KEY_STORAGE = 'beyan_claude_api_key';
+
+function loadClaudeApiKey() {
+  const k = localStorage.getItem(CLAUDE_API_KEY_STORAGE) || '';
+  const el = document.getElementById('claude-api-key');
+  if (!el) return;
+  if (k) {
+    el.value = k;
+    document.getElementById('claude-key-status').innerHTML =
+      '<span style="color:var(--green)">✅ APIキー保存済み</span>';
+  }
+}
+function onClaudeKeyInput() {
+  document.getElementById('claude-key-status').textContent = '';
+}
+function saveClaudeApiKey() {
+  const k = document.getElementById('claude-api-key').value.trim();
+  if (!k) { toast('APIキーを入力してください'); return; }
+  localStorage.setItem(CLAUDE_API_KEY_STORAGE, k);
+  document.getElementById('claude-key-status').innerHTML =
+    '<span style="color:var(--green)">✅ 保存しました</span>';
+  toast('Claude APIキーを保存しました');
+}
+
+async function runClaude() {
+  const typed = document.getElementById('claude-api-key').value.trim();
+  if (typed) localStorage.setItem(CLAUDE_API_KEY_STORAGE, typed);
+  const apiKey = localStorage.getItem(CLAUDE_API_KEY_STORAGE) || '';
+  if (!apiKey) {
+    toast('先にClaude APIキーを入力して保存してください');
+    document.getElementById('claude-api-key').focus();
+    return;
+  }
+
+  // 指示文が未生成なら生成する
+  if (document.getElementById('mw-chatgpt-wrap').style.display === 'none') {
+    genChatGPT();
+  }
+  const prompt = document.getElementById('mw-chatgpt').textContent.trim();
+  if (!prompt) {
+    toast('先にGeminiのリサーチ結果を入力してください');
+    return;
+  }
+
+  document.getElementById('btn-run-claude').disabled = true;
+  document.getElementById('claude-loading').style.display = 'block';
+  document.getElementById('claude-result-section').style.display = 'none';
+  const pbar = document.getElementById('claude-pbar');
+  pbar.style.width = '0%';
+  let pct = 0;
+  const pTimer = setInterval(() => {
+    pct = Math.min(pct + (pct < 70 ? 2 : 0.3), 90);
+    pbar.style.width = pct + '%';
+  }, 400);
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-ipc': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 8192,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    clearInterval(pTimer);
+    pbar.style.width = '100%';
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || `HTTP ${res.status}`;
+      throw new Error(msg);
+    }
+
+    const data = await res.json();
+    const text = data?.content?.[0]?.text || '';
+    if (!text) throw new Error('レスポンスが空でした');
+
+    // 結果表示
+    document.getElementById('mw-claude-output').textContent = text;
+    document.getElementById('claude-result-section').style.display = 'block';
+    document.getElementById('claude-key-status').innerHTML =
+      '<span style="color:var(--green)">✅ APIキー保存済み</span>';
+
+    // ③整形タブに自動入力
+    document.getElementById('mw-draft').value = text;
+
+    // S.notesに保存
+    const n = S.notes.find(x => x.id === curId);
+    if (n) { n.claudeResult = text; save(); }
+
+    toast('✅ クロの執筆完了！');
+  } catch(e) {
+    clearInterval(pTimer);
+    const msg = (e.message.includes('auth') || e.message.includes('key') || e.message.includes('401'))
+      ? 'APIキーが無効です。確認して再保存してください。'
+      : `エラー: ${e.message}`;
+    document.getElementById('claude-key-status').innerHTML =
+      `<span style="color:var(--red)">⚠️ ${msg}</span>`;
+    toast('エラーが発生しました');
+  } finally {
+    document.getElementById('claude-loading').style.display = 'none';
+    document.getElementById('btn-run-claude').disabled = false;
+  }
+}
+
 // ================================================================
 const GEMINI_KEY_STORAGE = 'beyan_gemini_key';
 const GEMINI_TMPL_KEY = 'beyan_gemini_tmpl';
