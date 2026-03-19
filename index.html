@@ -1953,7 +1953,8 @@ async function runClaude() {
   }, 400);
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    // GitHub Pages など静的サイトから Anthropic API を呼ぶには CORS プロキシが必要
+    const res = await fetch('https://corsproxy.io/?https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'x-api-key': apiKey,
