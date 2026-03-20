@@ -289,6 +289,7 @@ select option{background:var(--bg3)}
   font-size:13px;color:var(--text);white-space:nowrap;opacity:0;transition:all .25s;z-index:999}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 @keyframes pbar{from{width:0%}to{width:92%}}
+@keyframes pbarAnim{from{opacity:.6}to{opacity:1}}
 
 /* ===== 設定ボタン（topbar内） ===== */
 .topbar-gear{background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;
@@ -1340,21 +1341,40 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 <div class="overlay" id="modal-imggen" onclick="if(event.target===this)closeOverlay('modal-imggen')">
   <div class="modal" style="max-width:520px">
     <div class="modal-header">
-      <div class="modal-title">🖼️ 見出し画像プロンプト生成</div>
+      <div class="modal-title">🖼️ 見出し画像生成</div>
       <button class="modal-close" onclick="closeOverlay('modal-imggen')">✕</button>
     </div>
     <div style="padding:16px">
-      <div id="imggen-loading" style="text-align:center;padding:20px;display:none">
-        <div style="font-size:13px;color:var(--accent)">✨ Geminiが生成中...</div>
+      <!-- ローディング -->
+      <div id="imggen-loading" style="text-align:center;padding:24px 0;display:none">
+        <div style="font-size:22px;margin-bottom:8px">✨</div>
+        <div id="imggen-status" style="font-size:13px;color:var(--accent);font-weight:600">ジミーが生成中...</div>
+        <div style="width:100%;height:3px;background:var(--bg5);border-radius:2px;margin-top:12px;overflow:hidden">
+          <div id="imggen-pbar" style="height:100%;width:30%;background:var(--accent);border-radius:2px;animation:pbarAnim 1.2s ease-in-out infinite alternate;transition:width .4s"></div>
+        </div>
       </div>
+      <!-- 結果：画像 -->
+      <div id="imggen-img-wrap" style="display:none;margin-bottom:12px">
+        <img id="imggen-img" src="" alt="生成された見出し画像"
+          style="width:100%;border-radius:10px;display:block;border:1px solid var(--border)">
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button onclick="imggenDownload()" style="flex:1;min-height:44px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+            ⬇️ 保存
+          </button>
+          <button onclick="imggenRegenerate()" style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit">
+            🔄 再生成
+          </button>
+        </div>
+      </div>
+      <!-- 結果：プロンプトテキスト -->
       <div id="imggen-result-wrap" style="display:none">
-        <div style="font-size:12px;color:var(--text3);margin-bottom:6px">生成されたプロンプト：</div>
-        <textarea id="imggen-prompt-text" rows="5" style="width:100%;font-size:15px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit"></textarea>
-        <button onclick="navigator.clipboard.writeText(document.getElementById('imggen-prompt-text').value).then(()=>toast('コピーしました'))" style="width:100%;min-height:44px;margin-top:8px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;color:var(--text)">📋 コピー</button>
-        <div style="margin-top:10px;font-size:12px;color:var(--text3);line-height:1.6">このプロンプトをCanvaやAdobeで使って画像を作成してください。</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">使用したプロンプト：</div>
+        <textarea id="imggen-prompt-text" rows="3" style="width:100%;font-size:13px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit"></textarea>
+        <button onclick="navigator.clipboard.writeText(document.getElementById('imggen-prompt-text').value).then(()=>toast('コピーしました'))" style="width:100%;min-height:44px;margin-top:6px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 プロンプトをコピー</button>
       </div>
-      <div id="imggen-error" style="display:none;color:var(--red);font-size:13px;padding:10px"></div>
-      <button onclick="window.open('https://note.com/beyan51612/n/new','_blank')" style="width:100%;min-height:48px;margin-top:16px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">📝 noteで書く</button>
+      <!-- エラー -->
+      <div id="imggen-error" style="display:none;color:var(--red);font-size:13px;padding:10px;background:rgba(204,68,68,.08);border-radius:8px;line-height:1.6"></div>
+      <button onclick="window.open('https://note.com/beyan51612/n/new','_blank')" style="width:100%;min-height:48px;margin-top:14px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">📝 noteで書く</button>
     </div>
   </div>
 </div>
@@ -3337,47 +3357,116 @@ function renderNetaList() {
 // 見出し画像生成
 // ================================================================
 let imggenNoteId = null;
+let _imggenCurrentNote = null;
+
 function openImgGenModal(id) {
   imggenNoteId = id;
   const n = S.notes.find(x => x.id === id);
   if (!n) return;
-  document.getElementById('imggen-loading').style.display = 'none';
-  document.getElementById('imggen-result-wrap').style.display = 'none';
-  document.getElementById('imggen-error').style.display = 'none';
+  _imggenCurrentNote = n;
+  // リセット
+  ['imggen-loading','imggen-result-wrap','imggen-error','imggen-img-wrap']
+    .forEach(i => document.getElementById(i).style.display = 'none');
   openOverlay('modal-imggen');
-  // 自動でGemini呼び出し
-  genImgPrompt(n);
+  genImgFull(n);
 }
 
-async function genImgPrompt(n) {
+function imggenRegenerate() {
+  if (!_imggenCurrentNote) return;
+  ['imggen-loading','imggen-result-wrap','imggen-error','imggen-img-wrap']
+    .forEach(i => document.getElementById(i).style.display = 'none');
+  genImgFull(_imggenCurrentNote);
+}
+
+async function genImgFull(n) {
   const apiKey = localStorage.getItem('beyan_gemini_key') || '';
   if (!apiKey) {
-    document.getElementById('imggen-error').style.display = 'block';
-    document.getElementById('imggen-error').textContent = '⚠️ Gemini APIキーが設定されていません。設定から保存してください。';
+    showImggenError('⚠️ Gemini APIキーが設定されていません。設定から保存してください。');
     return;
   }
-  document.getElementById('imggen-loading').style.display = 'block';
+  const loadEl = document.getElementById('imggen-loading');
+  const statusEl = document.getElementById('imggen-status');
+  const pbar = document.getElementById('imggen-pbar');
+  loadEl.style.display = 'block';
+
+  // STEP 1: テキストプロンプト生成
+  statusEl.textContent = '① ジミーが画像プロンプトを生成中...';
+  pbar.style.width = '20%';
+  let imagePrompt = '';
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+    const r1 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: 'あなたはnote記事の見出し画像制作用プロンプト専門家です。記事タイトルとメモを受け取り、Canvaで使える日本語の見出し画像プロンプトを200文字以内で1つだけ出力してください。余計な説明は不要です。' }] },
+        system_instruction: { parts: [{ text: 'あなたはnote記事の見出し画像制作の専門家です。記事タイトルとメモから、Gemini画像生成APIで使える英語の画像生成プロンプトを1つだけ出力してください。スタイル：モダンでシンプル、文字なし、横長(16:9)、note記事の見出しに適した構図。余計な説明は不要。' }] },
         contents: [{ role: 'user', parts: [{ text: `記事タイトル：${n.title}\nメモ：${n.memo || 'なし'}` }] }],
-        generationConfig: { temperature: 0.8, maxOutputTokens: 512 }
+        generationConfig: { temperature: 0.8, maxOutputTokens: 256 }
       })
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || 'API error');
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    document.getElementById('imggen-loading').style.display = 'none';
-    document.getElementById('imggen-prompt-text').value = text.trim();
-    document.getElementById('imggen-result-wrap').style.display = 'block';
+    const d1 = await r1.json();
+    if (!r1.ok) throw new Error(d1.error?.message || 'プロンプト生成エラー');
+    imagePrompt = d1.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
   } catch(e) {
-    document.getElementById('imggen-loading').style.display = 'none';
-    document.getElementById('imggen-error').style.display = 'block';
-    document.getElementById('imggen-error').textContent = '⚠️ エラー: ' + e.message;
+    showImggenError('⚠️ プロンプト生成エラー: ' + e.message);
+    return;
   }
+
+  // STEP 2: 画像生成
+  statusEl.textContent = '② ジミーが画像を生成中...';
+  pbar.style.width = '60%';
+  try {
+    const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: imagePrompt }] }],
+        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+      })
+    });
+    const d2 = await r2.json();
+    if (!r2.ok) throw new Error(d2.error?.message || '画像生成エラー');
+    const parts = d2.candidates?.[0]?.content?.parts || [];
+    const imgPart = parts.find(p => p.inlineData);
+    if (!imgPart) throw new Error('画像データが返ってきませんでした');
+
+    pbar.style.width = '100%';
+    const { mimeType, data } = imgPart.inlineData;
+    const imgEl = document.getElementById('imggen-img');
+    imgEl.src = `data:${mimeType};base64,${data}`;
+    imgEl.dataset.mime = mimeType;
+    imgEl.dataset.b64 = data;
+
+    loadEl.style.display = 'none';
+    document.getElementById('imggen-img-wrap').style.display = 'block';
+    document.getElementById('imggen-prompt-text').value = imagePrompt;
+    document.getElementById('imggen-result-wrap').style.display = 'block';
+    toast('🖼️ 画像生成完了！');
+  } catch(e) {
+    // 画像生成に失敗した場合はプロンプトのみ表示（フォールバック）
+    loadEl.style.display = 'none';
+    document.getElementById('imggen-prompt-text').value = imagePrompt;
+    document.getElementById('imggen-result-wrap').style.display = 'block';
+    showImggenError('⚠️ 画像生成失敗（プロンプトのみ表示）: ' + e.message + '\n→ Canva / Adobe でこのプロンプトをご利用ください。');
+  }
+}
+
+function showImggenError(msg) {
+  document.getElementById('imggen-loading').style.display = 'none';
+  const el = document.getElementById('imggen-error');
+  el.style.display = 'block';
+  el.textContent = msg;
+}
+
+function imggenDownload() {
+  const img = document.getElementById('imggen-img');
+  const b64 = img.dataset.b64;
+  const mime = img.dataset.mime || 'image/png';
+  if (!b64) return;
+  const a = document.createElement('a');
+  a.href = `data:${mime};base64,${b64}`;
+  a.download = `note-header-${Date.now()}.png`;
+  a.click();
+  toast('画像を保存しました');
 }
 
 // ================================================================
