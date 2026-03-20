@@ -799,6 +799,25 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   .xpost-footer { flex-wrap:wrap; gap:6px; }
 }
 
+/* ===== WIP BANNER ===== */
+.wip-banner-head{font-size:11px;font-weight:700;color:var(--yellow);text-transform:uppercase;
+  letter-spacing:.6px;margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.wip-badge{background:var(--yellow);color:#fff;border-radius:20px;padding:1px 8px;font-size:11px;font-weight:700}
+.wip-cards{display:flex;flex-direction:column;gap:8px}
+.wip-card{background:linear-gradient(135deg,#fff8ee 0%,#fff2e0 100%);
+  border:1.5px solid var(--border2);border-left:4px solid var(--yellow);
+  border-radius:10px;padding:10px 12px;cursor:pointer;transition:all .15s}
+.wip-card:active{transform:scale(.98)}
+.wip-card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:5px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wip-card-meta{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.wip-pct{font-size:11px;font-weight:700;color:var(--yellow);min-width:30px}
+.wip-bar{flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
+.wip-bar-fill{height:100%;background:var(--yellow);border-radius:3px;transition:width .3s}
+.wip-time{font-size:10px;color:var(--text3);white-space:nowrap}
+.wip-card-memo{font-size:11px;color:var(--text3);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
 /* ===== RESEARCH WORKFLOW ===== */
 .rw-steps{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap}
 .rw-step{display:flex;align-items:center;gap:5px;padding:8px 14px;border-radius:20px;
@@ -1027,6 +1046,9 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div class="stat-lbl">アイデア</div>
     </div>
   </div>
+
+  <!-- ===== 執筆中バナー ===== -->
+  <div id="wip-banner" style="display:none;margin-top:10px"></div>
 
   <!-- ===== 今日の予定 ===== -->
   <div id="sec-today">
@@ -1416,7 +1438,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
     <div class="fpanel" id="fp-format">
       <div class="hint">クロの草稿を貼り付け → AI記号（# ※ **）を除去してnote入稿用に整形します。</div>
       <div class="input-group">
-        <textarea id="mw-draft" rows="5" placeholder="クロの草稿をここに…"></textarea>
+        <textarea id="mw-draft" rows="5" placeholder="クロの草稿をここに…" oninput="autoSaveDraft()"></textarea>
+        <div id="draft-autosave-status" style="font-size:10px;color:var(--text3);text-align:right;margin-top:3px;height:14px"></div>
       </div>
       <button class="btn btn-orange" style="min-height:44px;font-size:14px;margin-bottom:8px" onclick="doFormat()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/></svg>
@@ -1593,7 +1616,10 @@ const toast = msg => {
   setTimeout(() => e.classList.remove('show'), 2200);
 };
 const openOverlay = id => document.getElementById(id).classList.add('open');
-const closeOverlay = id => document.getElementById(id).classList.remove('open');
+const closeOverlay = id => {
+  document.getElementById(id).classList.remove('open');
+  if (id === 'modal-work') stopWorkAutoSave();
+};
 document.querySelectorAll('.overlay').forEach(o =>
   o.addEventListener('click', e => { if (e.target === o) closeOverlay(o.id); })
 );
@@ -1645,6 +1671,7 @@ function updateStats() {
   document.getElementById('notes-count-label').textContent = S.notes.length + '本';
   const stk = S.xposts.filter(p=>p.status==='stock').length;
   document.getElementById('xposts-count-label').textContent = `ストック${stk}本`;
+  renderWipBanner();
 }
 
 // ================================================================
@@ -1849,8 +1876,18 @@ function openWork(id) {
   setWorkType('A'); updateXcc();
   loadApiKey();
   loadClaudeApiKey();
+  // 保存済み草稿を復元
+  if (n.draftText) {
+    document.getElementById('mw-draft').value = n.draftText;
+    const st = document.getElementById('draft-autosave-status');
+    if (st && n.draftSavedAt) {
+      const d = new Date(n.draftSavedAt);
+      st.textContent = `💾 ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')} 保存済み`;
+    }
+  }
   switchTabByName('gemini');
   openOverlay('modal-work');
+  startWorkAutoSave();
 }
 
 function switchTab(el, name) {
@@ -2077,7 +2114,14 @@ function loadClaudeApiKey() {
   }
 }
 function onClaudeKeyInput() {
-  document.getElementById('claude-key-status').textContent = '';
+  const k = document.getElementById('claude-api-key').value.trim();
+  if (k) {
+    localStorage.setItem(CLAUDE_API_KEY_STORAGE, k);
+    document.getElementById('claude-key-status').innerHTML =
+      '<span style="color:var(--green)">✅ 自動保存済み</span>';
+  } else {
+    document.getElementById('claude-key-status').textContent = '';
+  }
 }
 function saveClaudeApiKey() {
   const k = document.getElementById('claude-api-key').value.trim();
@@ -2309,6 +2353,79 @@ ${jimmyResult}
 }
 // ================================================================
 
+// ================================================================
+// 自動保存（執筆中草稿）
+// ================================================================
+let _draftSaveTimer = null;
+let _workAutoSaveInterval = null;
+
+function autoSaveDraft() {
+  clearTimeout(_draftSaveTimer);
+  _draftSaveTimer = setTimeout(() => {
+    const n = S.notes.find(x => x.id === curId);
+    if (!n) return;
+    const text = document.getElementById('mw-draft').value;
+    n.draftText = text;
+    n.draftSavedAt = new Date().toISOString();
+    save();
+    const st = document.getElementById('draft-autosave-status');
+    if (st) {
+      const t = new Date();
+      st.textContent = `💾 ${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')} 自動保存済み`;
+      st.style.color = 'var(--green)';
+      setTimeout(() => { if(st) st.style.color = 'var(--text3)'; }, 3000);
+    }
+    renderWipBanner();
+  }, 1200);
+}
+
+function startWorkAutoSave() {
+  stopWorkAutoSave();
+  _workAutoSaveInterval = setInterval(() => {
+    const n = S.notes.find(x => x.id === curId);
+    if (!n) return;
+    const draft = document.getElementById('mw-draft');
+    if (draft && draft.value) {
+      n.draftText = draft.value;
+      n.draftSavedAt = new Date().toISOString();
+      save();
+      renderWipBanner();
+    }
+  }, 30000); // 30秒ごと
+}
+function stopWorkAutoSave() {
+  if (_workAutoSaveInterval) { clearInterval(_workAutoSaveInterval); _workAutoSaveInterval = null; }
+}
+
+// ================================================================
+// ダッシュボード：執筆中バナー
+// ================================================================
+function renderWipBanner() {
+  const wip = S.notes.filter(n => n.status === 'writing');
+  const el = document.getElementById('wip-banner');
+  if (!el) return;
+  if (wip.length === 0) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = `
+    <div class="wip-banner-head">✍️ 執筆中 <span class="wip-badge">${wip.length}本</span></div>
+    <div class="wip-cards">${wip.map(n => {
+      const pct = n.draftText ? Math.min(100, Math.round(n.draftText.length / 40)) : 0;
+      const savedAt = n.draftSavedAt ? (() => {
+        const d = new Date(n.draftSavedAt);
+        return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}保存`;
+      })() : '未保存';
+      return `<div class="wip-card" onclick="openWork(${n.id})">
+        <div class="wip-card-title">${n.title}</div>
+        <div class="wip-card-meta">
+          <span class="wip-pct">${pct}%</span>
+          <div class="wip-bar"><div class="wip-bar-fill" style="width:${pct}%"></div></div>
+          <span class="wip-time">${savedAt}</span>
+        </div>
+        <div class="wip-card-memo">${n.memo || ''}</div>
+      </div>`;
+    }).join('')}</div>`;
+}
+
 function pasteFromClipboardToManual() {
   navigator.clipboard.readText().then(t => {
     document.getElementById('claude-manual-input').value = t;
@@ -2350,7 +2467,14 @@ function loadApiKey() {
   }
 }
 function onKeyInput() {
-  document.getElementById('key-status').textContent = '';
+  const k = document.getElementById('gemini-api-key').value.trim();
+  if (k) {
+    localStorage.setItem(GEMINI_KEY_STORAGE, k);
+    document.getElementById('key-status').innerHTML =
+      '<span style="color:var(--green)">✅ 自動保存済み</span>';
+  } else {
+    document.getElementById('key-status').textContent = '';
+  }
 }
 function saveApiKey() {
   const k = document.getElementById('gemini-api-key').value.trim();
