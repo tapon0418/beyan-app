@@ -3472,11 +3472,29 @@ async function genImgFull(n) {
     }
   }
 
-  // 全モデル失敗 → プロンプトのみ表示
-  loadEl.style.display = 'none';
-  document.getElementById('imggen-prompt-text').value = imagePrompt;
-  document.getElementById('imggen-result-wrap').style.display = 'block';
-  showImggenError('⚠️ 画像生成APIが現在利用できません。\nプロンプトをCanva / AdobeFirefly に貼り付けてご利用ください。');
+  // 全モデル失敗 → pollinations.ai フォールバック（無料・APIキー不要）
+  statusEl.textContent = '② pollinations.ai で生成中...';
+  pbar.style.width = '80%';
+  const pollinationsPrompt = imagePrompt + ', minimalist blog header, 16:9, no text overlay';
+  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(pollinationsPrompt)}?width=1280&height=720&model=flux&nologo=true&seed=${Date.now()}`;
+
+  await new Promise((resolve) => {
+    const tmpImg = new Image();
+    tmpImg.crossOrigin = 'anonymous';
+    tmpImg.onload = () => {
+      pbar.style.width = '100%';
+      displayImggenResult_url(pollinationsUrl, imagePrompt);
+      resolve();
+    };
+    tmpImg.onerror = () => {
+      loadEl.style.display = 'none';
+      document.getElementById('imggen-prompt-text').value = imagePrompt;
+      document.getElementById('imggen-result-wrap').style.display = 'block';
+      showImggenError('⚠️ 画像生成APIが現在利用できません。\nプロンプトをCanva / AdobeFirefly に貼り付けてご利用ください。');
+      resolve();
+    };
+    tmpImg.src = pollinationsUrl;
+  });
 }
 
 function displayImggenResult(mimeType, b64, prompt) {
@@ -3484,11 +3502,25 @@ function displayImggenResult(mimeType, b64, prompt) {
   imgEl.src = `data:${mimeType};base64,${b64}`;
   imgEl.dataset.mime = mimeType;
   imgEl.dataset.b64 = b64;
+  imgEl.dataset.url = '';
   document.getElementById('imggen-loading').style.display = 'none';
   document.getElementById('imggen-img-wrap').style.display = 'block';
   document.getElementById('imggen-prompt-text').value = prompt;
   document.getElementById('imggen-result-wrap').style.display = 'block';
   toast('🖼️ 画像生成完了！');
+}
+
+function displayImggenResult_url(url, prompt) {
+  const imgEl = document.getElementById('imggen-img');
+  imgEl.src = url;
+  imgEl.dataset.mime = 'image/jpeg';
+  imgEl.dataset.b64 = '';
+  imgEl.dataset.url = url;
+  document.getElementById('imggen-loading').style.display = 'none';
+  document.getElementById('imggen-img-wrap').style.display = 'block';
+  document.getElementById('imggen-prompt-text').value = prompt;
+  document.getElementById('imggen-result-wrap').style.display = 'block';
+  toast('🖼️ 画像生成完了！(pollinations.ai)');
 }
 
 function showImggenError(msg) {
@@ -3501,7 +3533,14 @@ function showImggenError(msg) {
 function imggenDownload() {
   const img = document.getElementById('imggen-img');
   const b64 = img.dataset.b64;
+  const url = img.dataset.url;
   const mime = img.dataset.mime || 'image/png';
+  if (url) {
+    // URL-based image (pollinations.ai) → open in new tab for manual save
+    window.open(url, '_blank');
+    toast('画像を新しいタブで開きました。長押し or 右クリックで保存してください');
+    return;
+  }
   if (!b64) return;
   const a = document.createElement('a');
   a.href = `data:${mime};base64,${b64}`;
