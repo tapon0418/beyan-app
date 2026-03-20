@@ -1827,9 +1827,12 @@ function renderNotes() {
               ${n.rakuten?'<span class="badge badge-rakuten">楽天</span>':''}
             </div>
             ${n.memo?`<div class="note-memo">📌 ${n.memo}</div>`:''}
-            <button class="research-btn${n.researchDone?' done':''}" onclick="toggleResearch(${n.id},event)">
-              ${n.researchDone?`✅ リサーチ済み <span style="font-size:9px;opacity:.8">${n.researchDate||''}</span>`:'🔬 リサーチ未依頼'}
-            </button>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px">
+              <button class="research-btn${n.researchDone?' done':''}" onclick="toggleResearch(${n.id},event)" style="margin-top:0">
+                ${n.researchDone?`✅ リサーチ済み <span style="font-size:9px;opacity:.8">${n.researchDate||''}</span>`:'🔬 リサーチ未依頼'}
+              </button>
+              ${n.status !== 'done' ? `<button class="research-btn done" style="margin-top:0;background:rgba(122,154,106,.18);color:var(--green);border:1px solid rgba(122,154,106,.35);font-size:10px;padding:3px 10px;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:600" onclick="markNoteDone(${n.id},event)">✅ 執筆完了にする</button>` : `<span style="font-size:10px;color:var(--green);font-weight:700">✅ 公開済み</span>`}
+            </div>
           </div>
           <button class="note-del-btn" id="ndb-${n.id}" onclick="deleteNote(${n.id},event)" title="削除">🗑</button>
         </div>
@@ -1872,6 +1875,16 @@ function deleteNote(id, e) {
       if (b) { b.classList.remove('pending'); b.textContent = '🗑'; }
     }, 3000);
   }
+}
+
+// ---- 執筆完了 ----
+function markNoteDone(id, e) {
+  e.stopPropagation();
+  const n = S.notes.find(x => x.id === id);
+  if (!n) return;
+  n.status = 'done';
+  save(); renderNotes();
+  toast('✅ 公開済みに変更しました');
 }
 
 // ---- 月編集 ----
