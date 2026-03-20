@@ -3358,7 +3358,7 @@ async function genImgPrompt(n) {
   }
   document.getElementById('imggen-loading').style.display = 'block';
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3421,7 +3421,7 @@ async function genRakutenCard() {
   document.getElementById('rakuten-result-wrap').style.display = 'none';
   document.getElementById('rakuten-error').style.display = 'none';
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3455,7 +3455,7 @@ async function runNabebaseTests() {
   try {
     const apiKey = localStorage.getItem('beyan_gemini_key') || '';
     if (!apiKey) throw new Error('APIキー未設定');
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({contents:[{role:'user',parts:[{text:'テスト'}]}], generationConfig:{maxOutputTokens:10}})
     });
