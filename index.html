@@ -958,6 +958,16 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 
     <!-- ジミー指示文 -->
     <div id="spanel-gemini">
+      <!-- Gemini APIキー -->
+      <div style="background:#1a2e1a;border:1px solid #4a7a4a44;border-radius:10px;padding:12px;margin-bottom:14px;">
+        <div style="font-size:.78rem;color:#86efac;font-weight:700;margin-bottom:8px;">🔑 Gemini APIキー（AIStudio）</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="password" id="settings-gemini-api-key" placeholder="AIza..." style="flex:1;font-size:16px;background:#111;color:#e8e8e8;border:1px solid #555;border-radius:8px;padding:10px;"
+            oninput="autoSaveApiKey('gemini')" onchange="autoSaveApiKey('gemini')" onblur="autoSaveApiKey('gemini')">
+          <button onclick="autoSaveApiKey('gemini');toast('Gemini APIキーを保存しました')" style="background:var(--accent);border:none;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap;min-height:44px;">💾 保存</button>
+        </div>
+        <div id="settings-gemini-api-msg" style="margin-top:6px;font-size:.78rem;color:#4ade80;min-height:16px;"></div>
+      </div>
       <p style="color:#aaa;font-size:.82rem;margin-bottom:8px;">
         ※ <code style="background:var(--bg5);padding:2px 5px;border-radius:4px;color:var(--text);">${n.title}</code>
         <code style="background:var(--bg5);padding:2px 5px;border-radius:4px;color:var(--text);">${n.type}</code>
@@ -982,7 +992,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div style="background:#1e1233;border:1px solid #7c3aed44;border-radius:10px;padding:12px;margin-bottom:14px;">
         <div style="font-size:.78rem;color:#c4b5fd;font-weight:700;margin-bottom:8px;">🔑 Claude APIキー</div>
         <div style="display:flex;gap:8px;align-items:center">
-          <input type="password" id="settings-claude-api-key" placeholder="sk-ant-..." style="flex:1;font-size:16px;background:#111;color:#e8e8e8;border:1px solid #555;border-radius:8px;padding:10px;">
+          <input type="password" id="settings-claude-api-key" placeholder="sk-ant-..." style="flex:1;font-size:16px;background:#111;color:#e8e8e8;border:1px solid #555;border-radius:8px;padding:10px;"
+            oninput="autoSaveApiKey('claude')" onchange="autoSaveApiKey('claude')" onblur="autoSaveApiKey('claude')">
           <button onclick="saveClaudeApiKeyFromSettings()" style="background:#7c3aed;border:none;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap;min-height:44px;">💾 保存</button>
         </div>
         <div id="settings-claude-api-msg" style="margin-top:6px;font-size:.78rem;color:#4ade80;min-height:16px;"></div>
@@ -1310,7 +1321,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div id="gemini-key-section" style="margin-bottom:12px">
         <div style="display:flex;gap:8px;align-items:center">
           <input type="password" id="gemini-api-key" placeholder="Gemini APIキー（AIStudioで取得）"
-            style="flex:1;font-size:16px" oninput="onKeyInput()">
+            style="flex:1;font-size:16px" oninput="onKeyInput()" onchange="onKeyInput()" onblur="onKeyInput()">
           <button class="btn btn-ghost btn-sm" style="width:auto;min-width:56px;flex-shrink:0"
             id="btn-save-key" onclick="saveApiKey()">保存</button>
         </div>
@@ -1385,7 +1396,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <div id="claude-key-section" style="margin-bottom:10px">
           <div style="display:flex;gap:8px;align-items:center">
             <input type="password" id="claude-api-key" placeholder="Claude APIキー（console.anthropic.com で取得）"
-              style="flex:1;font-size:16px" oninput="onClaudeKeyInput()">
+              style="flex:1;font-size:16px" oninput="onClaudeKeyInput()" onchange="onClaudeKeyInput()" onblur="onClaudeKeyInput()">
             <button class="btn btn-ghost btn-sm" style="width:auto;min-width:56px;flex-shrink:0"
               onclick="saveClaudeApiKey()">保存</button>
           </div>
@@ -2121,8 +2132,34 @@ function onClaudeKeyInput() {
     localStorage.setItem(CLAUDE_API_KEY_STORAGE, k);
     document.getElementById('claude-key-status').innerHTML =
       '<span style="color:var(--green)">✅ 自動保存済み</span>';
+    // 設定モーダルにも反映
+    const s = document.getElementById('settings-claude-api-key');
+    if (s && !s.value) s.value = k;
   } else {
     document.getElementById('claude-key-status').textContent = '';
+  }
+}
+
+// 設定モーダル・ワークモーダル共通の自動保存（iOS paste対応）
+function autoSaveApiKey(type) {
+  if (type === 'gemini') {
+    const k = (document.getElementById('settings-gemini-api-key')?.value || '').trim();
+    if (!k) return;
+    localStorage.setItem(GEMINI_KEY_STORAGE, k);
+    const msg = document.getElementById('settings-gemini-api-msg');
+    if (msg) msg.textContent = '✅ 自動保存済み';
+    // ワークモーダルにも反映
+    const w = document.getElementById('gemini-api-key');
+    if (w) { w.value = k; document.getElementById('key-status').innerHTML = '<span style="color:var(--green)">✅ 自動保存済み</span>'; }
+  } else if (type === 'claude') {
+    const k = (document.getElementById('settings-claude-api-key')?.value || '').trim();
+    if (!k) return;
+    localStorage.setItem(CLAUDE_API_KEY_STORAGE, k);
+    const msg = document.getElementById('settings-claude-api-msg');
+    if (msg) msg.textContent = '✅ 自動保存済み';
+    // ワークモーダルにも反映
+    const w = document.getElementById('claude-api-key');
+    if (w) { w.value = k; document.getElementById('claude-key-status').innerHTML = '<span style="color:var(--green)">✅ 自動保存済み</span>'; }
   }
 }
 function saveClaudeApiKey() {
@@ -2596,6 +2633,12 @@ function openSettings() {
   const savedClaude = localStorage.getItem(CLAUDE_TMPL_KEY);
   document.getElementById('settings-claude-tmpl').value =
     savedClaude !== null ? savedClaude : getDefaultClaudeTmpl();
+
+  // Gemini APIキーを読み込む
+  const savedGeminiApi = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  document.getElementById('settings-gemini-api-key').value = savedGeminiApi;
+  const gMsg = document.getElementById('settings-gemini-api-msg');
+  if (gMsg) gMsg.textContent = savedGeminiApi ? '✅ APIキー保存済み' : '';
 
   // Claude APIキーを読み込む
   const savedClaudeApi = localStorage.getItem(CLAUDE_API_KEY_STORAGE) || '';
