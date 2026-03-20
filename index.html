@@ -3389,8 +3389,8 @@ async function genImgFull(n) {
   const pbar = document.getElementById('imggen-pbar');
   loadEl.style.display = 'block';
 
-  // STEP 1: テキストプロンプト生成
-  statusEl.textContent = '① ジミーが画像プロンプトを生成中...';
+  // STEP 1: 英語画像プロンプト生成
+  statusEl.textContent = '① 画像プロンプトを生成中...';
   pbar.style.width = '20%';
   let imagePrompt = '';
   try {
@@ -3398,56 +3398,97 @@ async function genImgFull(n) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system_instruction: { parts: [{ text: 'あなたはnote記事の見出し画像制作の専門家です。記事タイトルとメモから、Gemini画像生成APIで使える英語の画像生成プロンプトを1つだけ出力してください。スタイル：モダンでシンプル、文字なし、横長(16:9)、note記事の見出しに適した構図。余計な説明は不要。' }] },
-        contents: [{ role: 'user', parts: [{ text: `記事タイトル：${n.title}\nメモ：${n.memo || 'なし'}` }] }],
-        generationConfig: { temperature: 0.8, maxOutputTokens: 256 }
+        system_instruction: { parts: [{ text: 'You are an expert at creating image generation prompts for blog header images. Given a Japanese article title and memo, output a single English image generation prompt (under 100 words). Style: minimalist, modern, no text in image, 16:9 landscape, suitable for a blog header. Output only the prompt, no explanation.' }] },
+        contents: [{ role: 'user', parts: [{ text: `Title: ${n.title}\nMemo: ${n.memo || 'none'}` }] }],
+        generationConfig: { temperature: 0.8, maxOutputTokens: 200 }
       })
     });
     const d1 = await r1.json();
     if (!r1.ok) throw new Error(d1.error?.message || 'プロンプト生成エラー');
     imagePrompt = d1.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    if (!imagePrompt) throw new Error('プロンプトが空でした');
   } catch(e) {
     showImggenError('⚠️ プロンプト生成エラー: ' + e.message);
     return;
   }
 
-  // STEP 2: 画像生成
-  statusEl.textContent = '② ジミーが画像を生成中...';
-  pbar.style.width = '60%';
-  try {
-    const r2 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-preview-image-generation:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: imagePrompt }] }],
-        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
-      })
-    });
-    const d2 = await r2.json();
-    if (!r2.ok) throw new Error(d2.error?.message || '画像生成エラー');
-    const parts = d2.candidates?.[0]?.content?.parts || [];
-    const imgPart = parts.find(p => p.inlineData);
-    if (!imgPart) throw new Error('画像データが返ってきませんでした');
+  // STEP 2: 画像生成（複数モデルを順番に試す）
+  statusEl.textContent = '② 画像を生成中...';
+  pbar.style.width = '55%';
 
-    pbar.style.width = '100%';
-    const { mimeType, data } = imgPart.inlineData;
-    const imgEl = document.getElementById('imggen-img');
-    imgEl.src = `data:${mimeType};base64,${data}`;
-    imgEl.dataset.mime = mimeType;
-    imgEl.dataset.b64 = data;
+  // 候補モデル（順番に試す）
+  const imgModels = [
+    { model: 'gemini-2.0-flash-exp', type: 'generateContent' },
+    { model: 'imagen-3.0-generate-002', type: 'predict' },
+    { model: 'imagen-3.0-fast-generate-001', type: 'predict' },
+  ];
 
-    loadEl.style.display = 'none';
-    document.getElementById('imggen-img-wrap').style.display = 'block';
-    document.getElementById('imggen-prompt-text').value = imagePrompt;
-    document.getElementById('imggen-result-wrap').style.display = 'block';
-    toast('🖼️ 画像生成完了！');
-  } catch(e) {
-    // 画像生成に失敗した場合はプロンプトのみ表示（フォールバック）
-    loadEl.style.display = 'none';
-    document.getElementById('imggen-prompt-text').value = imagePrompt;
-    document.getElementById('imggen-result-wrap').style.display = 'block';
-    showImggenError('⚠️ 画像生成失敗（プロンプトのみ表示）: ' + e.message + '\n→ Canva / Adobe でこのプロンプトをご利用ください。');
+  for (const m of imgModels) {
+    statusEl.textContent = `② 画像生成中 (${m.model})...`;
+    try {
+      let imgB64, imgMime;
+
+      if (m.type === 'generateContent') {
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.model}:generateContent?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: imagePrompt }] }],
+            generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+          })
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message);
+        const imgPart = (d.candidates?.[0]?.content?.parts || []).find(p => p.inlineData);
+        if (!imgPart) throw new Error('no image in response');
+        imgB64 = imgPart.inlineData.data;
+        imgMime = imgPart.inlineData.mimeType;
+
+      } else { // predict (Imagen)
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.model}:predict?key=${apiKey}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instances: [{ prompt: imagePrompt }],
+            parameters: { sampleCount: 1, aspectRatio: '16:9' }
+          })
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message);
+        const pred = d.predictions?.[0];
+        if (!pred) throw new Error('no prediction');
+        imgB64 = pred.bytesBase64Encoded;
+        imgMime = pred.mimeType || 'image/png';
+      }
+
+      // 成功
+      pbar.style.width = '100%';
+      displayImggenResult(imgMime, imgB64, imagePrompt);
+      return;
+
+    } catch(e) {
+      console.warn(`[imggen] ${m.model} failed:`, e.message);
+      // 次のモデルへ
+    }
   }
+
+  // 全モデル失敗 → プロンプトのみ表示
+  loadEl.style.display = 'none';
+  document.getElementById('imggen-prompt-text').value = imagePrompt;
+  document.getElementById('imggen-result-wrap').style.display = 'block';
+  showImggenError('⚠️ 画像生成APIが現在利用できません。\nプロンプトをCanva / AdobeFirefly に貼り付けてご利用ください。');
+}
+
+function displayImggenResult(mimeType, b64, prompt) {
+  const imgEl = document.getElementById('imggen-img');
+  imgEl.src = `data:${mimeType};base64,${b64}`;
+  imgEl.dataset.mime = mimeType;
+  imgEl.dataset.b64 = b64;
+  document.getElementById('imggen-loading').style.display = 'none';
+  document.getElementById('imggen-img-wrap').style.display = 'block';
+  document.getElementById('imggen-prompt-text').value = prompt;
+  document.getElementById('imggen-result-wrap').style.display = 'block';
+  toast('🖼️ 画像生成完了！');
 }
 
 function showImggenError(msg) {
