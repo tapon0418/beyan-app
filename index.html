@@ -125,16 +125,30 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 
 /* ===== NOTE ITEM ===== */
 .note-item{background:var(--bg4);border:1px solid var(--border);border-radius:10px;
-  padding:12px;margin-bottom:10px;cursor:pointer;display:flex;gap:10px;align-items:flex-start;
+  margin-bottom:10px;cursor:pointer;display:block;overflow:hidden;
   transition:transform .25s ease-in-out, box-shadow .25s ease-in-out,
              border-color .25s ease-in-out, background .25s ease-in-out}
+.note-item-inner{display:flex;gap:10px;align-items:flex-start;padding:12px;position:relative}
 .note-item:hover{
   transform:translateY(-2px);
   box-shadow:0 8px 24px rgba(180,120,80,.18);
   border-color:rgba(212,98,42,.25);
-  background:var(--bg3);
 }
-.note-item:active{transform:scale(0.98);background:var(--bg5);}
+.note-item:active{transform:scale(0.98);}
+/* 削除ボタン */
+.note-del-btn{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:8px;
+  border:none;background:transparent;color:var(--text3);font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;z-index:2}
+.note-del-btn:hover{background:rgba(204,68,68,.15);color:var(--red)}
+.note-del-btn.pending{background:rgba(204,68,68,.2);color:var(--red);animation:delBlink .4s infinite alternate}
+@keyframes delBlink{from{opacity:.7}to{opacity:1}}
+/* 月編集バッジ */
+.badge-date{background:var(--accent-dim);color:var(--accent);cursor:pointer;transition:all .15s}
+.badge-date:hover{background:rgba(212,98,42,.25)}
+.month-edit-row{display:flex;align-items:center;gap:6px;padding:6px 12px 8px;background:var(--bg3);border-top:1px solid var(--border)}
+.month-edit-input{flex:1;font-size:15px;padding:6px 10px;border:1.5px solid var(--accent);border-radius:8px;background:var(--bg2);color:var(--text);font-family:inherit;min-height:38px}
+.month-edit-ok{min-height:38px;padding:0 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
+.month-edit-cancel{min-height:38px;padding:0 10px;background:none;border:1px solid var(--border2);border-radius:8px;color:var(--text3);font-size:13px;cursor:pointer;font-family:inherit;flex-shrink:0}
 .note-bar{width:3px;border-radius:2px;flex-shrink:0;align-self:stretch;min-height:36px}
 .note-body{flex:1;min-width:0}
 .note-title{font-size:13px;font-weight:600;line-height:1.45;margin-bottom:5px}
@@ -1793,16 +1807,23 @@ function renderNotes() {
     <button class="finish-btn" onclick="openRakutenModal(${n.id})">🛒 楽天カード</button>
     <button class="finish-btn primary" onclick="window.open('https://note.com/beyan51612/n/new','_blank')">📝 noteで書く</button>
   </div>` : '';
+      const monthEditRow = `
+  <div class="month-edit-row" id="mer-${n.id}" style="display:none" onclick="event.stopPropagation()">
+    <input class="month-edit-input" id="mei-${n.id}" type="text" placeholder="例: 3月" value="${n.publishDate||''}"
+      onkeydown="if(event.key==='Enter')saveNoteMonth(${n.id})" maxlength="10">
+    <button class="month-edit-ok" onclick="saveNoteMonth(${n.id})">保存</button>
+    <button class="month-edit-cancel" onclick="closeMonthEdit(${n.id})">✕</button>
+  </div>`;
       return `
-      <div class="note-item ${SCL[n.status]||'s-idea'}" onclick="openWork(${n.id})" style="padding:0;overflow:hidden;display:block">
-        <div style="display:flex;gap:10px;align-items:flex-start;padding:12px">
+      <div class="note-item ${SCL[n.status]||'s-idea'}" id="ni-${n.id}">
+        <div class="note-item-inner" onclick="openWork(${n.id})">
           <div class="note-bar"></div>
-          <div class="note-body">
+          <div class="note-body" style="padding-right:28px">
             <div class="note-title">${n.title}</div>
             <div class="note-meta">
               ${n.type?`<span class="badge badge-type">${n.type}</span>`:''}
               ${n.cat?`<span class="badge badge-cat">${n.cat}</span>`:''}
-              ${n.publishDate?`<span class="badge badge-date">📅 ${n.publishDate}</span>`:''}
+              <span class="badge badge-date" onclick="toggleMonthEdit(${n.id},event)">📅 ${n.publishDate||'月未設定'}</span>
               ${n.rakuten?'<span class="badge badge-rakuten">楽天</span>':''}
             </div>
             ${n.memo?`<div class="note-memo">📌 ${n.memo}</div>`:''}
@@ -1810,8 +1831,9 @@ function renderNotes() {
               ${n.researchDone?`✅ リサーチ済み <span style="font-size:9px;opacity:.8">${n.researchDate||''}</span>`:'🔬 リサーチ未依頼'}
             </button>
           </div>
-          <div class="note-status-dot"></div>
+          <button class="note-del-btn" id="ndb-${n.id}" onclick="deleteNote(${n.id},event)" title="削除">🗑</button>
         </div>
+        ${monthEditRow}
         ${finishPanel}
       </div>`;
     }).join('');
@@ -1821,6 +1843,68 @@ function renderNotes() {
   if (secState.notes) { body.style.maxHeight = body.scrollHeight + 4000 + 'px'; body.style.overflow = 'visible'; }
 }
 function setNf(v) { nf = v; renderNotes(); }
+
+// ---- 削除（2タップ確認）----
+let _delPending = null, _delTimer = null;
+function deleteNote(id, e) {
+  e.stopPropagation();
+  if (_delPending === id) {
+    // 2回目：実行
+    clearTimeout(_delTimer);
+    _delPending = null;
+    S.notes = S.notes.filter(n => n.id !== id);
+    save(); renderNotes();
+    toast('🗑 削除しました');
+  } else {
+    // 1回目：確認待ち
+    if (_delPending !== null) {
+      const prev = document.getElementById('ndb-'+_delPending);
+      if (prev) prev.classList.remove('pending');
+    }
+    _delPending = id;
+    const btn = document.getElementById('ndb-'+id);
+    if (btn) btn.classList.add('pending');
+    btn.textContent = '✕?';
+    toast('もう一度タップで削除 — 3秒でキャンセル');
+    _delTimer = setTimeout(() => {
+      _delPending = null;
+      const b = document.getElementById('ndb-'+id);
+      if (b) { b.classList.remove('pending'); b.textContent = '🗑'; }
+    }, 3000);
+  }
+}
+
+// ---- 月編集 ----
+function toggleMonthEdit(id, e) {
+  e.stopPropagation();
+  const row = document.getElementById('mer-'+id);
+  if (!row) return;
+  const isOpen = row.style.display !== 'none';
+  // 他の開いている編集行を閉じる
+  document.querySelectorAll('[id^="mer-"]').forEach(r => { r.style.display='none'; });
+  if (!isOpen) {
+    row.style.display = 'flex';
+    const inp = document.getElementById('mei-'+id);
+    if (inp) { inp.focus(); inp.select(); }
+    // セクション高さを再計算
+    const body = document.getElementById('body-notes');
+    if (secState.notes) body.style.maxHeight = body.scrollHeight + 4000 + 'px';
+  }
+}
+function closeMonthEdit(id) {
+  const row = document.getElementById('mer-'+id);
+  if (row) row.style.display = 'none';
+}
+function saveNoteMonth(id) {
+  const inp = document.getElementById('mei-'+id);
+  if (!inp) return;
+  const val = inp.value.trim();
+  const n = S.notes.find(x => x.id === id);
+  if (!n) return;
+  n.publishDate = val;
+  save(); renderNotes();
+  toast(`📅 月を「${val||'未設定'}」に変更しました`);
+}
 
 // ================================================================
 // TODAY
