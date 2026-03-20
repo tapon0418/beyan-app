@@ -820,6 +820,11 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 .wip-card-memo{font-size:11px;color:var(--text3);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
+.finish-panel{display:flex;gap:8px;padding:8px 10px;background:var(--bg3);border-top:1px solid var(--border);flex-wrap:wrap}
+.finish-btn{flex:1;min-height:44px;min-width:100px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;padding:0 8px}
+.finish-btn:active{transform:scale(.95)}
+.finish-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+
 /* ===== RESEARCH WORKFLOW ===== */
 .rw-steps{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap}
 .rw-step{display:flex;align-items:center;gap:5px;padding:8px 14px;border-radius:20px;
@@ -993,7 +998,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <div style="font-size:.78rem;color:#c4b5fd;font-weight:700;margin-bottom:8px;">🔑 Claude APIキー</div>
         <div style="display:flex;gap:8px;align-items:center">
           <input type="password" id="settings-claude-api-key" placeholder="sk-ant-..." style="flex:1;font-size:16px;background:#111;color:#e8e8e8;border:1px solid #555;border-radius:8px;padding:10px;"
-            oninput="autoSaveApiKey('claude')" onchange="autoSaveApiKey('claude')" onblur="autoSaveApiKey('claude')">
+            oninput="autoSaveApiKey('claude')" onchange="saveClaudeApiKeyFromSettings()" onblur="saveClaudeApiKeyFromSettings()">
           <button onclick="saveClaudeApiKeyFromSettings()" style="background:#7c3aed;border:none;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;white-space:nowrap;min-height:44px;">💾 保存</button>
         </div>
         <div id="settings-claude-api-msg" style="margin-top:6px;font-size:.78rem;color:#4ade80;min-height:16px;"></div>
@@ -1059,6 +1064,9 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div class="stat-lbl">アイデア</div>
     </div>
   </div>
+
+  <!-- 執筆中ピックアップ -->
+  <div id="wip-pickup" style="margin-top:12px"></div>
 
   <!-- ===== 執筆中バナー ===== -->
   <div id="wip-banner" style="display:none;margin-top:10px"></div>
@@ -1291,6 +1299,56 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 
 </div><!-- /main -->
 
+<!-- ===== MODAL: 見出し画像生成 ===== -->
+<div class="overlay" id="modal-imggen" onclick="if(event.target===this)closeOverlay('modal-imggen')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">🖼️ 見出し画像プロンプト生成</div>
+      <button class="modal-close" onclick="closeOverlay('modal-imggen')">✕</button>
+    </div>
+    <div style="padding:16px">
+      <div id="imggen-loading" style="text-align:center;padding:20px;display:none">
+        <div style="font-size:13px;color:var(--accent)">✨ Geminiが生成中...</div>
+      </div>
+      <div id="imggen-result-wrap" style="display:none">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:6px">生成されたプロンプト：</div>
+        <textarea id="imggen-prompt-text" rows="5" style="width:100%;font-size:15px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit"></textarea>
+        <button onclick="navigator.clipboard.writeText(document.getElementById('imggen-prompt-text').value).then(()=>toast('コピーしました'))" style="width:100%;min-height:44px;margin-top:8px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;color:var(--text)">📋 コピー</button>
+        <div style="margin-top:10px;font-size:12px;color:var(--text3);line-height:1.6">このプロンプトをCanvaやAdobeで使って画像を作成してください。</div>
+      </div>
+      <div id="imggen-error" style="display:none;color:var(--red);font-size:13px;padding:10px"></div>
+      <button onclick="window.open('https://note.com/beyan51612/n/new','_blank')" style="width:100%;min-height:48px;margin-top:16px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">📝 noteで書く</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: 楽天カード生成 ===== -->
+<div class="overlay" id="modal-rakuten" onclick="if(event.target===this)closeOverlay('modal-rakuten')">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">🛒 楽天商品カード生成</div>
+      <button class="modal-close" onclick="closeOverlay('modal-rakuten')">✕</button>
+    </div>
+    <div style="padding:16px">
+      <div style="margin-bottom:10px">
+        <input type="url" id="rakuten-url-input" placeholder="楽天商品URLを貼り付けてください" style="width:100%;font-size:16px;border:1.5px solid var(--border2);border-radius:8px;padding:10px;background:var(--bg2);color:var(--text);font-family:inherit">
+      </div>
+      <button onclick="genRakutenCard()" style="width:100%;min-height:48px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px">🛒 カード生成</button>
+      <div id="rakuten-loading" style="text-align:center;padding:12px;display:none">
+        <div style="font-size:13px;color:var(--accent)">✨ Geminiが生成中...</div>
+      </div>
+      <div id="rakuten-result-wrap" style="display:none">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:6px">生成されたHTMLカード：</div>
+        <textarea id="rakuten-html-output" rows="8" style="width:100%;font-size:13px;line-height:1.5;resize:vertical;background:#1a1a2e;color:#e0e0e0;border:1.5px solid var(--border2);border-radius:8px;padding:10px;font-family:monospace;word-break:break-all"></textarea>
+        <button onclick="navigator.clipboard.writeText(document.getElementById('rakuten-html-output').value).then(()=>toast('コピーしました'))" style="width:100%;min-height:44px;margin-top:8px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:14px;cursor:pointer;font-family:inherit;color:var(--text)">📋 コピー</button>
+        <div style="margin-top:8px;font-size:12px;color:var(--text3)">noteのHTML挿入欄に貼り付けてください。</div>
+      </div>
+      <div id="rakuten-error" style="display:none;color:var(--red);font-size:13px;padding:10px"></div>
+      <button onclick="window.open('https://note.com/beyan51612/n/new','_blank')" style="width:100%;min-height:48px;margin-top:12px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">📝 noteで書く</button>
+    </div>
+  </div>
+</div>
+
 <!-- ============================= MODAL: 作業フロー ============================= -->
 <div class="overlay" id="modal-work">
   <div class="modal">
@@ -1321,7 +1379,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div id="gemini-key-section" style="margin-bottom:12px">
         <div style="display:flex;gap:8px;align-items:center">
           <input type="password" id="gemini-api-key" placeholder="Gemini APIキー（AIStudioで取得）"
-            style="flex:1;font-size:16px" oninput="onKeyInput()" onchange="onKeyInput()" onblur="onKeyInput()">
+            style="flex:1;font-size:16px" oninput="onKeyInput()" onchange="saveApiKey()" onblur="saveApiKey()">
           <button class="btn btn-ghost btn-sm" style="width:auto;min-width:56px;flex-shrink:0"
             id="btn-save-key" onclick="saveApiKey()">保存</button>
         </div>
@@ -1396,7 +1454,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <div id="claude-key-section" style="margin-bottom:10px">
           <div style="display:flex;gap:8px;align-items:center">
             <input type="password" id="claude-api-key" placeholder="Claude APIキー（console.anthropic.com で取得）"
-              style="flex:1;font-size:16px" oninput="onClaudeKeyInput()" onchange="onClaudeKeyInput()" onblur="onClaudeKeyInput()">
+              style="flex:1;font-size:16px" oninput="onClaudeKeyInput()" onchange="saveClaudeApiKey()" onblur="saveClaudeApiKey()">
             <button class="btn btn-ghost btn-sm" style="width:auto;min-width:56px;flex-shrink:0"
               onclick="saveClaudeApiKey()">保存</button>
           </div>
@@ -1685,6 +1743,27 @@ function updateStats() {
   const stk = S.xposts.filter(p=>p.status==='stock').length;
   document.getElementById('xposts-count-label').textContent = `ストック${stk}本`;
   renderWipBanner();
+  renderWipPickup();
+}
+
+function renderWipPickup() {
+  const el = document.getElementById('wip-pickup');
+  if (!el) return;
+  const wip = S.notes.filter(n => n.status === 'writing');
+  if (!wip.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div style="background:linear-gradient(135deg,rgba(212,98,42,.12),rgba(212,98,42,.06));border:1.5px solid rgba(212,98,42,.3);border-radius:12px;padding:12px 14px">
+      <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">✍️ 執筆中 — ${wip.length}本</div>
+      ${wip.map(n => `
+        <div onclick="openWork(${n.id})" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid var(--border)">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${n.title}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px">${n.cat||''} ${n.researchDone?'✅リサーチ済':'⬜リサーチ未'}</div>
+          </div>
+          <div style="font-size:11px;color:var(--accent);font-weight:700;flex-shrink:0">開く →</div>
+        </div>
+      `).join('')}
+    </div>`;
 }
 
 // ================================================================
@@ -1707,24 +1786,35 @@ function renderNotes() {
 
   document.getElementById('note-list').innerHTML = list.length === 0
     ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">該当する記事がありません</div>`
-    : list.map(n => `
-      <div class="note-item ${SCL[n.status]||'s-idea'}" onclick="openWork(${n.id})">
-        <div class="note-bar"></div>
-        <div class="note-body">
-          <div class="note-title">${n.title}</div>
-          <div class="note-meta">
-            ${n.type?`<span class="badge badge-type">${n.type}</span>`:''}
-            ${n.cat?`<span class="badge badge-cat">${n.cat}</span>`:''}
-            ${n.publishDate?`<span class="badge badge-date">📅 ${n.publishDate}</span>`:''}
-            ${n.rakuten?'<span class="badge badge-rakuten">楽天</span>':''}
+    : list.map(n => {
+      const finishPanel = (n.status === 'review' || n.status === 'done') ? `
+  <div class="finish-panel" onclick="event.stopPropagation()">
+    <button class="finish-btn" onclick="openImgGenModal(${n.id})">🖼️ 見出し画像</button>
+    <button class="finish-btn" onclick="openRakutenModal(${n.id})">🛒 楽天カード</button>
+    <button class="finish-btn primary" onclick="window.open('https://note.com/beyan51612/n/new','_blank')">📝 noteで書く</button>
+  </div>` : '';
+      return `
+      <div class="note-item ${SCL[n.status]||'s-idea'}" onclick="openWork(${n.id})" style="padding:0;overflow:hidden;display:block">
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:12px">
+          <div class="note-bar"></div>
+          <div class="note-body">
+            <div class="note-title">${n.title}</div>
+            <div class="note-meta">
+              ${n.type?`<span class="badge badge-type">${n.type}</span>`:''}
+              ${n.cat?`<span class="badge badge-cat">${n.cat}</span>`:''}
+              ${n.publishDate?`<span class="badge badge-date">📅 ${n.publishDate}</span>`:''}
+              ${n.rakuten?'<span class="badge badge-rakuten">楽天</span>':''}
+            </div>
+            ${n.memo?`<div class="note-memo">📌 ${n.memo}</div>`:''}
+            <button class="research-btn${n.researchDone?' done':''}" onclick="toggleResearch(${n.id},event)">
+              ${n.researchDone?`✅ リサーチ済み <span style="font-size:9px;opacity:.8">${n.researchDate||''}</span>`:'🔬 リサーチ未依頼'}
+            </button>
           </div>
-          ${n.memo?`<div class="note-memo">📌 ${n.memo}</div>`:''}
-          <button class="research-btn${n.researchDone?' done':''}" onclick="toggleResearch(${n.id},event)">
-            ${n.researchDone?`✅ リサーチ済み <span style="font-size:9px;opacity:.8">${n.researchDate||''}</span>`:'🔬 リサーチ未依頼'}
-          </button>
+          <div class="note-status-dot"></div>
         </div>
-        <div class="note-status-dot"></div>
-      </div>`).join('');
+        ${finishPanel}
+      </div>`;
+    }).join('');
 
   // セクション高さを再計算
   const body = document.getElementById('body-notes');
@@ -2560,7 +2650,7 @@ async function runGemini() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 32768 }
+        generationConfig: { temperature: 0.7, maxOutputTokens: 65536 }
       })
     });
 
@@ -3101,6 +3191,196 @@ function renderNetaList() {
     body.style.maxHeight = body.scrollHeight + 500 + 'px';
   }
 }
+
+// ================================================================
+// 見出し画像生成
+// ================================================================
+let imggenNoteId = null;
+function openImgGenModal(id) {
+  imggenNoteId = id;
+  const n = S.notes.find(x => x.id === id);
+  if (!n) return;
+  document.getElementById('imggen-loading').style.display = 'none';
+  document.getElementById('imggen-result-wrap').style.display = 'none';
+  document.getElementById('imggen-error').style.display = 'none';
+  openOverlay('modal-imggen');
+  // 自動でGemini呼び出し
+  genImgPrompt(n);
+}
+
+async function genImgPrompt(n) {
+  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
+  if (!apiKey) {
+    document.getElementById('imggen-error').style.display = 'block';
+    document.getElementById('imggen-error').textContent = '⚠️ Gemini APIキーが設定されていません。設定から保存してください。';
+    return;
+  }
+  document.getElementById('imggen-loading').style.display = 'block';
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: 'あなたはnote記事の見出し画像制作用プロンプト専門家です。記事タイトルとメモを受け取り、Canvaで使える日本語の見出し画像プロンプトを200文字以内で1つだけ出力してください。余計な説明は不要です。' }] },
+        contents: [{ role: 'user', parts: [{ text: `記事タイトル：${n.title}\nメモ：${n.memo || 'なし'}` }] }],
+        generationConfig: { temperature: 0.8, maxOutputTokens: 512 }
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    document.getElementById('imggen-loading').style.display = 'none';
+    document.getElementById('imggen-prompt-text').value = text.trim();
+    document.getElementById('imggen-result-wrap').style.display = 'block';
+  } catch(e) {
+    document.getElementById('imggen-loading').style.display = 'none';
+    document.getElementById('imggen-error').style.display = 'block';
+    document.getElementById('imggen-error').textContent = '⚠️ エラー: ' + e.message;
+  }
+}
+
+// ================================================================
+// 楽天カード生成
+// ================================================================
+const RAKUTEN_AFF_ID = '51b49e8f.9e110f22.51b49e90.feb3b809';
+
+function extractRakutenProductId(url) {
+  const patterns = [
+    /item\.rakuten\.co\.jp\/[^\/]+\/([^\/\?#]+)/,
+    /rakuten\.co\.jp\/[^\/]+\/([^\/\?#]+)/,
+    /\/([A-Za-z0-9\-_]+)\/?(?:\?|$)/
+  ];
+  for (const p of patterns) {
+    const m = url.match(p);
+    if (m) return m[1];
+  }
+  return null;
+}
+
+function genAffiliateLink(originalUrl) {
+  return `https://hb.afl.rakuten.co.jp/hgc/${RAKUTEN_AFF_ID}/?pc=${encodeURIComponent(originalUrl)}&m=${encodeURIComponent(originalUrl)}`;
+}
+
+function openRakutenModal(id) {
+  document.getElementById('rakuten-url-input').value = '';
+  document.getElementById('rakuten-result-wrap').style.display = 'none';
+  document.getElementById('rakuten-error').style.display = 'none';
+  document.getElementById('rakuten-loading').style.display = 'none';
+  openOverlay('modal-rakuten');
+}
+
+async function genRakutenCard() {
+  const url = document.getElementById('rakuten-url-input').value.trim();
+  if (!url) { toast('楽天商品URLを入力してください'); return; }
+  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
+  if (!apiKey) { toast('Gemini APIキーを設定してください'); return; }
+  const affLink = genAffiliateLink(url);
+  const productId = extractRakutenProductId(url) || url;
+  document.getElementById('rakuten-loading').style.display = 'block';
+  document.getElementById('rakuten-result-wrap').style.display = 'none';
+  document.getElementById('rakuten-error').style.display = 'none';
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: `以下の楽天商品URL・IDから、商品名と短い説明文（1文）を推測して、シンプルなHTMLカードを生成してください。\nURL: ${url}\n商品ID: ${productId}\nアフィリエイトリンク: ${affLink}\n\n出力形式（HTMLのみ、説明不要）:\n<div style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;max-width:400px;font-family:sans-serif">\n  <div style="font-weight:bold;font-size:14px;margin-bottom:4px">[商品名]</div>\n  <div style="font-size:12px;color:#666;margin-bottom:8px">[説明1文]</div>\n  <a href="${affLink}" style="display:inline-block;background:#bf0000;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">楽天で見る</a>\n</div>` }] }],
+        generationConfig: { temperature: 0.5, maxOutputTokens: 1024 }
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    let html = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    html = html.replace(/```html\n?/g,'').replace(/```\n?/g,'').trim();
+    document.getElementById('rakuten-loading').style.display = 'none';
+    document.getElementById('rakuten-html-output').value = html;
+    document.getElementById('rakuten-result-wrap').style.display = 'block';
+  } catch(e) {
+    document.getElementById('rakuten-loading').style.display = 'none';
+    document.getElementById('rakuten-error').style.display = 'block';
+    document.getElementById('rakuten-error').textContent = '⚠️ エラー: ' + e.message;
+  }
+}
+
+// ================================================================
+// 自己テスト
+// ================================================================
+async function runNabebaseTests() {
+  const results = [];
+  const ok = (name) => results.push({name, pass:true});
+  const fail = (name, err) => results.push({name, pass:false, err});
+
+  // 1. Gemini API疎通確認
+  try {
+    const apiKey = localStorage.getItem('beyan_gemini_key') || '';
+    if (!apiKey) throw new Error('APIキー未設定');
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({contents:[{role:'user',parts:[{text:'テスト'}]}], generationConfig:{maxOutputTokens:10}})
+    });
+    if (!res.ok) { const d=await res.json(); throw new Error(d.error?.message||'HTTP '+res.status); }
+    ok('Gemini API疎通確認');
+  } catch(e) { fail('Gemini API疎通確認', e.message); }
+
+  // 2. 楽天URL商品ID抽出テスト
+  try {
+    const testUrls = [
+      ['https://item.rakuten.co.jp/book/12345678/', '12345678'],
+      ['https://item.rakuten.co.jp/shop/item-code-001/', 'item-code-001'],
+      ['https://item.rakuten.co.jp/abc/xyz123/', 'xyz123'],
+      ['https://item.rakuten.co.jp/store/product_A/', 'product_A'],
+      ['https://item.rakuten.co.jp/rakuten24/12345/', '12345'],
+    ];
+    let allPass = true;
+    for (const [url, expected] of testUrls) {
+      const got = extractRakutenProductId(url);
+      if (got !== expected) { allPass = false; fail(`楽天URL抽出(${expected})`, `got:${got}`); break; }
+    }
+    if (allPass) ok('楽天URL商品ID抽出テスト');
+  } catch(e) { fail('楽天URL商品ID抽出テスト', e.message); }
+
+  // 3. アフィリエイトリンク生成テスト
+  try {
+    const link = genAffiliateLink('https://item.rakuten.co.jp/test/123/');
+    if (!link.includes(RAKUTEN_AFF_ID)) throw new Error('アフィリエイトIDが含まれない');
+    ok('アフィリエイトリンク生成テスト');
+  } catch(e) { fail('アフィリエイトリンク生成テスト', e.message); }
+
+  // 4. モーダル表示・非表示テスト
+  try {
+    const m = document.getElementById('modal-imggen');
+    if (!m) throw new Error('modal-imggen not found');
+    openOverlay('modal-imggen');
+    if (!m.classList.contains('open')) throw new Error('open failed');
+    closeOverlay('modal-imggen');
+    if (m.classList.contains('open')) throw new Error('close failed');
+    ok('モーダル表示・非表示テスト');
+  } catch(e) { fail('モーダル表示・非表示テスト', e.message); }
+
+  // 5. コピーボタン動作テスト
+  try {
+    if (!navigator.clipboard) throw new Error('clipboard API not available');
+    ok('コピーボタン動作テスト');
+  } catch(e) { fail('コピーボタン動作テスト', e.message); }
+
+  // 6. noteURLテスト
+  try {
+    const url = 'https://note.com/beyan51612/n/new';
+    if (!url.startsWith('https://note.com/beyan51612')) throw new Error('URL不正');
+    ok('noteで書くURLテスト');
+  } catch(e) { fail('noteで書くURLテスト', e.message); }
+
+  // 結果出力
+  let allPassed = true;
+  for (const r of results) {
+    if (r.pass) console.log(`✅ ${r.name}`);
+    else { console.log(`❌ ${r.name}: ${r.err}`); allPassed = false; }
+  }
+  if (allPassed) console.log('✅ 全テスト通過');
+  else console.log('⚠️ 一部テスト失敗');
+}
+
+runNabebaseTests();
 
 </script>
 
