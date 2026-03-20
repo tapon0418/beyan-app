@@ -904,23 +904,46 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 
 
 <!-- ===== JSON一括登録モーダル ===== -->
-<div id="json-import-modal" style="display:none;position:fixed;inset:0;background:rgba(58,37,24,.5);z-index:9999;overflow-y:auto;" onclick="if(event.target===this)closeJsonImport()">
-  <div style="background:var(--bg2);margin:16px auto;max-width:640px;border-radius:20px;padding:24px;position:relative;border:1px solid var(--border2);">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <span style="font-weight:800;font-size:1.1rem;color:var(--text);">📋 記事一括登録</span>
-      <button onclick="closeJsonImport()" style="background:none;border:none;color:var(--text2);font-size:1.4rem;cursor:pointer;">×</button>
+<div id="json-import-modal" style="display:none;position:fixed;inset:0;background:rgba(58,37,24,.55);z-index:9999;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:max(12px,env(safe-area-inset-top)) 12px max(24px,env(safe-area-inset-bottom));box-sizing:border-box;" onclick="if(event.target===this)closeJsonImport()">
+  <div style="background:var(--bg2);margin:0 auto;max-width:640px;border-radius:20px;padding:20px;position:relative;border:1px solid var(--border2);box-sizing:border-box;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <span style="font-weight:800;font-size:1.05rem;color:var(--text);">📋 記事一括登録（JSON）</span>
+      <button onclick="closeJsonImport()" style="background:none;border:none;color:var(--text2);font-size:1.4rem;cursor:pointer;min-width:44px;min-height:44px;">×</button>
     </div>
-    <p style="color:var(--text2);font-size:.85rem;margin-bottom:12px;">クロが出力したJSONをそのまま貼り付けてください。バリデーション後に登録されます。</p>
-    <textarea id="json-import-area" rows="10" placeholder='[{"title":"タイトル","type":"エッセイ(A)","cat":"ライティング","status":"idea","publishDate":"","memo":"","prevLink":"","nextLink":"","researchNote":""}]'
-      style="width:100%;background:var(--bg3);color:var(--text);border:1.5px solid var(--border2);border-radius:10px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
-    <div id="json-import-error" style="margin-top:8px;font-size:.82rem;color:#cc4444;display:none;"></div>
+    <p style="color:var(--text2);font-size:12px;margin-bottom:10px;line-height:1.6;">ClaudeのJSON出力をそのまま貼り付けてください。既存カードは消えません。</p>
+
+    <!-- 貼り付けボタン + テキストエリア -->
+    <div style="position:relative">
+      <textarea id="json-import-area" rows="8"
+        placeholder='[{"title":"タイトル","type":"エッセイ(A)","cat":"ライティング","status":"idea","publishDate":"","memo":"","prevLink":"","nextLink":"","researchNote":""}]'
+        style="width:100%;background:var(--bg3);color:var(--text);border:1.5px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;min-height:120px;word-break:break-all;"
+        oninput="jsonImportLiveCheck()"></textarea>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button onclick="jsonPasteFromClipboard()" style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit;">
+        📋 クリップボードから貼り付け
+      </button>
+      <button onclick="document.getElementById('json-import-area').value='';document.getElementById('json-import-error').style.display='none';document.getElementById('json-import-preview').style.display='none';" style="min-height:44px;min-width:56px;background:none;border:1px solid var(--border2);border-radius:10px;color:var(--text3);font-size:13px;cursor:pointer;font-family:inherit;">
+        クリア
+      </button>
+    </div>
+
+    <!-- エラー表示 -->
+    <div id="json-import-error" style="margin-top:10px;font-size:12px;color:#cc4444;display:none;padding:10px;background:rgba(204,68,68,.08);border-radius:8px;line-height:1.6;"></div>
+
+    <!-- プレビュー（バリデーション通過後） -->
     <div id="json-import-preview" style="margin-top:12px;display:none;">
-      <p style="font-size:.85rem;font-weight:700;color:var(--text);margin-bottom:8px;">✅ 登録予定の記事：</p>
-      <div id="json-preview-list" style="font-size:.82rem;color:var(--text2);"></div>
+      <div style="font-size:12px;font-weight:700;color:var(--green);margin-bottom:8px;">✅ 登録予定の記事一覧：</div>
+      <div id="json-preview-list" style="max-height:200px;overflow-y:auto;background:var(--bg3);border-radius:8px;padding:8px;font-size:12px;color:var(--text2);line-height:1.8;"></div>
+      <!-- 確定ボタン（confirm()不使用） -->
+      <button id="json-confirm-btn" onclick="commitImportJson()" style="width:100%;min-height:52px;margin-top:12px;background:var(--green);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;">
+        ✅ この内容で登録する
+      </button>
     </div>
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      <button onclick="validateAndImportJson()" style="flex:1;background:var(--accent);border:none;color:#fff;padding:12px;border-radius:10px;font-weight:700;font-size:.95rem;cursor:pointer;font-family:inherit;">登録する</button>
-      <button onclick="closeJsonImport()" style="background:var(--bg4);border:none;color:var(--text2);padding:12px 16px;border-radius:10px;cursor:pointer;font-family:inherit;">キャンセル</button>
+
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button onclick="validateAndImportJson()" style="flex:1;min-height:48px;background:var(--accent);border:none;color:#fff;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">確認する</button>
+      <button onclick="closeJsonImport()" style="min-height:48px;padding:0 16px;background:var(--bg4);border:none;color:var(--text2);border-radius:10px;cursor:pointer;font-family:inherit;font-size:14px;">キャンセル</button>
     </div>
   </div>
 </div>
@@ -2857,15 +2880,33 @@ function closeSettings() {
 // ================================================================
 // JSON一括登録
 // ================================================================
+let _jsonParsedItems = null;
+
 function openJsonImport() {
   document.getElementById('json-import-area').value = '';
   document.getElementById('json-import-error').style.display = 'none';
   document.getElementById('json-import-preview').style.display = 'none';
+  _jsonParsedItems = null;
   document.getElementById('json-import-modal').style.display = 'block';
 }
 
 function closeJsonImport() {
   document.getElementById('json-import-modal').style.display = 'none';
+  _jsonParsedItems = null;
+}
+
+function jsonPasteFromClipboard() {
+  navigator.clipboard.readText().then(t => {
+    document.getElementById('json-import-area').value = t;
+    jsonImportLiveCheck();
+    toast('貼り付けました');
+  }).catch(() => toast('クリップボードへのアクセスを許可してください'));
+}
+
+function jsonImportLiveCheck() {
+  document.getElementById('json-import-error').style.display = 'none';
+  document.getElementById('json-import-preview').style.display = 'none';
+  _jsonParsedItems = null;
 }
 
 function validateAndImportJson() {
@@ -2876,84 +2917,87 @@ function validateAndImportJson() {
 
   errEl.style.display = 'none';
   previewEl.style.display = 'none';
+  _jsonParsedItems = null;
 
-  // JSONパース
+  if (!raw) {
+    errEl.textContent = '❌ JSONを貼り付けてください';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  // JSONパース（```json ... ``` ブロックも許容）
+  let src = raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim();
   let items;
   try {
-    items = JSON.parse(raw);
+    items = JSON.parse(src);
   } catch(e) {
-    errEl.textContent = '❌ JSONの形式が正しくありません: ' + e.message;
+    errEl.innerHTML = `❌ JSONの形式が正しくありません<br><span style="font-size:11px">${e.message}</span><br><span style="font-size:11px;color:var(--text3)">ヒント：ClaudeのJSON出力をそのままコピーしてください</span>`;
     errEl.style.display = 'block';
     return;
   }
 
+  // 単体オブジェクトは配列に変換
   if (!Array.isArray(items)) {
-    errEl.textContent = '❌ 配列（[...]）形式で入力してください';
+    if (typeof items === 'object' && items !== null && items.title) items = [items];
+    else { errEl.textContent = '❌ 配列（[...]）形式で入力してください'; errEl.style.display = 'block'; return; }
+  }
+  if (items.length === 0) {
+    errEl.textContent = '❌ 0件です。JSONの内容を確認してください';
     errEl.style.display = 'block';
     return;
   }
 
-  // バリデーション
-  const required = ['title', 'type', 'cat', 'status'];
-  const validTypes = ['エッセイ(A)', 'ハウツー(B)', 'AI活用', '有料note'];
-  const validCats = ['ライティング', '副業', '楽天', 'AI活用', '振り返り', 'その他'];
-  const validStatuses = ['idea', 'writing', 'review', 'xready', 'done'];
-  const errors = [];
-
+  // 必須はtitleのみ、それ以外は補完
+  const validStatuses = ['idea', 'writing', 'review', 'xprep', 'done'];
+  const warnings = [];
   items.forEach((item, i) => {
-    required.forEach(k => {
-      if (!item[k]) errors.push(`記事${i+1}「${item.title||'?'}」: ${k}が未入力`);
-    });
-    if (item.type && !validTypes.includes(item.type)) {
-      errors.push(`記事${i+1}: typeが無効（${item.type}）`);
+    if (!item.title) { item.title = `（タイトル未設定 ${i+1}）`; warnings.push(`記事${i+1}：titleが空のため仮タイトルを設定`); }
+    if (!item.status || !validStatuses.includes(item.status)) {
+      if (item.status) warnings.push(`記事${i+1}「${item.title}」：status「${item.status}」は無効 → 「idea」に設定`);
+      item.status = 'idea';
     }
-    if (item.cat && !validCats.includes(item.cat)) {
-      errors.push(`記事${i+1}: catが無効（${item.cat}）`);
-    }
-    if (item.status && !validStatuses.includes(item.status)) {
-      errors.push(`記事${i+1}: statusが無効（${item.status}）`);
-    }
+    item.type = item.type || '';
+    item.cat = item.cat || '';
+    item.publishDate = item.publishDate || '';
+    item.memo = item.memo || '';
+    item.prevLink = item.prevLink || '';
+    item.nextLink = item.nextLink || '';
+    item.researchNote = item.researchNote || '';
   });
 
-  if (errors.length > 0) {
-    errEl.innerHTML = '❌ エラーがあります:<br>' + errors.join('<br>');
-    errEl.style.display = 'block';
-    return;
-  }
+  _jsonParsedItems = items;
+  const statusLabel = {idea:'💡アイデア', writing:'✍️執筆中', review:'🔍確認中', xprep:'📣X準備', done:'✅完了'};
+  previewList.innerHTML =
+    items.map((item, i) => `
+      <div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">
+        <span style="color:var(--text3);flex-shrink:0;font-size:11px">${i+1}.</span>
+        <span style="font-weight:600;color:var(--text);flex:1;min-width:0">${item.title}</span>
+        <span style="color:var(--text3);font-size:11px;flex-shrink:0">${statusLabel[item.status]||item.status}</span>
+        ${item.publishDate?`<span style="color:var(--accent);font-size:11px;flex-shrink:0">📅${item.publishDate}</span>`:''}
+      </div>`).join('') +
+    (warnings.length ? `<div style="margin-top:8px;padding:8px;background:rgba(232,168,48,.1);border-radius:6px;font-size:11px;color:var(--yellow);line-height:1.7">⚠️ ${warnings.join('<br>')}</div>` : '');
 
-  // プレビュー表示後に確認
-  previewList.innerHTML = items.map((item,i) =>
-    `<div style="padding:6px 0;border-bottom:1px solid var(--border);">${i+1}. 【${item.status}】${item.title} <span style="color:var(--text3)">(${item.type} / ${item.cat})</span></div>`
-  ).join('');
+  document.getElementById('json-confirm-btn').textContent = `✅ ${items.length}件を追加登録する`;
   previewEl.style.display = 'block';
+  setTimeout(() => document.getElementById('json-confirm-btn').scrollIntoView({behavior:'smooth',block:'nearest'}), 100);
+}
 
-  if (!confirm(`${items.length}件の記事を登録します。よろしいですか？`)) return;
-
-  // 登録
+function commitImportJson() {
+  if (!_jsonParsedItems || !_jsonParsedItems.length) return;
   const maxId = Math.max(...S.notes.map(n => n.id), 200);
-  items.forEach((item, i) => {
+  _jsonParsedItems.forEach((item, i) => {
     S.notes.push({
       id: maxId + i + 1,
-      title: item.title,
-      type: item.type,
-      cat: item.cat,
-      status: item.status,
-      publishDate: item.publishDate || '',
-      memo: item.memo || '',
-      prevLink: item.prevLink || '',
-      nextLink: item.nextLink || '',
-      researchNote: item.researchNote || '',
-      geminiResult: '',
-      xposts: []
+      title: item.title, type: item.type, cat: item.cat,
+      status: item.status, publishDate: item.publishDate,
+      memo: item.memo, prevLink: item.prevLink,
+      nextLink: item.nextLink, researchNote: item.researchNote,
+      rakuten: false, researchDone: false, researchDate: '',
+      geminiResult: '', claudeResult: '', draftText: ''
     });
   });
-
-  localStorage.setItem(KEY, JSON.stringify(S));
-  renderNotes();
-  closeJsonImport();
-  // トースト表示
-  const t = document.getElementById('toast');
-  if(t){ t.textContent = `✅ ${items.length}件の記事を登録しました`; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+  save(); renderNotes(); closeJsonImport();
+  toast(`✅ ${_jsonParsedItems.length}件を追加登録しました`);
 }
 
 function switchStab(tab) {
