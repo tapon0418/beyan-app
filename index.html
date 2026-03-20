@@ -216,7 +216,9 @@ select option{background:var(--bg3)}
 /* ===== COPY BOX ===== */
 .copy-box{background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);
   padding:12px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-all;
-  max-height:200px;overflow-y:auto;color:var(--text2);margin-bottom:6px}
+  overflow-y:auto;color:var(--text2);margin-bottom:6px}
+/* 結果表示ボックスは全文展開（途切れ防止） */
+.result-box{max-height:none!important}
 .copy-btn{display:flex;align-items:center;gap:6px;background:var(--bg5);
   border:1px solid var(--border2);border-radius:8px;padding:8px 14px;
   color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;
@@ -1200,7 +1202,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
           ✨ STEP1プロンプトを生成
         </button>
         <div id="rw-out-1" style="display:none">
-          <div class="copy-box" id="rw-result-1" style="white-space:pre-wrap;max-height:320px;overflow-y:auto;font-size:13px;line-height:1.75"></div>
+          <div class="copy-box" id="rw-result-1" style="white-space:pre-wrap;font-size:13px;line-height:1.75"></div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button class="copy-btn" style="flex:1" onclick="rwCopy(1)">📋 コピー</button>
             <button class="copy-btn" style="flex:1;background:#0ea5e920;color:#0ea5e9;border-color:#0ea5e9" onclick="window.open('https://www.perplexity.ai','_blank');toast('Perplexityが開きます')">🔵 パペで開く</button>
@@ -1227,7 +1229,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
           ✨ STEP2プロンプトを生成
         </button>
         <div id="rw-out-2" style="display:none">
-          <div class="copy-box" id="rw-result-2" style="white-space:pre-wrap;max-height:320px;overflow-y:auto;font-size:13px;line-height:1.75"></div>
+          <div class="copy-box" id="rw-result-2" style="white-space:pre-wrap;font-size:13px;line-height:1.75"></div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button class="copy-btn" style="flex:1" onclick="rwCopy(2)">📋 コピー</button>
             <button class="copy-btn" style="flex:1;background:#f59e0b20;color:#d97706;border-color:#f59e0b" onclick="openInGemini(document.getElementById('rw-result-2').textContent)">🟡 ジミィで開く</button>
@@ -1262,7 +1264,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
           ✨ STEP3プロンプトを生成
         </button>
         <div id="rw-out-3" style="display:none">
-          <div class="copy-box" id="rw-result-3" style="white-space:pre-wrap;max-height:320px;overflow-y:auto;font-size:13px;line-height:1.75"></div>
+          <div class="copy-box" id="rw-result-3" style="white-space:pre-wrap;font-size:13px;line-height:1.75"></div>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button class="copy-btn" style="flex:1" onclick="rwCopy(3)">📋 コピー</button>
             <button class="copy-btn" style="flex:1;background:#7c3aed20;color:#7c3aed;border-color:#7c3aed" onclick="openInClaude(document.getElementById('rw-result-3').textContent)">🟣 クロで開く</button>
@@ -1330,7 +1332,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 
       <div id="gemini-result-section" style="display:none">
         <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ リサーチ完了 → ②クロ執筆タブへ自動入力済み</div>
-        <div class="copy-box" id="mw-gemini-output" style="max-height:220px"></div>
+        <div class="copy-box result-box" id="mw-gemini-output"></div>
         <button class="copy-btn" onclick="cp('mw-gemini-output')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
           結果をコピー
@@ -1362,11 +1364,11 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div class="hint">Geminiのリサーチ結果を貼り付け → <strong>クロ（Claude）用の執筆指示文</strong>が自動生成されます。</div>
       <div class="input-group">
         <label class="input-label">Geminiのリサーチ結果を貼り付け</label>
-        <textarea id="mw-gemini-result" rows="4" placeholder="Geminiの出力をここに…" oninput="genChatGPT()"></textarea>
+        <textarea id="mw-gemini-result" rows="8" placeholder="Geminiの出力をここに…" oninput="genChatGPT()" style="min-height:120px;resize:vertical"></textarea>
       </div>
       <div id="mw-chatgpt-wrap" style="display:none">
         <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:700">↓ クロ（Claude）用 執筆指示文</div>
-        <div class="copy-box" id="mw-chatgpt"></div>
+        <div class="copy-box result-box" id="mw-chatgpt"></div>
         <div style="display:flex;gap:6px">
           <button class="copy-btn" style="flex:1" onclick="cp('mw-chatgpt')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー
@@ -1402,7 +1404,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <!-- API成功時の結果 -->
         <div id="claude-result-section" style="display:none">
           <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ 執筆完了 → ③整形タブへ自動入力済み</div>
-          <div class="copy-box" id="mw-claude-output" style="max-height:280px;overflow-y:auto;white-space:pre-wrap"></div>
+          <div class="copy-box result-box" id="mw-claude-output" style="white-space:pre-wrap"></div>
           <div style="display:flex;gap:6px;margin-top:8px">
             <button class="copy-btn" style="flex:1" onclick="cp('mw-claude-output')">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー
@@ -1438,7 +1440,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
     <div class="fpanel" id="fp-format">
       <div class="hint">クロの草稿を貼り付け → AI記号（# ※ **）を除去してnote入稿用に整形します。</div>
       <div class="input-group">
-        <textarea id="mw-draft" rows="5" placeholder="クロの草稿をここに…" oninput="autoSaveDraft()"></textarea>
+        <textarea id="mw-draft" rows="10" placeholder="クロの草稿をここに…" oninput="autoSaveDraft()" style="min-height:180px;resize:vertical"></textarea>
         <div id="draft-autosave-status" style="font-size:10px;color:var(--text3);text-align:right;margin-top:3px;height:14px"></div>
       </div>
       <button class="btn btn-orange" style="min-height:44px;font-size:14px;margin-bottom:8px" onclick="doFormat()">
@@ -1446,7 +1448,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         AI記号を除去して整形
       </button>
       <div id="mw-formatted-wrap" style="display:none">
-        <div class="copy-box" id="mw-formatted"></div>
+        <div class="copy-box result-box" id="mw-formatted"></div>
         <button class="copy-btn" onclick="cp('mw-formatted')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー（note用）
         </button>
@@ -2136,7 +2138,7 @@ function saveClaudeApiKey() {
 async function fetchClaudeApi(apiKey, prompt) {
   const body = JSON.stringify({
     model: 'claude-sonnet-4-6',
-    max_tokens: 8192,
+    max_tokens: 16000,
     messages: [{ role: 'user', content: prompt }]
   });
   const headers = {
