@@ -898,6 +898,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
     <button class="tpill" id="tp-today"  onclick="scrollToSec('sec-today')"><span class="tpill-icon">📅</span><span class="tpill-label"> 今日</span></button>
     <button class="tpill" id="tp-tmpl"   onclick="openSettings();switchStab('gemini')"><span class="tpill-icon">📋</span><span class="tpill-label"> 指示文</span></button>
     <button class="tpill" id="tp-research" onclick="scrollToSec('sec-research')"><span class="tpill-icon">🔍</span><span class="tpill-label"> リサーチ</span></button>
+    <button class="tpill" id="tp-archive" onclick="scrollToSec('sec-archive')"><span class="tpill-icon">📦</span><span class="tpill-label"> アーカイブ</span></button>
   </div>
   <button class="topbar-gear" onclick="openSettings()" aria-label="設定">⚙️</button>
 </header>
@@ -1206,12 +1207,27 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       </button>
       <div class="filter-bar">
         <button class="chip active" data-xf="all" onclick="setXf(this,'all')">すべて</button>
-        <button class="chip" data-xf="stock" onclick="setXf(this,'stock')">ストック</button>
         <button class="chip" data-xf="A" onclick="setXf(this,'A')">タイプA（朝）</button>
         <button class="chip" data-xf="B" onclick="setXf(this,'B')">タイプB（夜）</button>
-        <button class="chip" data-xf="posted" onclick="setXf(this,'posted')">投稿済み</button>
       </div>
       <div id="xpost-list" style="padding:4px 3px;"></div>
+    </div>
+  </div>
+
+  <!-- ===== アーカイブ ===== -->
+  <div id="sec-archive">
+    <div class="sec-head" onclick="toggleSec('archive')">
+      <div class="sec-head-title">📦 アーカイブ</div>
+      <div class="sec-head-count" id="archive-count-label"></div>
+      <svg class="sec-chevron" id="chev-archive" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-archive" style="max-height:0;overflow:hidden">
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <button class="chip active" id="arc-tab-notes" onclick="setArchiveTab('notes')">✅ 公開済みnote</button>
+        <button class="chip" id="arc-tab-xposts" onclick="setArchiveTab('xposts')">𝕏 投稿済みX</button>
+      </div>
+      <div id="archive-notes-list"></div>
+      <div id="archive-xposts-list" style="display:none"></div>
     </div>
   </div>
 
@@ -1735,7 +1751,7 @@ const cp = id => navigator.clipboard.writeText(document.getElementById(id).textC
 // ================================================================
 // SECTION COLLAPSE
 // ================================================================
-const secState = {today:true, notes:true, xposts:true, research:true};
+const secState = {today:true, notes:true, xposts:true, research:true, archive:false};
 function toggleSec(name) {
   secState[name] = !secState[name];
   const body = document.getElementById('body-'+name);
@@ -1810,12 +1826,15 @@ function renderNotes() {
   Object.keys(SL).forEach(k => counts[k] = S.notes.filter(n=>n.status===k).length);
 
   document.getElementById('filter-bar').innerHTML =
-    [['all','すべて'],['idea','アイデア'],['writing','執筆中'],['review','確認中'],['xprep','X準備中'],['done','公開済み']]
-      .map(([v,l]) => `<button class="chip${nf===v?' active':''}" onclick="setNf('${v}')">${l} ${counts[v]||0}</button>`)
+    [['all','作業中'],['idea','アイデア'],['writing','執筆中'],['review','確認中'],['xprep','X準備中']]
+      .map(([v,l]) => {
+        const cnt = v === 'all' ? S.notes.filter(n=>n.status!=='done').length : (counts[v]||0);
+        return `<button class="chip${nf===v?' active':''}" onclick="setNf('${v}')">${l} ${cnt}</button>`;
+      })
       .join('');
 
   const q = (document.getElementById('note-search')?.value||'').toLowerCase();
-  let list = [...S.notes];
+  let list = [...S.notes].filter(n => n.status !== 'done');
   if (nf !== 'all') list = list.filter(n => n.status === nf);
   if (q) list = list.filter(n => (n.title+' '+(n.memo||'')).toLowerCase().includes(q));
 
@@ -1904,8 +1923,8 @@ function markNoteDone(id, e) {
   const n = S.notes.find(x => x.id === id);
   if (!n) return;
   n.status = 'done';
-  save(); renderNotes();
-  toast('✅ 公開済みに変更しました');
+  save(); renderNotes(); renderArchive();
+  toast('✅ 公開済みに変更しました — アーカイブへ移動しました');
 }
 
 // ---- 月編集 ----
@@ -1986,11 +2005,10 @@ function setXf(el, v) {
 }
 function renderXPosts() {
   updateStats();
-  let list = [...S.xposts];
-  if (xfEl==='stock')  list = list.filter(p=>p.status==='stock');
-  if (xfEl==='posted') list = list.filter(p=>p.status==='posted');
-  if (xfEl==='A')      list = list.filter(p=>p.type==='A');
-  if (xfEl==='B')      list = list.filter(p=>p.type==='B');
+  // posted は常にアーカイブへ — メイン一覧には表示しない
+  let list = [...S.xposts].filter(p => p.status !== 'posted');
+  if (xfEl==='A') list = list.filter(p=>p.type==='A');
+  if (xfEl==='B') list = list.filter(p=>p.type==='B');
   document.getElementById('xpost-list').innerHTML = list.length === 0
     ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">投稿がありません</div>`
     : list.map(p => {
@@ -2017,8 +2035,69 @@ function renderXPosts() {
   if (secState.xposts) body.style.maxHeight = body.scrollHeight + 4000 + 'px';
 }
 
-function markPosted(id){const p=S.xposts.find(x=>x.id===id);if(p){p.status='posted';save();renderXPosts();toast('投稿済みにしました ✓');}}
-function delXPost(id){S.xposts=S.xposts.filter(x=>x.id!==id);save();renderXPosts();toast('削除しました');}
+function markPosted(id){const p=S.xposts.find(x=>x.id===id);if(p){p.status='posted';save();renderXPosts();renderArchive();toast('投稿済みにしました ✓ — アーカイブへ移動しました');}}
+function delXPost(id){S.xposts=S.xposts.filter(x=>x.id!==id);save();renderXPosts();renderArchive();toast('削除しました');}
+
+// ================================================================
+// アーカイブ
+// ================================================================
+let archiveTab = 'notes';
+function setArchiveTab(tab) {
+  archiveTab = tab;
+  document.getElementById('arc-tab-notes').classList.toggle('active', tab==='notes');
+  document.getElementById('arc-tab-xposts').classList.toggle('active', tab==='xposts');
+  document.getElementById('archive-notes-list').style.display = tab==='notes' ? 'block' : 'none';
+  document.getElementById('archive-xposts-list').style.display = tab==='xposts' ? 'block' : 'none';
+}
+function renderArchive() {
+  const doneNotes  = S.notes.filter(n => n.status === 'done');
+  const postedX    = S.xposts.filter(p => p.status === 'posted');
+  const countLbl   = document.getElementById('archive-count-label');
+  if (countLbl) countLbl.textContent = `note ${doneNotes.length}件 · X ${postedX.length}件`;
+
+  const nl = document.getElementById('archive-notes-list');
+  if (nl) nl.innerHTML = doneNotes.length === 0
+    ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">公開済み記事はありません</div>`
+    : doneNotes.map(n => `
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border-radius:10px;margin-bottom:6px;border:1px solid var(--border)">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0"></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${n.title}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">${n.publishDate||'月未設定'} · ${n.type||''} · ${n.cat||''}</div>
+        </div>
+        <button onclick="unarchiveNote(${n.id})" style="background:var(--bg5);border:1px solid var(--border2);border-radius:7px;padding:5px 10px;font-size:11px;cursor:pointer;color:var(--text2);font-family:inherit;white-space:nowrap;flex-shrink:0;min-height:36px">↩ 戻す</button>
+      </div>`).join('');
+
+  const xl = document.getElementById('archive-xposts-list');
+  if (xl) xl.innerHTML = postedX.length === 0
+    ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">投稿済みX投稿はありません</div>`
+    : postedX.map(p => `
+      <div style="padding:10px 12px;background:var(--bg3);border-radius:10px;margin-bottom:6px;border:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;${p.type==='A'?'background:rgba(59,130,246,.2);color:#60a5fa':'background:rgba(167,139,250,.2);color:#a78bfa'}">${p.type==='A'?'タイプA 朝':'タイプB 夜'}</span>
+          <span style="font-size:11px;color:var(--text3)">${p.createdAt||''}</span>
+          <button onclick="unarchiveXPost(${p.id})" style="margin-left:auto;background:var(--bg5);border:1px solid var(--border2);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer;color:var(--text2);font-family:inherit;min-height:32px">↩ 戻す</button>
+        </div>
+        <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.6">${p.content}</div>
+      </div>`).join('');
+
+  const body = document.getElementById('body-archive');
+  if (body && secState.archive) { body.style.maxHeight = body.scrollHeight + 4000 + 'px'; body.style.overflow = 'visible'; }
+}
+function unarchiveNote(id) {
+  const n = S.notes.find(x => x.id === id);
+  if (!n) return;
+  n.status = 'xprep';
+  save(); renderNotes(); renderArchive();
+  toast('↩ X準備中に戻しました');
+}
+function unarchiveXPost(id) {
+  const p = S.xposts.find(x => x.id === id);
+  if (!p) return;
+  p.status = 'stock';
+  save(); renderXPosts(); renderArchive();
+  toast('↩ ストックに戻しました');
+}
 function openAddXPost(){ document.getElementById('mx-id').value=''; document.getElementById('mx-content').value=''; document.getElementById('mx-status').value='stock'; setMxType('A'); updateMxcc(); openOverlay('modal-xpost'); }
 function editXPost(id){
   const p=S.xposts.find(x=>x.id===id); if(!p) return;
@@ -2818,6 +2897,7 @@ async function runGemini() {
 initSec();
 renderNotes();
 renderXPosts();
+renderArchive();
 renderToday();
 renderWeeklyReviews();
 renderNetaList();
@@ -3198,7 +3278,7 @@ function openXPost(id) {
   navigator.clipboard.writeText(p.content).then(() => {
     toast('コピーしました。X投稿画面が開きます');
     window.open('https://x.com/compose/post', '_blank');
-    if (p.status !== 'posted') { p.status = 'posted'; save(); renderXPosts(); }
+    if (p.status !== 'posted') { p.status = 'posted'; save(); renderXPosts(); renderArchive(); }
   });
 }
 
