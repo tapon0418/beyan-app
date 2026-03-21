@@ -1200,6 +1200,10 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         </div>
       </div>
 
+      <button class="btn btn-accent" style="margin-bottom:10px;font-size:14px;min-height:48px;font-weight:700" onclick="openAddXPost()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        ＋ 投稿を追加
+      </button>
       <div class="filter-bar">
         <button class="chip active" data-xf="all" onclick="setXf(this,'all')">すべて</button>
         <button class="chip" data-xf="stock" onclick="setXf(this,'stock')">ストック</button>
@@ -1208,10 +1212,6 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <button class="chip" data-xf="posted" onclick="setXf(this,'posted')">投稿済み</button>
       </div>
       <div id="xpost-list" style="padding:4px 3px;"></div>
-      <button class="btn btn-ghost" style="margin-top:4px;font-size:13px;min-height:44px" onclick="openAddXPost()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        投稿を追加
-      </button>
     </div>
   </div>
 
@@ -1388,7 +1388,11 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
     </div>
     <div style="padding:16px">
       <div style="margin-bottom:10px">
-        <input type="url" id="rakuten-url-input" placeholder="楽天商品URLを貼り付けてください" style="width:100%;font-size:16px;border:1.5px solid var(--border2);border-radius:8px;padding:10px;background:var(--bg2);color:var(--text);font-family:inherit">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+          <input type="url" id="rakuten-url-input" placeholder="楽天商品URLを貼り付けてください" style="flex:1;font-size:16px;border:1.5px solid var(--border2);border-radius:8px;padding:10px;background:var(--bg2);color:var(--text);font-family:inherit">
+          <button onclick="navigator.clipboard.readText().then(t=>{document.getElementById('rakuten-url-input').value=t;toast('貼り付けました')}).catch(()=>toast('貼り付け失敗'))" style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px 12px;font-size:13px;cursor:pointer;color:var(--text2);font-family:inherit;white-space:nowrap;min-height:44px">📋 貼り付け</button>
+        </div>
+        <div style="font-size:11px;color:var(--text3)">例: https://item.rakuten.co.jp/shop/item-code/</div>
       </div>
       <button onclick="genRakutenCard()" style="width:100%;min-height:48px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:12px">🛒 カード生成</button>
       <div id="rakuten-loading" style="text-align:center;padding:12px;display:none">
@@ -1487,77 +1491,48 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 
     <!-- ② クロ執筆 -->
     <div class="fpanel" id="fp-chatgpt">
-      <div class="hint">Geminiのリサーチ結果を貼り付け → <strong>クロ（Claude）用の執筆指示文</strong>が自動生成されます。</div>
-      <div class="input-group">
-        <label class="input-label">Geminiのリサーチ結果を貼り付け</label>
-        <textarea id="mw-gemini-result" rows="8" placeholder="Geminiの出力をここに…" oninput="genChatGPT()" style="min-height:120px;resize:vertical"></textarea>
+
+      <!-- STEP 1 -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">1</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text2)">ジミーのリサーチ結果を確認・貼り付け</div>
       </div>
+      <div class="input-group" style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+          <label class="input-label" style="margin-bottom:0;font-size:11px">Geminiのリサーチ結果</label>
+          <button onclick="navigator.clipboard.readText().then(t=>{document.getElementById('mw-gemini-result').value=t;genChatGPT()}).catch(()=>toast('貼り付け失敗'))" style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit;min-height:32px">📋 貼り付け</button>
+        </div>
+        <textarea id="mw-gemini-result" rows="5" placeholder="①Geminiタブのリサーチ結果、またはここに直接貼り付け…" oninput="genChatGPT()" style="min-height:100px;resize:vertical"></textarea>
+      </div>
+
+      <!-- STEP 2 -->
       <div id="mw-chatgpt-wrap" style="display:none">
-        <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:700">↓ クロ（Claude）用 執筆指示文</div>
-        <div class="copy-box result-box" id="mw-chatgpt"></div>
-        <div style="display:flex;gap:6px">
-          <button class="copy-btn" style="flex:1" onclick="cp('mw-chatgpt')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー
-          </button>
-          <button class="copy-btn" style="flex:1;background:#f3e8ff;color:#7c3aed;border-color:#7c3aed" onclick="openInClaude(document.getElementById('mw-chatgpt').textContent)">
-            🔗 クロで開く
-          </button>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <div style="background:#7c3aed;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">2</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text2)">クロに執筆指示文を送る</div>
         </div>
+        <div class="copy-box result-box" id="mw-chatgpt" style="max-height:120px;overflow-y:auto"></div>
+        <button onclick="(()=>{const txt=document.getElementById('mw-chatgpt').textContent;navigator.clipboard.writeText(txt).then(()=>{toast('📋 指示文をコピーしました！クロで開きます');setTimeout(()=>openInClaude(txt),600)}).catch(()=>openInClaude(txt))})()" style="width:100%;min-height:52px;margin-top:8px;background:#7c3aed;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em">
+          📋 指示文をコピーして クロで開く →
+        </button>
+        <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px;line-height:1.6">Claudeが開いたら指示文を貼り付けて執筆させてください</div>
       </div>
 
-      <!-- Claude API 実行セクション -->
-      <div style="border-top:1px solid var(--border2);margin-top:14px;padding-top:14px">
-        <div style="font-size:11px;font-weight:700;color:#c4b5fd;margin-bottom:10px;letter-spacing:.04em">✍️ Claude API で直接執筆させる</div>
-        <div id="claude-key-section" style="margin-bottom:10px">
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="password" id="claude-api-key" placeholder="Claude APIキー（console.anthropic.com で取得）"
-              style="flex:1;font-size:16px" oninput="onClaudeKeyInput()" onchange="saveClaudeApiKey()" onblur="saveClaudeApiKey()">
-            <button class="btn btn-ghost btn-sm" style="width:auto;min-width:56px;flex-shrink:0"
-              onclick="saveClaudeApiKey()">保存</button>
-          </div>
-          <div id="claude-key-status" style="font-size:11px;margin-top:5px;color:var(--text3)"></div>
+      <!-- STEP 3 -->
+      <div style="margin-top:16px;background:#1e1233;border:1.5px solid #7c3aed55;border-radius:12px;padding:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <div style="background:#5b21b6;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">3</div>
+          <div style="font-size:12px;font-weight:700;color:#c4b5fd">クロの回答を貼り付けて保存</div>
         </div>
-        <button class="btn btn-accent" id="btn-run-claude" onclick="runClaude()"
-          style="width:100%;margin-bottom:12px;min-height:48px;font-size:15px;font-weight:700;background:#7c3aed;border-color:#7c3aed">
-          ✍️ クロに執筆させる
-        </button>
-        <div id="claude-loading" style="display:none;text-align:center;padding:12px 0">
-          <div style="font-size:13px;color:#c4b5fd">✍️ クロが執筆中...</div>
-          <div style="width:100%;height:3px;background:var(--bg5);border-radius:2px;margin-top:10px;overflow:hidden">
-            <div id="claude-pbar" style="height:100%;width:0%;background:#7c3aed;border-radius:2px;transition:width .4s"></div>
-          </div>
-        </div>
-        <!-- API成功時の結果 -->
-        <div id="claude-result-section" style="display:none">
-          <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ 執筆完了 → ③整形タブへ自動入力済み</div>
-          <div class="copy-box result-box" id="mw-claude-output" style="white-space:pre-wrap"></div>
-          <div style="display:flex;gap:6px;margin-top:8px">
-            <button class="copy-btn" style="flex:1" onclick="cp('mw-claude-output')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー
-            </button>
-            <button class="copy-btn" style="flex:1;background:var(--bg3)" onclick="switchTabByName('format');toast('③整形タブへ移動')">
-              ③ 整形へ →
-            </button>
-          </div>
-        </div>
-
-        <!-- フォールバック時：手動ペーストパネル -->
-        <div id="claude-manual-panel" style="display:none;background:#1e1233;border:1px solid #7c3aed55;border-radius:12px;padding:14px;margin-top:4px">
-          <div style="font-size:13px;font-weight:700;color:#c4b5fd;margin-bottom:10px">📋 Claudeで執筆後、ここに貼り付けてください</div>
-          <div style="font-size:12px;color:#aaa;margin-bottom:12px;line-height:1.7">
-            ① Claudeが開きます → ② 自動でプロンプトが送信されます<br>
-            ③ Claudeの回答を全コピー → ④ 下の「貼り付けて保存」を押す
-          </div>
-          <textarea id="claude-manual-input" rows="6" placeholder="Claudeの回答をここに貼り付け…"
-            style="width:100%;background:#111;color:#e8e8e8;border:1px solid #555;border-radius:8px;padding:10px;font-size:15px;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
-          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-            <button onclick="pasteFromClipboardToManual()" style="flex:1;min-height:48px;background:#3b1f6e;border:1px solid #7c3aed;color:#c4b5fd;border-radius:10px;font-size:14px;cursor:pointer;font-family:inherit;">
-              📋 クリップボードから貼り付け
-            </button>
-            <button onclick="saveManualClaudeResult()" style="flex:1;min-height:48px;background:#7c3aed;border:none;color:#fff;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
-              ✅ 保存して③整形へ
-            </button>
-          </div>
+        <textarea id="claude-manual-input" rows="7" placeholder="Claudeの執筆結果をここに貼り付け…"
+          style="width:100%;background:#111;color:#e8e8e8;border:1px solid #7c3aed44;border-radius:8px;padding:10px;font-size:15px;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button onclick="navigator.clipboard.readText().then(t=>{document.getElementById('claude-manual-input').value=t;toast('貼り付けました')}).catch(()=>toast('貼り付け失敗'))" style="flex:1;min-height:48px;background:#3b1f6e;border:1px solid #7c3aed;color:#c4b5fd;border-radius:10px;font-size:14px;cursor:pointer;font-family:inherit;">
+            📋 貼り付け
+          </button>
+          <button onclick="saveManualClaudeResult()" style="flex:1;min-height:48px;background:#7c3aed;border:none;color:#fff;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
+            ✅ 保存して③整形へ
+          </button>
         </div>
       </div>
     </div>
@@ -1653,7 +1628,10 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <button class="type-btn" id="mx-tpb" onclick="setMxType('B')">タイプB<br><span style="font-size:10px;font-weight:400">夜21時・note導線</span></button>
     </div>
     <div class="input-group">
-      <label class="input-label">投稿内容</label>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <label class="input-label" style="margin-bottom:0">投稿内容</label>
+        <button onclick="navigator.clipboard.readText().then(t=>{document.getElementById('mx-content').value=t;updateMxcc()}).catch(()=>toast('クリップボードの読み取りに失敗しました'))" style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit;min-height:32px">📋 貼り付け</button>
+      </div>
       <textarea id="mx-content" rows="6" oninput="updateMxcc()"></textarea>
       <div style="text-align:right;margin-top:3px;font-size:11px"><span id="mx-cc" class="char-ok">0 / 140字</span></div>
     </div>
@@ -3480,17 +3458,23 @@ async function genImgFull(n) {
 
   await new Promise((resolve) => {
     const tmpImg = new Image();
-    tmpImg.crossOrigin = 'anonymous';
+    const _timeout = setTimeout(() => {
+      // タイムアウト → URL直接表示を試みる
+      pbar.style.width = '100%';
+      displayImggenResult_url(pollinationsUrl, imagePrompt);
+      resolve();
+    }, 30000);
     tmpImg.onload = () => {
+      clearTimeout(_timeout);
       pbar.style.width = '100%';
       displayImggenResult_url(pollinationsUrl, imagePrompt);
       resolve();
     };
     tmpImg.onerror = () => {
-      loadEl.style.display = 'none';
-      document.getElementById('imggen-prompt-text').value = imagePrompt;
-      document.getElementById('imggen-result-wrap').style.display = 'block';
-      showImggenError('⚠️ 画像生成APIが現在利用できません。\nプロンプトをCanva / AdobeFirefly に貼り付けてご利用ください。');
+      clearTimeout(_timeout);
+      // pollinationsは直接imgタグでは表示できることが多い → URLをそのまま表示
+      pbar.style.width = '100%';
+      displayImggenResult_url(pollinationsUrl, imagePrompt);
       resolve();
     };
     tmpImg.src = pollinationsUrl;
@@ -3594,8 +3578,9 @@ async function genRakutenCard() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: `以下の楽天商品URL・IDから、商品名と短い説明文（1文）を推測して、シンプルなHTMLカードを生成してください。\nURL: ${url}\n商品ID: ${productId}\nアフィリエイトリンク: ${affLink}\n\n出力形式（HTMLのみ、説明不要）:\n<div style="border:1px solid #e0e0e0;border-radius:8px;padding:12px;max-width:400px;font-family:sans-serif">\n  <div style="font-weight:bold;font-size:14px;margin-bottom:4px">[商品名]</div>\n  <div style="font-size:12px;color:#666;margin-bottom:8px">[説明1文]</div>\n  <a href="${affLink}" style="display:inline-block;background:#bf0000;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;font-size:13px">楽天で見る</a>\n</div>` }] }],
-        generationConfig: { temperature: 0.5, maxOutputTokens: 1024 }
+        system_instruction: { parts: [{ text: 'あなたは楽天アフィリエイトのHTMLカード生成の専門家です。URLのパス（ショップ名・商品IDなど）から商品カテゴリや内容を推測し、リアルな商品名と説明文を作成してください。架空でも実在感のある内容にしてください。HTMLのみ出力。余計な説明は不要。' }] },
+        contents: [{ role: 'user', parts: [{ text: `楽天商品URL: ${url}\nショップ名: ${url.match(/item\.rakuten\.co\.jp\/([^\/]+)\//)?.[1] || '不明'}\n商品ID: ${productId}\nアフィリエイトリンク: ${affLink}\n\nこの情報から商品名と説明文を推測して、noteのHTML挿入欄に使えるアフィリエイトカードを生成してください。\n\n出力形式（HTMLのみ、\`\`\`なし）:\n<div style="border:1.5px solid #e0d0d0;border-radius:10px;padding:14px 16px;max-width:420px;font-family:sans-serif;background:#fff9f9;display:flex;flex-direction:column;gap:8px">\n  <div style="font-size:13px;color:#999">楽天市場</div>\n  <div style="font-weight:bold;font-size:15px;color:#222;line-height:1.4">[具体的な商品名（架空でもOK）]</div>\n  <div style="font-size:12px;color:#666;line-height:1.5">[商品の魅力を1〜2文で。副業ライターの記事内容に合わせて]</div>\n  <a href="${affLink}" style="display:inline-block;background:#bf0000;color:#fff;padding:9px 18px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:bold;align-self:flex-start">🛒 楽天で見る・買う</a>\n</div>` }] }],
+        generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
       })
     });
     const data = await res.json();
