@@ -82,7 +82,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
   min-height:54px;display:flex;align-items:center;padding:4px 16px;gap:8px}
 .brand{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--accent);flex:1;letter-spacing:.04em;}
-.topbar-pills{display:flex;gap:8px}
+.topbar-pills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:2px}
+.topbar-pills::-webkit-scrollbar{display:none}
 .tpill{font-size:13px;padding:8px 18px;border-radius:20px;font-weight:700;border:none;
   background:var(--bg4);color:var(--text2);cursor:pointer;font-family:inherit;transition:all .15s}
 .tpill.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(212,98,42,.3)}
@@ -98,14 +99,27 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .stat-lbl{font-size:9px;color:var(--text2);margin-top:3px}
 
 /* ===== SECTION HEADER（折りたたみ） ===== */
-.sec-head{display:flex;align-items:center;gap:8px;padding:10px 0 8px;cursor:pointer;
-  user-select:none;-webkit-user-select:none}
-.sec-head-title{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;
-  letter-spacing:.5px;flex:1}
+.sec-head{display:flex;align-items:center;gap:10px;padding:14px 16px 13px;cursor:pointer;
+  user-select:none;-webkit-user-select:none;
+  background:var(--bg3);border-bottom:1px solid var(--border)}
+.sec-head-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:.15px;flex:1}
 .sec-head-count{font-size:11px;color:var(--text3)}
-.sec-chevron{transition:transform .2s;color:var(--text3)}
+.sec-chevron{transition:transform .2s;color:var(--text3);flex-shrink:0}
 .sec-chevron.open{transform:rotate(180deg)}
-.sec-body{overflow:hidden;transition:max-height .25s ease}
+.sec-body{overflow:hidden;transition:max-height .25s ease;padding:0 2px}
+
+/* ===== セクションカード（色分け） ===== */
+#sec-today, #sec-notes, #sec-xposts, #sec-archive, #sec-research {
+  border-radius:16px;
+  margin-bottom:18px;
+  border:1.5px solid var(--border2);
+  overflow:clip;
+}
+#sec-notes    { border-left:5px solid var(--accent); }
+#sec-xposts   { border-left:5px solid #1a1a2e; }
+#sec-archive  { border-left:5px solid #7c3aed; }
+#sec-today    { border-left:5px solid var(--yellow); }
+#sec-research { border-left:5px solid var(--green); }
 
 /* ===== FILTER CHIPS ===== */
 .filter-bar{display:flex;gap:6px;overflow-x:auto;overflow-y:visible;padding:4px 2px 6px;margin-bottom:10px;scrollbar-width:none}
@@ -742,6 +756,15 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   .stat-box { padding:8px 4px; }
   .stat-num { font-size:18px; }
 
+  /* セクション：小画面での余白・文字調整 */
+  #sec-today,#sec-notes,#sec-xposts,#sec-archive,#sec-research {
+    margin-bottom:12px !important;
+    border-radius:12px !important;
+  }
+  .sec-head { padding:11px 12px 10px !important; }
+  .sec-head-title { font-size:13px !important; }
+  .sec-body[style*="padding"] { padding:10px 10px 6px !important; }
+
   /* 2. トップバー：アイコンのみ・均等幅 */
   .brand { display:none; }
   .topbar { padding:0; gap:0; min-height:56px; }
@@ -1117,7 +1140,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div class="sec-head-count" id="today-date-label"></div>
       <svg class="sec-chevron open" id="chev-today" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
-    <div class="sec-body" id="body-today">
+    <div class="sec-body" id="body-today" style="padding:12px 14px 8px">
       <div id="today-routine"></div>
 
       <!-- 週次レビュー -->
@@ -1142,7 +1165,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div class="sec-head-count" id="notes-count-label"></div>
       <svg class="sec-chevron open" id="chev-notes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
-    <div class="sec-body" id="body-notes">
+    <div class="sec-body" id="body-notes" style="padding:12px 14px 8px">
       <div class="filter-bar" id="filter-bar"></div>
       <div class="search-wrap">
         <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1174,7 +1197,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div class="sec-head-count" id="xposts-count-label"></div>
       <svg class="sec-chevron open" id="chev-xposts" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
-    <div class="sec-body" id="body-xposts">
+    <div class="sec-body" id="body-xposts" style="padding:12px 14px 8px">
 
       <!-- ネタストック（折りたたみ） -->
       <div id="neta-wrap" style="margin-bottom:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
@@ -1221,7 +1244,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div class="sec-head-count" id="archive-count-label"></div>
       <svg class="sec-chevron" id="chev-archive" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
-    <div class="sec-body" id="body-archive" style="max-height:0;overflow:hidden">
+    <div class="sec-body" id="body-archive" style="max-height:0;overflow:hidden;padding:12px 14px 8px">
       <div style="display:flex;gap:6px;margin-bottom:10px">
         <button class="chip active" id="arc-tab-notes" onclick="setArchiveTab('notes')">✅ 公開済みnote</button>
         <button class="chip" id="arc-tab-xposts" onclick="setArchiveTab('xposts')">𝕏 投稿済みX</button>
@@ -1238,7 +1261,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
       <div class="sec-head-count" style="font-size:11px;color:var(--text3)">パペ → ジミィ → クロ</div>
       <svg class="sec-chevron open" id="chev-research" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
-    <div class="sec-body" id="body-research">
+    <div class="sec-body" id="body-research" style="padding:12px 14px 8px">
 
       <!-- ステップインジケーター -->
       <div class="rw-steps">
