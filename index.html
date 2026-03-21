@@ -11,7 +11,7 @@
   --bg:#f0f4ee;--bg2:#f6faf4;--bg3:#e5ede0;--bg4:#d6e4d0;--bg5:#c4d8bc;
   --border:rgba(40,80,50,0.14);--border2:rgba(40,80,50,0.26);
   --accent:#3a6650;--accent-dim:rgba(58,102,80,0.12);
-  --orange:#8a6038;--orange-dim:rgba(138,96,56,0.10);
+  --orange:#c07030;--orange-dim:rgba(192,112,48,0.12);
   --blue:#3d7068;--green:#4a8838;--yellow:#b09030;--red:#984040;
   --pink:#ccdec8;--pink2:#e0eed8;
   --text:#1a2e20;--text2:#3e5e48;--text3:#6e9070;
@@ -25,9 +25,10 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
   background-color:var(--bg);
   background-image:
     url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g fill='%231e4030' opacity='.045'><polygon points='48,14 28,58 68,58'/><polygon points='48,36 22,82 74,82'/><polygon points='48,58 16,108 80,108'/><rect x='42' y='108' width='12' height='22'/></g><g fill='%231e4030' opacity='.028' transform='translate(130,95)'><polygon points='34,10 20,42 48,42'/><polygon points='34,26 16,62 52,62'/><polygon points='34,42 12,78 56,78'/><rect x='29' y='78' width='10' height='18'/></g></svg>"),
-    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g fill='%231e4030' opacity='.028' transform='translate(100,0)'><polygon points='34,10 20,42 48,42'/><polygon points='34,26 16,62 52,62'/><polygon points='34,42 12,78 56,78'/><rect x='29' y='78' width='10' height='18'/></g><g fill='%231e4030' opacity='0.018' transform='translate(20,120)'><polygon points='28,8 16,34 40,34'/><polygon points='28,20 12,48 44,48'/><polygon points='28,32 10,60 46,60'/><rect x='24' y='60' width='8' height='14'/></g></svg>");
-  background-size:200px 200px,200px 200px;
-  background-position:0 0,100px 100px;}
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g fill='%231e4030' opacity='.028' transform='translate(100,0)'><polygon points='34,10 20,42 48,42'/><polygon points='34,26 16,62 52,62'/><polygon points='34,42 12,78 56,78'/><rect x='29' y='78' width='10' height='18'/></g><g fill='%231e4030' opacity='0.018' transform='translate(20,120)'><polygon points='28,8 16,34 40,34'/><polygon points='28,20 12,48 44,48'/><polygon points='28,32 10,60 46,60'/><rect x='24' y='60' width='8' height='14'/></g></svg>"),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='320' height='200'><path d='M0,45 Q80,43 160,46 Q240,48 320,45' stroke='%23907050' stroke-width='1.2' fill='none' opacity='.22'/><path d='M0,88 Q100,86 200,89 Q270,91 320,88' stroke='%23705038' stroke-width='1.8' fill='none' opacity='.18'/><path d='M0,135 Q70,133 140,136 Q220,138 320,135' stroke='%23907050' stroke-width='1' fill='none' opacity='.16'/><path d='M0,178 Q90,176 180,179 Q260,181 320,178' stroke='%23705038' stroke-width='1.4' fill='none' opacity='.2'/><ellipse cx='50' cy='66' rx='11' ry='4' fill='%23705038' opacity='.14' transform='rotate(-4,50,66)'/><ellipse cx='200' cy='110' rx='13' ry='5' fill='%23705038' opacity='.11' transform='rotate(3,200,110)'/><ellipse cx='120' cy='155' rx='10' ry='4' fill='%23705038' opacity='.16' transform='rotate(-2,120,155)'/><ellipse cx='280' cy='62' rx='9' ry='3.5' fill='%23705038' opacity='.1' transform='rotate(5,280,62)'/></svg>");
+  background-size:200px 200px,200px 200px,320px 200px;
+  background-position:0 0,100px 100px,0 0;}
 
 /* ===== SECRETARY ===== */
 .secretary-bar{background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);
@@ -124,11 +125,16 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
   border:1.5px solid var(--border2);
   overflow:clip;
 }
-#sec-notes    { border-left:5px solid var(--accent); }
+#sec-notes    { border-left:5px solid var(--orange); }
 #sec-xposts   { border-left:5px solid #1a1a2e; }
 #sec-archive  { border-left:5px solid #7c3aed; }
 #sec-today    { border-left:5px solid var(--yellow); }
 #sec-research { border-left:5px solid var(--green); }
+
+/* notes section header gets a warm orange tint */
+#sec-notes > .sec-head {
+  background:linear-gradient(135deg, var(--bg3) 0%, rgba(192,112,48,.1) 100%);
+}
 
 /* ===== FILTER CHIPS ===== */
 .filter-bar{display:flex;gap:6px;overflow-x:auto;overflow-y:visible;padding:4px 2px 6px;margin-bottom:10px;scrollbar-width:none}
@@ -433,14 +439,15 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
    btn系（アクセント・ゴースト・カラーバリアント）
 ================================================================ */
 .btn-accent, .btn.btn-accent {
-  background: linear-gradient(to bottom right, var(--accent) 0%, #e8732a 100%) !important;
+  background: linear-gradient(135deg, #5a9870 0%, #e8a030 55%, #d06828 100%) !important;
   color: #fff !important;
   border: none !important;
+  text-shadow: 0 1px 2px rgba(0,0,0,.18) !important;
 }
 .btn-accent:hover {
-  transform: scale(1.05) translateY(-1px) !important;
-  box-shadow: 0 6px 18px rgba(58,102,80,.4) !important;
-  background: linear-gradient(to bottom right, #2a5040 0%, var(--accent) 100%) !important;
+  transform: scale(1.04) translateY(-1px) !important;
+  box-shadow: 0 6px 20px rgba(200,110,40,.35) !important;
+  background: linear-gradient(135deg, #4a8860 0%, #f0b040 55%, #e07030 100%) !important;
 }
 .btn-ghost:hover {
   background: var(--accent-dim) !important;
@@ -482,7 +489,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   transform: translateY(-1px) !important;
 }
 .type-btn.sel-a {
-  background: linear-gradient(to bottom right, var(--accent) 0%, #e8732a 100%) !important;
+  background: linear-gradient(135deg, #5a9870 0%, #e8a030 55%, #d06828 100%) !important;
   color: #fff !important;
 }
 
@@ -499,12 +506,12 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
    設定FAB（中央下部固定）
 ================================================================ */
 .settings-fab {
-  background: linear-gradient(to bottom right, var(--accent) 0%, #e8732a 100%) !important;
+  background: linear-gradient(135deg, #5a9870 0%, #e8a030 55%, #d06828 100%) !important;
 }
 .settings-fab:hover {
   transform: translateX(-50%) scale(1.05) translateY(-3px) !important;
-  box-shadow: 0 10px 30px rgba(58,102,80,.5) !important;
-  background: linear-gradient(to bottom right, #2a5040 0%, var(--accent) 100%) !important;
+  box-shadow: 0 10px 30px rgba(200,110,40,.4) !important;
+  background: linear-gradient(135deg, #4a8860 0%, #f0b040 55%, #e07030 100%) !important;
 }
 .settings-fab:active {
   transform: translateX(-50%) scale(0.95) !important;
@@ -698,11 +705,11 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 .chip.active {
   background-size: 200% 200% !important;
   background-image: linear-gradient(
-    to bottom right,
-    var(--accent) 0%,
-    #e8a030 40%,
-    #e8732a 70%,
-    var(--accent) 100%
+    135deg,
+    #5a9870 0%,
+    #f0b040 40%,
+    #d06828 70%,
+    #5a9870 100%
   ) !important;
   animation: shimmer 4s ease-in-out infinite;
 }
@@ -714,11 +721,11 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 .chip.active:hover {
   animation: shimmer 1.2s ease-in-out infinite !important;
   background-image: linear-gradient(
-    to bottom right,
-    #2a5040 0%,
-    #e8a030 40%,
-    var(--accent) 70%,
-    #e8732a 100%
+    135deg,
+    #4a8860 0%,
+    #f5c050 40%,
+    #e07030 70%,
+    #4a8860 100%
   ) !important;
 }
 
@@ -1567,8 +1574,18 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
         <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px;line-height:1.6">Claudeが開いたら指示文を貼り付けて執筆させてください</div>
       </div>
 
+      <!-- Claude result section (API or restored) -->
+      <div id="claude-result-section" style="display:none;margin-top:14px">
+        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ 執筆完了 → ③整形タブへ自動入力済み</div>
+        <div class="copy-box result-box" id="mw-claude-output" style="max-height:160px;overflow-y:auto"></div>
+        <button class="copy-btn" onclick="cp('mw-claude-output')" style="margin-bottom:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          結果をコピー
+        </button>
+      </div>
+
       <!-- STEP 3 -->
-      <div style="margin-top:16px;background:#1e1233;border:1.5px solid #7c3aed55;border-radius:12px;padding:14px">
+      <div id="claude-manual-panel" style="margin-top:16px;background:#1e1233;border:1.5px solid #7c3aed55;border-radius:12px;padding:14px">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
           <div style="background:#5b21b6;color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">3</div>
           <div style="font-size:12px;font-weight:700;color:#c4b5fd">クロの回答を貼り付けて保存</div>
@@ -2198,7 +2215,7 @@ function openWork(id) {
   } else {
     document.getElementById('mw-claude-output').textContent = '';
     document.getElementById('claude-result-section').style.display = 'none';
-    document.getElementById('claude-manual-panel').style.display = 'none';
+    document.getElementById('claude-manual-panel').style.display = 'block';
     document.getElementById('claude-manual-input').value = '';
     document.getElementById('mw-draft').value = '';
   }
