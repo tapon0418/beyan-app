@@ -7,18 +7,18 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Noto+Sans+JP:wght@400;500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
 <style>
 :root {
-  /* Nordic Modern Palette */
-  --bg:#f2f5ee;--bg2:#f8faf5;--bg3:#e8efe2;--bg4:#d8e6d0;--bg5:#c8d8be;
-  --border:rgba(40,70,45,0.13);--border2:rgba(40,70,45,0.24);
-  --accent:#3a6650;--accent-dim:rgba(58,102,80,0.12);
+  /* Nordic Modern — Warm Ivory × Sage Green (1:1 balance) */
+  --bg:#f5f2ea;--bg2:#faf8f2;--bg3:#ece6d8;--bg4:#e0d8c8;--bg5:#d0c8b8;
+  --border:rgba(80,60,38,0.12);--border2:rgba(80,60,38,0.22);
+  --accent:#3a6650;--accent-dim:rgba(58,102,80,0.11);
   --orange:#c07030;--orange-dim:rgba(192,112,48,0.12);
   --blue:#3d7068;--green:#4a8838;--yellow:#b09030;--red:#984040;
-  --pink:#ccdec8;--pink2:#e0eed8;
-  --text:#2a3828;--text2:#4a6050;--text3:#7a9070;
+  --pink:#e0d4c0;--pink2:#ece4d4;
+  --text:#2c2820;--text2:#5a5040;--text3:#8a7e6a;
   --r:14px;--r2:20px;
   /* glass surface variables */
-  --glass:rgba(255,255,255,0.55);--glass2:rgba(255,255,255,0.75);
-  --glass-border:rgba(255,255,255,0.8);--glass-shadow:rgba(40,70,45,0.09);
+  --glass:rgba(255,252,244,0.58);--glass2:rgba(255,252,248,0.82);
+  --glass-border:rgba(255,250,240,0.85);--glass-shadow:rgba(60,45,25,0.09);
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:17px}
@@ -132,7 +132,7 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 #sec-xposts   { border-left:5px solid #1a1a2e; }
 #sec-archive  { border-left:5px solid #7c3aed; }
 #sec-today    { border-left:5px solid var(--yellow); }
-#sec-research { border-left:5px solid var(--green); }
+#sec-research { border-left:5px solid var(--blue); }
 
 /* notes section header gets a warm orange tint */
 #sec-notes > .sec-head {
@@ -352,7 +352,7 @@ body::before {
       transparent 3px,
       transparent 24px
     ),
-    linear-gradient(180deg, #f0f4ee 0%, #e8f0e4 40%, #dde8d6 100%);
+    linear-gradient(180deg, #f5f2ea 0%, #ece6d8 40%, #e3dace 100%);
   pointer-events:none;
 }
 
@@ -917,9 +917,12 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   from { opacity:0; transform:translateY(12px); }
   to   { opacity:1; transform:translateY(0); }
 }
+/* きらーん: 黄金色の光の筋が左から右へ走る */
 @keyframes shineSwipe {
-  0%   { left:-120%; }
-  100% { left:160%; }
+  0%   { left:-140%; opacity:0; }
+  8%   { opacity:1; }
+  92%  { opacity:1; }
+  100% { left:180%; opacity:0; }
 }
 @keyframes statPop {
   0%   { transform:scale(.85); opacity:0; }
@@ -942,7 +945,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 .main > *:nth-child(5){animation-delay:.24s}
 .main > *:nth-child(6){animation-delay:.29s}
 
-/* ---- ステータスカード（frosted glass）---- */
+/* ---- ステータスカード（frosted glass + shine）---- */
 .stat-box {
   background: var(--glass2) !important;
   border: 1px solid var(--glass-border) !important;
@@ -950,6 +953,30 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   backdrop-filter: blur(10px) !important;
   border-radius: 14px !important;
   padding: 12px 6px !important;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+}
+.stat-box::before {
+  content: '';
+  position: absolute;
+  top: -80%; left: -140%;
+  width: 65%; height: 280%;
+  background: linear-gradient(
+    108deg,
+    transparent 20%,
+    rgba(255,228,120,.25) 38%,
+    rgba(255,248,200,.9) 50%,
+    rgba(255,220,100,.28) 62%,
+    transparent 80%
+  );
+  transform: skewX(-18deg);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 8;
+}
+.stat-box:hover::before {
+  animation: shineSwipe .5s cubic-bezier(.4,0,.2,1);
 }
 .stat-num {
   font-family: 'Syne', 'Noto Sans JP', sans-serif !important;
@@ -994,7 +1021,37 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 #sec-notes > .sec-head  { border-left: none; }
 #sec-today > .sec-head  { color: var(--yellow); }
 
-/* ---- ノートアイテム（frosted glass）---- */
+/* ---- きらーん共通ミックスイン ---- */
+/* note-item / xpost-item / stat-box / slot / wip-card 共通のshine */
+.shine-target {
+  position: relative;
+  overflow: hidden;
+}
+.shine-target::before {
+  content: '';
+  position: absolute;
+  top: -80%; left: -140%;
+  width: 65%; height: 280%;
+  /* ウォームゴールドの光 — アイボリー背景でもくっきり見える */
+  background: linear-gradient(
+    108deg,
+    transparent 20%,
+    rgba(255,228,120,.18) 38%,
+    rgba(255,248,200,.75) 50%,
+    rgba(255,220,100,.22) 62%,
+    transparent 80%
+  );
+  transform: skewX(-18deg);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 8;
+}
+.shine-target:hover::before,
+.shine-target:active::before {
+  animation: shineSwipe .65s cubic-bezier(.4,0,.2,1);
+}
+
+/* ---- ノートアイテム（frosted glass + shine）---- */
 .note-item {
   background: var(--glass2) !important;
   border: 1px solid var(--glass-border) !important;
@@ -1006,28 +1063,35 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 .note-item::before {
   content: '';
   position: absolute;
-  top: -60%; left: -120%;
-  width: 55%; height: 300%;
-  background: linear-gradient(105deg, transparent 25%, rgba(255,255,255,.5) 50%, transparent 75%);
-  transform: skewX(-15deg);
+  top: -80%; left: -140%;
+  width: 65%; height: 280%;
+  background: linear-gradient(
+    108deg,
+    transparent 20%,
+    rgba(255,228,120,.18) 38%,
+    rgba(255,248,200,.8) 50%,
+    rgba(255,220,100,.22) 62%,
+    transparent 80%
+  );
+  transform: skewX(-18deg);
   pointer-events: none;
   opacity: 0;
-  z-index: 5;
+  z-index: 8;
 }
-.note-item:hover::before {
-  animation: shineSwipe .55s ease-in-out;
-  opacity: 1;
+.note-item:hover::before,
+.note-item:active::before {
+  animation: shineSwipe .65s cubic-bezier(.4,0,.2,1);
 }
 .note-item:hover {
   transform: translateY(-3px) !important;
-  box-shadow: 0 10px 28px rgba(40,70,45,.16) !important;
-  border-color: rgba(58,102,80,.2) !important;
+  box-shadow: 0 10px 28px rgba(60,45,20,.14) !important;
+  border-color: rgba(192,112,48,.25) !important;
 }
 .note-item:active {
   transform: scale(0.97) translateY(1px) !important;
 }
 
-/* ---- X投稿カード（frosted glass）---- */
+/* ---- X投稿カード（frosted glass + shine）---- */
 .xpost-item {
   background: var(--glass2) !important;
   border: 1px solid var(--glass-border) !important;
@@ -1039,26 +1103,53 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 .xpost-item::before {
   content: '';
   position: absolute;
-  top: -60%; left: -120%;
-  width: 55%; height: 300%;
-  background: linear-gradient(105deg, transparent 25%, rgba(255,255,255,.45) 50%, transparent 75%);
-  transform: skewX(-15deg);
+  top: -80%; left: -140%;
+  width: 65%; height: 280%;
+  background: linear-gradient(
+    108deg,
+    transparent 20%,
+    rgba(255,228,120,.15) 38%,
+    rgba(255,248,200,.75) 50%,
+    rgba(255,220,100,.18) 62%,
+    transparent 80%
+  );
+  transform: skewX(-18deg);
   pointer-events: none;
   opacity: 0;
+  z-index: 8;
 }
-.xpost-item:hover::before {
-  animation: shineSwipe .55s ease-in-out;
-  opacity: 1;
+.xpost-item:hover::before,
+.xpost-item:active::before {
+  animation: shineSwipe .65s cubic-bezier(.4,0,.2,1);
 }
 
 /* ---- スロット（今日の予定）--- */
 .slot {
-  background: rgba(255,255,255,0.58) !important;
-  border: 1px solid rgba(255,255,255,.75) !important;
+  background: rgba(255,250,240,0.72) !important;
+  border: 1px solid rgba(255,248,230,.88) !important;
   box-shadow: 0 2px 10px var(--glass-shadow) !important;
   backdrop-filter: blur(8px) !important;
   border-radius: 12px !important;
+  overflow: hidden;
+  position: relative;
 }
+.slot::before {
+  content: '';
+  position: absolute;
+  top: -80%; left: -140%;
+  width: 65%; height: 280%;
+  background: linear-gradient(108deg,
+    transparent 20%,
+    rgba(255,228,120,.2) 38%,
+    rgba(255,248,200,.8) 50%,
+    rgba(255,220,100,.2) 62%,
+    transparent 80%);
+  transform: skewX(-18deg);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 5;
+}
+.slot:hover::before { animation: shineSwipe .6s cubic-bezier(.4,0,.2,1); }
 
 /* ---- WIPカード ---- */
 .wip-card {
@@ -1082,16 +1173,24 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 .btn-accent::before {
   content: '';
   position: absolute;
-  top: -60%; left: -120%;
-  width: 50%; height: 300%;
-  background: linear-gradient(105deg, transparent 20%, rgba(255,255,255,.45) 50%, transparent 80%);
-  transform: skewX(-15deg);
+  top: -80%; left: -140%;
+  width: 60%; height: 280%;
+  /* ボタン上のきらーん：明るいゴールド */
+  background: linear-gradient(
+    108deg,
+    transparent 18%,
+    rgba(255,240,160,.35) 38%,
+    rgba(255,255,220,.9) 50%,
+    rgba(255,240,160,.35) 62%,
+    transparent 82%
+  );
+  transform: skewX(-18deg);
   pointer-events: none;
   opacity: 0;
 }
-.btn-accent:hover::before {
-  animation: shineSwipe .5s ease-in-out;
-  opacity: 1;
+.btn-accent:hover::before,
+.btn-accent:active::before {
+  animation: shineSwipe .55s cubic-bezier(.4,0,.2,1);
 }
 
 /* ---- topbar 洗練（より透明感＆余白）---- */
@@ -1234,7 +1333,7 @@ input:focus, textarea:focus, select:focus {
     <!-- 貼り付けボタン + テキストエリア -->
     <div style="position:relative">
       <textarea id="json-import-area" rows="8"
-        placeholder='[{"title":"タイトル","type":"エッセイ(A)","cat":"ライティング","status":"idea","publishDate":"","memo":"","prevLink":"","nextLink":"","researchNote":""}]'
+        placeholder="[{&quot;title&quot;:&quot;タイトル&quot;,&quot;type&quot;:&quot;エッセイ(A)&quot;,&quot;status&quot;:&quot;idea&quot;,...}]"
         style="width:100%;background:var(--bg3);color:var(--text);border:1.5px solid var(--border2);border-radius:10px;padding:12px;font-size:13px;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;min-height:120px;word-break:break-all;"
         oninput="jsonImportLiveCheck()"></textarea>
     </div>
@@ -1473,7 +1572,7 @@ input:focus, textarea:focus, select:focus {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
           テーマをまとめて登録（ClaudeのJSON出力をペースト）
         </div>
-        <textarea id="theme-paste-input" rows="8" placeholder='[{"title":"タイトル","type":"エッセイ(A)","cat":"ライティング","status":"idea","memo":"","prevLink":"","nextLink":"","researchNote":""}]' style="font-size:15px;line-height:1.6"></textarea>
+        <textarea id="theme-paste-input" rows="8" placeholder="[{&quot;title&quot;:&quot;タイトル&quot;,&quot;type&quot;:&quot;エッセイ(A)&quot;,&quot;status&quot;:&quot;idea&quot;,...}]" style="font-size:15px;line-height:1.6"></textarea>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="btn btn-ghost" id="btn-clipboard-paste" onclick="navigator.clipboard.readText().then(t=>{document.getElementById('theme-paste-input').value=t;toast('クリップボードから貼り付けました');}).catch(()=>toast('クリップボードへのアクセスを許可してください'))" style="flex:1;min-height:48px;font-size:14px">📋 貼り付け</button>
           <button class="btn btn-accent" id="btn-paste-themes" style="flex:1;min-height:48px;font-size:14px;font-weight:700">✅ 登録する</button>
@@ -1688,7 +1787,7 @@ input:focus, textarea:focus, select:focus {
       </div>
       <!-- 結果：画像 -->
       <div id="imggen-img-wrap" style="display:none;margin-bottom:12px">
-        <img id="imggen-img" src="" alt="生成された見出し画像"
+        <img id="imggen-img" src="#" alt="生成された見出し画像"
           style="width:100%;border-radius:10px;display:block;border:1px solid var(--border)">
         <div style="display:flex;gap:8px;margin-top:8px">
           <button onclick="imggenDownload()" style="flex:1;min-height:44px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
@@ -3166,17 +3265,38 @@ async function runGemini() {
     pbar.style.width = pct + '%';
   }, 300);
 
+  // 利用可能なモデルを順番に試す（フォールバック）
+  const GEMINI_MODELS = [
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+  ];
+  const body = JSON.stringify({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.7, maxOutputTokens: 65536 }
+  });
+
   try {
-    // CORS回避: fetchに直接APIキーをクエリパラメータとして付与
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 65536 }
-      })
-    });
+    let res = null, usedModel = '', lastErr = null;
+    for (const model of GEMINI_MODELS) {
+      try {
+        const ep = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        res = await fetch(ep, { method:'POST', headers:{'Content-Type':'application/json'}, body });
+        usedModel = model;
+        if (res.ok) break;
+        // HTTP error: check if it's model-not-found, then try next
+        const errBody = await res.clone().json().catch(() => ({}));
+        const status = errBody?.error?.status || '';
+        if (res.status === 404 || status === 'NOT_FOUND' || status === 'INVALID_ARGUMENT') {
+          lastErr = new Error(errBody?.error?.message || `${model}: HTTP ${res.status}`);
+          res = null; continue;
+        }
+        break; // other errors (auth etc.) — don't retry
+      } catch(fetchErr) {
+        lastErr = fetchErr; res = null; continue; // network error, try next model
+      }
+    }
+    if (!res) throw lastErr || new Error('すべてのモデルで接続できませんでした');
 
     clearInterval(pTimer);
     pbar.style.width = '100%';
@@ -3190,6 +3310,8 @@ async function runGemini() {
     const data = await res.json();
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     if (!text) throw new Error('レスポンスが空でした');
+    document.getElementById('key-status').innerHTML =
+      `<span style="color:var(--green)">✅ ${usedModel} で完了</span>`;
 
     // 結果を表示
     document.getElementById('mw-gemini-output').textContent = text;
@@ -3206,12 +3328,17 @@ async function runGemini() {
     toast('✅ ジミーのリサーチ完了！');
   } catch (e) {
     clearInterval(pTimer);
-    const errMsg = e.message.includes('API_KEY') || e.message.includes('key')
-      ? 'APIキーが無効です。確認して再保存してください。'
-      : `エラー: ${e.message}`;
+    let errMsg;
+    if (e.message.includes('API_KEY') || e.message.toLowerCase().includes('invalid') && e.message.toLowerCase().includes('key')) {
+      errMsg = 'APIキーが無効です。AI StudioでAPIキーを確認してください。';
+    } else if (e.message.includes('fetch') || e.message.includes('network') || e.message.includes('接続')) {
+      errMsg = 'ネットワーク接続エラー。インターネット接続を確認してください。';
+    } else {
+      errMsg = `エラー: ${e.message}`;
+    }
     document.getElementById('key-status').innerHTML =
       `<span style="color:var(--red)">⚠️ ${errMsg}</span>`;
-    toast('エラーが発生しました');
+    toast('⚠️ エラーが発生しました');
   } finally {
     document.getElementById('gemini-loading').style.display = 'none';
     document.getElementById('btn-run-gemini').disabled = false;
