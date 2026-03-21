@@ -7,25 +7,32 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#fdf6ee;--bg2:#fff8f2;--bg3:#fff2e8;--bg4:#fde8d8;--bg5:#f9dcc8;
-  --border:rgba(180,120,80,0.15);--border2:rgba(180,120,80,0.25);
-  --accent:#d4622a;--accent-dim:rgba(212,98,42,0.12);
-  --orange:#e8732a;--orange-dim:rgba(232,115,42,0.12);
-  --blue:#8b6a4a;--green:#7a9a6a;--yellow:#e8a830;--red:#cc4444;
-  --pink:#f4d0c8;--pink2:#ffe8e0;
-  --text:#3a2518;--text2:#7a5a42;--text3:#b89a80;
+  /* Nordic Forest Palette */
+  --bg:#f0f4ee;--bg2:#f6faf4;--bg3:#e5ede0;--bg4:#d6e4d0;--bg5:#c4d8bc;
+  --border:rgba(40,80,50,0.14);--border2:rgba(40,80,50,0.26);
+  --accent:#3a6650;--accent-dim:rgba(58,102,80,0.12);
+  --orange:#8a6038;--orange-dim:rgba(138,96,56,0.10);
+  --blue:#3d7068;--green:#4a8838;--yellow:#b09030;--red:#984040;
+  --pink:#ccdec8;--pink2:#e0eed8;
+  --text:#1a2e20;--text2:#3e5e48;--text3:#6e9070;
   --r:12px;--r2:18px;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{font-size:17px}
-body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);
+body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
   min-height:100vh;padding-bottom:calc(20px + env(safe-area-inset-bottom));
-  -webkit-tap-highlight-color:transparent}
+  -webkit-tap-highlight-color:transparent;
+  background-color:var(--bg);
+  background-image:
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g fill='%231e4030' opacity='.045'><polygon points='48,14 28,58 68,58'/><polygon points='48,36 22,82 74,82'/><polygon points='48,58 16,108 80,108'/><rect x='42' y='108' width='12' height='22'/></g><g fill='%231e4030' opacity='.028' transform='translate(130,95)'><polygon points='34,10 20,42 48,42'/><polygon points='34,26 16,62 52,62'/><polygon points='34,42 12,78 56,78'/><rect x='29' y='78' width='10' height='18'/></g></svg>"),
+    url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><g fill='%231e4030' opacity='.028' transform='translate(100,0)'><polygon points='34,10 20,42 48,42'/><polygon points='34,26 16,62 52,62'/><polygon points='34,42 12,78 56,78'/><rect x='29' y='78' width='10' height='18'/></g><g fill='%231e4030' opacity='0.018' transform='translate(20,120)'><polygon points='28,8 16,34 40,34'/><polygon points='28,20 12,48 44,48'/><polygon points='28,32 10,60 46,60'/><rect x='24' y='60' width='8' height='14'/></g></svg>");
+  background-size:200px 200px,200px 200px;
+  background-position:0 0,100px 100px;}
 
 /* ===== SECRETARY ===== */
 .secretary-bar{background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);
   border:1.5px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:14px;
-  box-shadow:0 2px 12px rgba(180,120,80,.1)}
+  box-shadow:0 2px 12px rgba(40,80,50,.1)}
 .secretary-label{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;
   letter-spacing:.8px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
 .secretary-input-row{display:flex;gap:8px}
@@ -49,7 +56,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
   font-family:inherit;white-space:nowrap;transition:all .15s}
 .sec-btn:active{transform:scale(.95)}
 .sec-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);
-  box-shadow:0 2px 8px rgba(212,98,42,.3)}
+  box-shadow:0 2px 8px rgba(58,102,80,.3)}
 
 /* ===== RESEARCH TOGGLE ===== */
 .research-btn{font-size:10px;padding:3px 10px;border-radius:20px;
@@ -78,15 +85,17 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .wr-date{font-size:10px;color:var(--text3);font-weight:700}
 
 /* ===== TOPBAR ===== */
-.topbar{position:sticky;top:0;z-index:100;background:rgba(253,246,238,0.97);
-  backdrop-filter:blur(12px);border-bottom:1px solid var(--border);
+.topbar{position:sticky;top:0;z-index:100;
+  background:rgba(18,38,24,0.97);
+  backdrop-filter:blur(12px);border-bottom:1px solid rgba(60,110,70,.35);
   min-height:54px;display:flex;align-items:center;padding:4px 16px;gap:8px}
-.brand{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:var(--accent);flex:1;letter-spacing:.04em;}
+.brand{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;
+  color:#a0d0a8;flex:1;letter-spacing:.08em;text-shadow:0 1px 8px rgba(60,180,80,.2)}
 .topbar-pills{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:2px}
 .topbar-pills::-webkit-scrollbar{display:none}
 .tpill{font-size:13px;padding:8px 18px;border-radius:20px;font-weight:700;border:none;
-  background:var(--bg4);color:var(--text2);cursor:pointer;font-family:inherit;transition:all .15s}
-.tpill.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(212,98,42,.3)}
+  background:rgba(255,255,255,.1);color:rgba(210,235,210,.85);cursor:pointer;font-family:inherit;transition:all .15s}
+.tpill.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,102,80,.45)}
 
 /* ===== MAIN ===== */
 .main{padding:12px;max-width:680px;margin:0 auto;padding-bottom:100px}
@@ -145,8 +154,8 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 .note-item-inner{display:flex;gap:10px;align-items:flex-start;padding:12px;position:relative}
 .note-item:hover{
   transform:translateY(-2px);
-  box-shadow:0 8px 24px rgba(180,120,80,.18);
-  border-color:rgba(212,98,42,.25);
+  box-shadow:0 8px 24px rgba(40,80,50,.18);
+  border-color:rgba(58,102,80,.25);
 }
 .note-item:active{transform:scale(0.98);}
 /* 削除ボタン */
@@ -158,7 +167,7 @@ body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text
 @keyframes delBlink{from{opacity:.7}to{opacity:1}}
 /* 月編集バッジ */
 .badge-date{background:var(--accent-dim);color:var(--accent);cursor:pointer;transition:all .15s}
-.badge-date:hover{background:rgba(212,98,42,.25)}
+.badge-date:hover{background:rgba(58,102,80,.25)}
 .month-edit-row{display:flex;align-items:center;gap:6px;padding:6px 12px 8px;background:var(--bg3);border-top:1px solid var(--border)}
 .month-edit-input{flex:1;font-size:15px;padding:6px 10px;border:1.5px solid var(--accent);border-radius:8px;background:var(--bg2);color:var(--text);font-family:inherit;min-height:38px}
 .month-edit-ok{min-height:38px;padding:0 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
@@ -307,7 +316,7 @@ select option{background:var(--bg3)}
 
 /* ===== 設定ボタン（topbar内） ===== */
 .topbar-gear{background:none;border:none;cursor:pointer;padding:6px;border-radius:8px;
-  color:var(--accent);font-size:20px;line-height:1;flex-shrink:0;
+  color:rgba(200,230,205,.8);font-size:20px;line-height:1;flex-shrink:0;
   min-height:44px;min-width:44px;display:flex;align-items:center;justify-content:center}
 
 /* ===== 設定モーダル ===== */
@@ -334,7 +343,7 @@ body::before {
       transparent 3px,
       transparent 24px
     ),
-    linear-gradient(180deg, #fdf6ee 0%, #faf0e2 40%, #f5e8d4 100%);
+    linear-gradient(180deg, #f0f4ee 0%, #e8f0e4 40%, #dde8d6 100%);
   pointer-events:none;
 }
 
@@ -352,7 +361,7 @@ body::after {
 
 .note-card:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 6px 20px rgba(180,120,80,.15) !important;
+  box-shadow: 0 6px 20px rgba(40,80,50,.15) !important;
 }
 
 
@@ -388,19 +397,19 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   transform: scale(1.05) translateY(-1px) !important;
   background: linear-gradient(to bottom right, var(--bg4) 0%, var(--pink) 100%) !important;
   color: var(--accent) !important;
-  border-color: rgba(212,98,42,.25) !important;
-  box-shadow: 0 4px 14px rgba(212,98,42,.18) !important;
+  border-color: rgba(58,102,80,.25) !important;
+  box-shadow: 0 4px 14px rgba(58,102,80,.18) !important;
 }
 .tpill.active {
   background: linear-gradient(to bottom right, var(--accent) 0%, #e8732a 100%) !important;
   color: #fff !important;
   border-color: transparent !important;
-  box-shadow: 0 3px 12px rgba(212,98,42,.35) !important;
+  box-shadow: 0 3px 12px rgba(58,102,80,.35) !important;
 }
 .tpill.active:hover {
   transform: scale(1.05) translateY(-1px) !important;
-  background: linear-gradient(to bottom right, #c45520 0%, var(--accent) 100%) !important;
-  box-shadow: 0 6px 18px rgba(212,98,42,.45) !important;
+  background: linear-gradient(to bottom right, #2a5040 0%, var(--accent) 100%) !important;
+  box-shadow: 0 6px 18px rgba(58,102,80,.45) !important;
 }
 
 /* ================================================================
@@ -430,8 +439,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 }
 .btn-accent:hover {
   transform: scale(1.05) translateY(-1px) !important;
-  box-shadow: 0 6px 18px rgba(212,98,42,.4) !important;
-  background: linear-gradient(to bottom right, #c45520 0%, var(--accent) 100%) !important;
+  box-shadow: 0 6px 18px rgba(58,102,80,.4) !important;
+  background: linear-gradient(to bottom right, #2a5040 0%, var(--accent) 100%) !important;
 }
 .btn-ghost:hover {
   background: var(--accent-dim) !important;
@@ -494,8 +503,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 }
 .settings-fab:hover {
   transform: translateX(-50%) scale(1.05) translateY(-3px) !important;
-  box-shadow: 0 10px 30px rgba(212,98,42,.5) !important;
-  background: linear-gradient(to bottom right, #c45520 0%, var(--accent) 100%) !important;
+  box-shadow: 0 10px 30px rgba(58,102,80,.5) !important;
+  background: linear-gradient(to bottom right, #2a5040 0%, var(--accent) 100%) !important;
 }
 .settings-fab:active {
   transform: translateX(-50%) scale(0.95) !important;
@@ -510,8 +519,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 }
 .note-card:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 24px rgba(180,120,80,.18) !important;
-  border-color: rgba(212,98,42,.2) !important;
+  box-shadow: 0 8px 24px rgba(40,80,50,.18) !important;
+  border-color: rgba(58,102,80,.2) !important;
 }
 
 /* ================================================================
@@ -547,18 +556,18 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   transform: scale(1.05) translateY(-1px) !important;
   background: linear-gradient(to bottom right, var(--bg4) 0%, var(--pink) 100%) !important;
   color: var(--accent) !important;
-  border-color: rgba(212,98,42,.3) !important;
-  box-shadow: 0 4px 12px rgba(212,98,42,.15) !important;
+  border-color: rgba(58,102,80,.3) !important;
+  box-shadow: 0 4px 12px rgba(58,102,80,.15) !important;
 }
 .chip.active {
   background: linear-gradient(to bottom right, var(--accent) 0%, #e8732a 100%) !important;
   color: #fff !important;
   border-color: transparent !important;
-  box-shadow: 0 3px 10px rgba(212,98,42,.3) !important;
+  box-shadow: 0 3px 10px rgba(58,102,80,.3) !important;
 }
 .chip.active:hover {
   transform: scale(1.05) translateY(-1px) !important;
-  box-shadow: 0 6px 16px rgba(212,98,42,.4) !important;
+  box-shadow: 0 6px 16px rgba(58,102,80,.4) !important;
 }
 .chip:active {
   transform: scale(0.95) !important;
@@ -575,8 +584,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   transform: scale(1.05) translateY(-1px) !important;
   background: var(--accent-dim) !important;
   color: var(--accent) !important;
-  border-color: rgba(212,98,42,.3) !important;
-  box-shadow: 0 4px 12px rgba(212,98,42,.12) !important;
+  border-color: rgba(58,102,80,.3) !important;
+  box-shadow: 0 4px 12px rgba(58,102,80,.12) !important;
 }
 .btn-ghost:active {
   transform: scale(0.95) !important;
@@ -590,8 +599,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 }
 .xpost-item:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 22px rgba(180,120,80,.18) !important;
-  border-color: rgba(212,98,42,.22) !important;
+  box-shadow: 0 8px 22px rgba(40,80,50,.18) !important;
+  border-color: rgba(58,102,80,.22) !important;
   background: var(--bg3) !important;
 }
 .xpost-item:active {
@@ -601,7 +610,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 /* --- NOTE進捗表の追加ボタン（JSON登録・検索エリア） --- */
 #json-import-area:focus {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px rgba(212,98,42,.12) !important;
+  box-shadow: 0 0 0 3px rgba(58,102,80,.12) !important;
   outline: none !important;
   transition: border-color .3s ease-in-out, box-shadow .3s ease-in-out !important;
 }
@@ -613,7 +622,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 }
 .filter-bar button:hover, #filter-bar button:hover {
   transform: scale(1.05) translateY(-1px) !important;
-  box-shadow: 0 4px 12px rgba(212,98,42,.18) !important;
+  box-shadow: 0 4px 12px rgba(58,102,80,.18) !important;
 }
 .filter-bar button:active, #filter-bar button:active {
   transform: scale(0.95) !important;
@@ -706,7 +715,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   animation: shimmer 1.2s ease-in-out infinite !important;
   background-image: linear-gradient(
     to bottom right,
-    #c45520 0%,
+    #2a5040 0%,
     #e8a030 40%,
     var(--accent) 70%,
     #e8732a 100%
@@ -775,18 +784,19 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
     padding:0 !important;
     min-height:56px !important;
     font-size:20px !important;
-    background:var(--bg2) !important;
+    background:transparent !important;
     border:none !important;
     box-shadow:none !important;
+    color:rgba(200,230,205,.75) !important;
     display:flex !important;
     align-items:center !important;
     justify-content:center !important;
     animation:none !important;
   }
   .tpill.active {
-    background:var(--accent-dim) !important;
-    box-shadow:inset 0 -3px 0 var(--accent) !important;
-    color:var(--accent) !important;
+    background:rgba(58,102,80,.35) !important;
+    box-shadow:inset 0 -3px 0 #a0d0a8 !important;
+    color:#a0d0a8 !important;
     animation:none !important;
   }
   .tpill-label { display:none; }
@@ -1826,7 +1836,7 @@ function renderWipPickup() {
   const wip = S.notes.filter(n => n.status === 'writing');
   if (!wip.length) { el.innerHTML = ''; return; }
   el.innerHTML = `
-    <div style="background:linear-gradient(135deg,rgba(212,98,42,.12),rgba(212,98,42,.06));border:1.5px solid rgba(212,98,42,.3);border-radius:12px;padding:12px 14px">
+    <div style="background:linear-gradient(135deg,rgba(58,102,80,.12),rgba(58,102,80,.06));border:1.5px solid rgba(58,102,80,.3);border-radius:12px;padding:12px 14px">
       <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">✍️ 執筆中 — ${wip.length}本</div>
       ${wip.map(n => `
         <div onclick="openWork(${n.id})" style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg2);border-radius:8px;margin-bottom:6px;cursor:pointer;border:1px solid var(--border)">
