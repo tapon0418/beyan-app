@@ -4021,37 +4021,41 @@ async function runImgGen() {
   loadEl.style.display = 'block';
   btn.disabled = true;
 
-  const TEXT_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+  // リサーチと同じモデルリスト（gemini-2.5-flash を優先）
+  const TEXT_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
   // ── STEP 1: テンプレート変数を記事情報で埋めた日本語プロンプト生成 ──
   statusEl.textContent = '① テンプレートプロンプト生成中...';
   pbar.style.width = '20%';
 
   const fillSystem = getImgPromptTemplate();
-
   const userInput = `タイトル: ${n.title}\nカテゴリ: ${n.cat || 'ライティング'}\nメモ: ${n.memo || 'なし'}`;
 
-  let jaPrompt = '';
+  let jaPrompt = '', step1Err = '';
   for (const model of TEXT_MODELS) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: fillSystem }] },
-          contents: [{ role: 'user', parts: [{ text: userInput }] }],
+          contents: [{ role: 'user', parts: [{ text: fillSystem + '\n\n---\n' + userInput }] }],
           generationConfig: { temperature: 0.85, maxOutputTokens: 600 }
         })
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error?.message || r.status);
+      if (!r.ok) {
+        step1Err = d.error?.message || `HTTP ${r.status}`;
+        const st = d.error?.status || '';
+        if (st === 'NOT_FOUND' || st === 'INVALID_ARGUMENT') continue;
+        throw new Error(step1Err);
+      }
       jaPrompt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
       if (jaPrompt) break;
-    } catch(e) { console.warn('[imggen] step1', model, e.message); }
+    } catch(e) { step1Err = e.message; console.warn('[imggen] step1', model, e.message); }
   }
   if (!jaPrompt) {
     loadEl.style.display = 'none'; btn.disabled = false;
-    showMwImgError('⚠️ プロンプト生成に失敗しました。APIキーを確認してください。');
+    showMwImgError(`⚠️ プロンプト生成に失敗しました。${step1Err ? '（' + step1Err + '）' : 'APIキーを確認してください。'}`);
     return;
   }
 
@@ -4059,10 +4063,12 @@ async function runImgGen() {
   statusEl.textContent = '② Imagen用プロンプトに変換中...';
   pbar.style.width = '45%';
 
-  const engSystem = `Convert the following Japanese image prompt to English for Google Imagen API.
+  const engInstruction = `Convert the following Japanese image prompt to English for Google Imagen API.
 Keep the visual design intent: gradient background, 3-color scheme, layout structure (top badge, center bold stats, bottom subtitle, right icons).
 Remove Midjourney flags (--ar --v --style). Describe text elements as visual design areas.
-Output only the English prompt, 120 words max.`;
+Output only the English prompt, 120 words max.
+
+Japanese prompt:`;
 
   let engPrompt = jaPrompt; // fallback: use Japanese if conversion fails
   for (const model of TEXT_MODELS) {
@@ -4071,13 +4077,16 @@ Output only the English prompt, 120 words max.`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: engSystem }] },
-          contents: [{ role: 'user', parts: [{ text: jaPrompt }] }],
+          contents: [{ role: 'user', parts: [{ text: engInstruction + '\n' + jaPrompt }] }],
           generationConfig: { temperature: 0.7, maxOutputTokens: 250 }
         })
       });
       const d = await r.json();
-      if (!r.ok) throw new Error(d.error?.message || r.status);
+      if (!r.ok) {
+        const st = d.error?.status || '';
+        if (st === 'NOT_FOUND' || st === 'INVALID_ARGUMENT') continue;
+        break; // その他エラーはjaPromptのフォールバックで続行
+      }
       const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
       if (t) { engPrompt = t; break; }
     } catch(e) { console.warn('[imggen] step2', model, e.message); }
