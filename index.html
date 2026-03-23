@@ -123,19 +123,19 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 /* ===== NOTE ITEM ===== */
 .note-item{background:var(--bg4);border:1px solid var(--border);border-radius:10px;
   margin-bottom:8px;cursor:pointer;display:block;overflow:hidden;
-  transition:transform .25s ease-in-out, box-shadow .25s ease-in-out,
-             border-color .25s ease-in-out, background .25s ease-in-out}
+  transition:transform .15s ease-out, box-shadow .15s ease-out, border-color .15s ease-out;
+  will-change:transform}
 .note-item-inner{display:flex;gap:10px;align-items:flex-start;padding:11px 12px;position:relative}
 .note-item:hover{
   transform:translateY(-2px);
-  box-shadow:0 8px 24px rgba(40,80,50,.18);
+  box-shadow:0 6px 18px rgba(40,80,50,.14);
   border-color:rgba(58,102,80,.25);
 }
 .note-item:active{transform:scale(0.98);}
 /* 削除ボタン */
 .note-del-btn{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:8px;
   border:none;background:transparent;color:var(--text3);font-size:16px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0;z-index:2}
+  display:flex;align-items:center;justify-content:center;transition:opacity .12s,background .12s;flex-shrink:0;z-index:2}
 .note-del-btn:hover{background:rgba(204,68,68,.15);color:var(--red)}
 .note-del-btn.pending{background:rgba(204,68,68,.2);color:var(--red);animation:delBlink .4s infinite alternate}
 @keyframes delBlink{from{opacity:.7}to{opacity:1}}
@@ -198,7 +198,7 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 /* ===== BUTTONS ===== */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;
   padding:12px 20px;border-radius:var(--r);border:none;cursor:pointer;
-  font-size:15px;font-weight:700;font-family:inherit;transition:all .15s;
+  font-size:15px;font-weight:700;font-family:inherit;transition:opacity .12s ease-out, transform .12s ease-out;
   width:100%;min-height:50px}
 .btn-accent{background:var(--accent);color:#000}
 .btn-accent:active{background:#00a0c0}
@@ -601,12 +601,12 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
    カードホバー
 ================================================================ */
 .note-card {
-  transition: transform .25s ease-in-out, box-shadow .25s ease-in-out,
-              border-color .25s ease-in-out !important;
+  transition: transform .15s ease-out, box-shadow .15s ease-out, border-color .15s ease-out !important;
+  will-change: transform;
 }
 .note-card:hover {
   transform: translateY(-2px) !important;
-  box-shadow: 0 8px 24px rgba(40,80,50,.18) !important;
+  box-shadow: 0 6px 18px rgba(40,80,50,.14) !important;
   border-color: rgba(58,102,80,.2) !important;
 }
 
@@ -614,18 +614,18 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
    note / X サイドアイコン
 ================================================================ */
 .side-icon-note {
-  transition: transform .3s ease-in-out, box-shadow .3s ease-in-out !important;
+  transition: transform .15s ease-out !important;
+  will-change: transform;
 }
 .side-icon-note:hover {
-  transform: translateX(-4px) scale(1.08) !important;
-  box-shadow: 0 6px 20px rgba(65,201,180,.45) !important;
+  transform: translateX(-3px) scale(1.06) !important;
 }
 .side-icon-x {
-  transition: transform .3s ease-in-out, box-shadow .3s ease-in-out !important;
+  transition: transform .15s ease-out !important;
+  will-change: transform;
 }
 .side-icon-x:hover {
-  transform: translateX(-4px) scale(1.08) !important;
-  box-shadow: 0 6px 20px rgba(0,0,0,.35) !important;
+  transform: translateX(-3px) scale(1.06) !important;
 }
 
 
@@ -4119,34 +4119,112 @@ Japanese prompt:`;
     } catch(e) { console.warn('[imggen] imagen', model, e.message); }
   }
 
-  // ── フォールバック: pollinations.ai (fetch→base64化) ──
-  statusEl.textContent = '③ フォールバック生成中 (pollinations.ai)...';
+  // ── フォールバック: Gemini → SVG → Canvas PNG ──
+  statusEl.textContent = '③ サムネイル生成中 (Gemini)...';
   pbar.style.width = '75%';
-  const polModels = ['flux', 'flux-realism', 'turbo'];
-  let polSuccess = false;
-  for (const polModel of polModels) {
-    try {
-      const seed = Math.floor(Math.random() * 1e9);
-      const polPrompt = engPrompt + ', professional eye-catch blog thumbnail, 16:9';
-      const polUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(polPrompt)}?width=1280&height=720&model=${polModel}&nologo=true&seed=${seed}`;
-      statusEl.textContent = `③ フォールバック生成中 (${polModel})...`;
-      const polRes = await fetch(polUrl);
-      if (!polRes.ok) throw new Error(`pollinations ${polModel}: HTTP ${polRes.status}`);
-      const ct = polRes.headers.get('content-type') || 'image/jpeg';
-      if (!ct.startsWith('image/')) throw new Error(`pollinations ${polModel}: not an image (${ct})`);
-      const buf = await polRes.arrayBuffer();
-      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-      pbar.style.width = '100%';
-      loadEl.style.display = 'none'; btn.disabled = false;
-      displayMwImg(ct, b64, jaPrompt);
-      polSuccess = true;
-      break;
-    } catch(e) { console.warn('[imggen] pollinations', polModel, e.message); }
-  }
-  if (!polSuccess) {
+  try {
+    const b64 = await runImgGenSVG(n, jaPrompt, apiKey, TEXT_MODELS);
+    pbar.style.width = '100%';
     loadEl.style.display = 'none'; btn.disabled = false;
-    showMwImgError('⚠️ 画像生成に失敗しました。しばらく待ってから再試行してください。');
+    displayMwImg('image/png', b64, jaPrompt);
+  } catch(e) {
+    console.warn('[imggen] svg fallback', e.message);
+    loadEl.style.display = 'none'; btn.disabled = false;
+    showMwImgError('⚠️ 画像生成に失敗しました。APIキーを確認してください。');
   }
+}
+
+async function runImgGenSVG(n, jaPrompt, apiKey, models) {
+  // GeminiにデザインスペックをJSON形式で生成させる
+  const designReq = `以下の記事情報からnoteアイキャッチ画像のデザイン仕様をJSONで返してください。
+記事タイトル: ${n.title}
+カテゴリ: ${n.cat || 'ライティング'}
+メモ: ${n.memo || 'なし'}
+
+出力はJSONのみ（コードブロックなし）。形式：
+{"bg1":"#暗めの色","bg2":"#bg1と対比する色","accent":"#明るいアクセントカラー","badge":"【バッジ5文字以内】","mainText":"インパクトある見出し20字以内","subText":"サブタイトル25字以内","icon1":"絵文字","icon2":"絵文字"}`;
+
+  let design = null;
+  for (const model of models) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          contents:[{role:'user',parts:[{text:designReq}]}],
+          generationConfig:{temperature:0.8,maxOutputTokens:200}
+        })
+      });
+      const d = await r.json();
+      if (!r.ok) continue;
+      const txt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      const m = txt.match(/\{[\s\S]*?\}/);
+      if (m) { design = JSON.parse(m[0]); break; }
+    } catch(e) { console.warn('[imggen] design json', model, e.message); }
+  }
+  // デフォルトデザイン（Gemini失敗時）
+  if (!design) design = {
+    bg1:'#1a2a4a', bg2:'#2d4a6e', accent:'#f5a623',
+    badge:'【体験談】', mainText: n.title.slice(0,20),
+    subText: n.memo ? n.memo.slice(0,25) : 'nabebase', icon1:'📝', icon2:'💡'
+  };
+
+  const svg = buildThumbnailSVG(design);
+  return svgToBase64PNG(svg);
+}
+
+function buildThumbnailSVG(d) {
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const bg1 = esc(d.bg1||'#1a2a4a'), bg2 = esc(d.bg2||'#2d4a6e'), acc = esc(d.accent||'#f5a623');
+  const badge = esc(d.badge||''), mainT = esc(d.mainText||''), subT = esc(d.subText||'');
+  const ic1 = esc(d.icon1||'📝'), ic2 = esc(d.icon2||'💡');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${bg1}"/>
+      <stop offset="100%" stop-color="${bg2}"/>
+    </linearGradient>
+    <linearGradient id="ac" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="${acc}" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="${acc}"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1280" height="720" fill="rgba(0,0,0,0.15)"/>
+  <!-- accent bar left -->
+  <rect x="0" y="0" width="8" height="720" fill="url(#ac)"/>
+  <!-- badge -->
+  <rect x="50" y="55" width="${badge.length * 22 + 30}" height="48" rx="24" fill="url(#ac)"/>
+  <text x="${50 + badge.length * 11 + 15}" y="87" font-size="26" font-weight="700" font-family="Noto Sans JP,sans-serif" fill="#fff" text-anchor="middle">${badge}</text>
+  <!-- main text -->
+  <text x="100" y="310" font-size="68" font-weight="900" font-family="Noto Sans JP,sans-serif" fill="#fff" dominant-baseline="middle">${mainT}</text>
+  <!-- accent underline -->
+  <rect x="100" y="358" width="720" height="5" rx="2.5" fill="url(#ac)"/>
+  <!-- sub text -->
+  <text x="100" y="440" font-size="40" font-weight="700" font-family="Noto Sans JP,sans-serif" fill="${acc}" dominant-baseline="middle">${subT}</text>
+  <!-- icons right -->
+  <text x="1110" y="310" font-size="120" text-anchor="middle" dominant-baseline="middle">${ic1}</text>
+  <text x="1110" y="470" font-size="100" text-anchor="middle" dominant-baseline="middle">${ic2}</text>
+  <!-- bottom bar -->
+  <rect x="0" y="680" width="1280" height="40" fill="rgba(0,0,0,0.3)"/>
+  <text x="50" y="706" font-size="20" fill="rgba(255,255,255,0.6)" font-family="sans-serif">note.com/beyan51612</text>
+</svg>`;
+}
+
+function svgToBase64PNG(svgString) {
+  return new Promise((resolve, reject) => {
+    const blob = new Blob([svgString], {type:'image/svg+xml;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280; canvas.height = 720;
+      canvas.getContext('2d').drawImage(img, 0, 0, 1280, 720);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/png').split(',')[1]);
+    };
+    img.onerror = e => { URL.revokeObjectURL(url); reject(new Error('SVG render failed')); };
+    img.src = url;
+  });
 }
 
 function displayMwImg(mimeType, b64, prompt) {
