@@ -3910,48 +3910,24 @@ function renderNetaList() {
 // ================================================================
 // 見出し画像生成 — テンプレート管理
 // ================================================================
-const DEFAULT_IMG_TEMPLATE = `あなたはnote記事のアイキャッチ画像プロンプト専門家です。
-記事情報をもとに以下のテンプレートの全変数を適切な値で埋め、完成したプロンプトを出力してください。
-前置き・説明不要。プロンプト本文のみ出力。末尾に「 --ar 16:9 --v 6 --style raw」を付加。
+const DEFAULT_IMG_TEMPLATE = `記事情報から以下のJSON変数を決定してください。JSONのみ出力（コードブロック不要）。
 
-テンプレート：
-note記事用アイキャッチ画像、1280x720px、プロフェッショナル・クリック欲求高めるデザイン
+変数の選択基準：
+- badge: 「実体験」「検証済み」「初心者必見」のどれかを記事カテゴリに合わせて選択
+- number: 記事の具体的な成果数字（例：PV80、売上30万、3倍）
+- unit: 数字の単位（例：PV、万円、倍、件）
+- period: 達成期間（例：5日、1ヶ月、2週間）
+- achievement: 短い成果フレーズ（例：初動UP、無から利益）10字以内
+- target: 読者像（例：心折れそうなあなた、忙しい会社員）15字以内
+- solution: 行動促進フレーズ（例：1週間で解決、コピペ術）10字以内
+- subtitle: 感情に訴えるサブタイトル（例：同じ悩み、ありませんか？）20字以内
+- mainColor: ネイビー / 深緑 / 濃紺（記事カテゴリに合う濃色をひとつ）
+- accentColor: オレンジ / ゴールド / ブルー（コントラスト色をひとつ）
+- mainColorHex: mainColorの16進数カラーコード
+- accentColorHex: accentColorの16進数カラーコード
 
-【[カテゴリ/実績]】[数字]を[期間]で達成！
-[メイン成果]！[ターゲット]のための[解決策]
-[感情に訴えるサブタイトル]
-
-レイアウト：
-- 上段：【タイトル】太字[メインカラー1]、白抜き縁取り
-- 中段：[メイン文] [アクセントカラー]グラデ強調、成果数字特大
-- 下段：[サブタイトル]太字、励まし/疑問トーン
-- 右側：[テーマアイコン1]+[テーマアイコン2]（グラフ/電球/ハート等）、シャープ
-
-視覚要素：
-- 背景：[明るめグラデ]（[カラー1]-[カラー2]、70%ベース）、クリーン
-- 配色：[メインカラー1](70%) × [アクセントカラー](25%) × 白(5%)、3色厳守
-- noteロゴ：左上微か配置、余白バランス最適化
-- 全体：信頼感+注目度UP、初見で「読みたい！」となる構図
-
-変数選択基準：
-[カテゴリ/実績]→「実体験」「検証済み」「初心者必見」等
-[数字+期間]→記事の成果数字（例：PV80・5日、売上30万・1ヶ月）
-[メイン成果]→短い成果フレーズ（例：初動80%UP、無から利益）
-[ターゲット]→読者像（例：心折れそうなあなた、忙しい会社員）
-[解決策]→行動促進フレーズ（例：1週間で！、コピペ術）
-[メインカラー1]→ネイビー/深緑/濃紺など記事カテゴリに合う濃色
-[アクセントカラー]→オレンジ/ゴールド/ブルーなどコントラスト色
-
-変数例：
-         例1（PV系）  例2（収益系）  例3（スキル系）
-[カテゴリ/実績]  実体験       検証済み      初心者必見
-[数字]          PV80        売上30万      スキル3倍
-[期間]          5日         1ヶ月         2週間
-[メイン成果]     初動80%UP   無から利益     副業即開始
-[ターゲット]     心折れそうなあなた  0円スタート  忙しい会社員
-[解決策]        1週間で！   再現テンプレ   コピペ術
-[メインカラー1]  ネイビー    深緑          濃紺
-[アクセントカラー] オレンジ   ゴールド       ブルー`;
+出力JSONフォーマット例：
+{"badge":"実体験","number":"PV80","unit":"PV","period":"5日","achievement":"初動UP","target":"心折れそうなあなた","solution":"1週間で解決","subtitle":"同じ悩み、ありませんか？","mainColor":"ネイビー","accentColor":"ゴールド","mainColorHex":"#1a237e","accentColorHex":"#ffd700"}`;
 
 function getImgPromptTemplate() {
   return localStorage.getItem('beyan_img_template') || DEFAULT_IMG_TEMPLATE;
@@ -4025,22 +4001,21 @@ async function runImgGen() {
   // gemini-3.0-flash を優先したモデルリスト
   const TEXT_MODELS = ['gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
-  // ── STEP 1: テンプレート変数を記事情報で埋めた日本語プロンプト生成 ──
-  statusEl.textContent = '① プロンプト生成中 (gemini-3.0-flash)...';
+  // ── STEP 1: 記事情報から変数値をJSON取得 ──
+  statusEl.textContent = '① 変数生成中 (gemini-3.0-flash)...';
   pbar.style.width = '20%';
 
-  const fillSystem = getImgPromptTemplate();
-  const userInput = `タイトル: ${n.title}\nカテゴリ: ${n.cat || 'ライティング'}\nメモ: ${n.memo || 'なし'}`;
+  const varInstruction = getImgPromptTemplate();
+  const articleInfo = `記事タイトル: ${n.title}\nカテゴリ: ${n.cat || 'ライティング'}\nメモ: ${n.memo || 'なし'}`;
 
-  let jaPrompt = '', step1Err = '';
+  let vars = null, step1Err = '';
   for (const model of TEXT_MODELS) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: fillSystem + '\n\n---\n' + userInput }] }],
-          generationConfig: { temperature: 0.85, maxOutputTokens: 600 }
+          contents: [{ role: 'user', parts: [{ text: varInstruction + '\n\n' + articleInfo }] }],
+          generationConfig: { temperature: 0.85, maxOutputTokens: 400 }
         })
       });
       const d = await r.json();
@@ -4050,15 +4025,39 @@ async function runImgGen() {
         if (st === 'NOT_FOUND' || st === 'INVALID_ARGUMENT') continue;
         throw new Error(step1Err);
       }
-      jaPrompt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      if (jaPrompt) break;
+      const txt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      const m = txt.match(/\{[\s\S]*?\}/);
+      if (m) { try { vars = JSON.parse(m[0]); break; } catch(e2) {} }
     } catch(e) { step1Err = e.message; console.warn('[imggen] step1', model, e.message); }
   }
-  if (!jaPrompt) {
-    loadEl.style.display = 'none'; btn.disabled = false;
-    showMwImgError(`⚠️ プロンプト生成に失敗しました。${step1Err ? '（' + step1Err + '）' : 'APIキーを確認してください。'}`);
-    return;
-  }
+
+  // デフォルト変数（取得失敗時）
+  if (!vars) vars = {
+    badge:'実体験', number:'PV80', unit:'PV', period:'5日',
+    achievement:'初動UP', target:'心折れそうなあなた', solution:'1週間で解決',
+    subtitle:'同じ悩み、ありませんか？',
+    mainColor:'ネイビー', accentColor:'ゴールド',
+    mainColorHex:'#1a237e', accentColorHex:'#ffd700'
+  };
+
+  // ── 変数からクリーンな日本語プロンプトを組み立て ──
+  const jaPrompt = `note記事用アイキャッチ画像、1280x720px、プロフェッショナル・クリック欲求高めるデザイン
+
+【${vars.badge}】${vars.number}${vars.unit}を${vars.period}で達成！
+${vars.achievement}！${vars.target}への${vars.solution}
+${vars.subtitle}
+
+レイアウト：
+- 上段：「${vars.badge} ${vars.number}${vars.unit}を${vars.period}で達成！」太字${vars.mainColor}、白抜き縁取り
+- 中段：「${vars.achievement}」${vars.accentColor}グラデ強調、数字「${vars.number}」特大
+- 下段：「${vars.subtitle}」太字、励まし/疑問トーン
+- 右側：グラフアイコン＋電球アイコン、シャープ
+
+視覚要素：
+- 背景：${vars.mainColor}（${vars.mainColorHex}）から${vars.accentColor}（${vars.accentColorHex}）グラデ、70%ベース、クリーン
+- 配色：${vars.mainColor}(70%) × ${vars.accentColor}(25%) × 白(5%)、3色厳守
+- noteロゴ：左上に微か配置
+- 全体：信頼感+注目度UP、初見で「読みたい！」となる構図 --ar 16:9 --v 6 --style raw`;
 
   // ── STEP 2: 英語プロンプトに変換 ──
   statusEl.textContent = '② 英語プロンプトに変換中...';
