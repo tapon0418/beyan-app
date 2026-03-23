@@ -33,34 +33,6 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
   background-size:200px 200px,200px 200px,320px 200px;
   background-position:0 0,100px 100px,0 0;}
 
-/* ===== SECRETARY ===== */
-.secretary-bar{background:linear-gradient(135deg,var(--bg3) 0%,var(--bg4) 100%);
-  border:1.5px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:14px;
-  box-shadow:0 2px 12px rgba(40,80,50,.1)}
-.secretary-label{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;
-  letter-spacing:.8px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
-.secretary-input-row{display:flex;gap:8px}
-.secretary-input{flex:1;background:var(--bg2);border:1.5px solid var(--border2);border-radius:10px;
-  padding:10px 14px;color:var(--text);font-size:16px;font-family:inherit;outline:none;
-  transition:border-color .2s;min-height:48px}
-.secretary-input:focus{border-color:var(--accent)}
-.secretary-send{background:var(--accent);border:none;border-radius:10px;
-  padding:0 18px;color:#fff;font-size:18px;cursor:pointer;transition:all .15s;flex-shrink:0;
-  min-height:48px;min-width:48px}
-.secretary-send:active{transform:scale(.93)}
-.secretary-reply{margin-top:10px;padding:9px 12px;background:var(--bg2);border-radius:8px;
-  font-size:13px;color:var(--text2);line-height:1.6;border-left:3px solid var(--accent);
-  display:none}
-.sec-btns{display:flex;gap:8px;overflow-x:auto;padding:2px 1px 4px;margin-top:10px;
-  scrollbar-width:none}
-.sec-btns::-webkit-scrollbar{display:none}
-.sec-btn{flex-shrink:0;padding:10px 16px;border-radius:20px;
-  border:1.5px solid var(--border2);background:var(--bg2);
-  color:var(--text2);font-size:13px;font-weight:600;cursor:pointer;
-  font-family:inherit;white-space:nowrap;transition:all .15s}
-.sec-btn:active{transform:scale(.95)}
-.sec-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);
-  box-shadow:0 2px 8px rgba(58,102,80,.3)}
 
 /* ===== RESEARCH TOGGLE ===== */
 .research-btn{font-size:10px;padding:3px 10px;border-radius:20px;
@@ -81,12 +53,6 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 .neta-toggle.done{border-color:rgba(122,154,106,.4);background:rgba(122,154,106,.12);color:var(--green)}
 .neta-del{background:none;border:none;color:var(--text3);font-size:16px;
   cursor:pointer;padding:2px 4px;line-height:1;flex-shrink:0}
-.wr-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
-.wr-row input{font-size:15px}
-.wr-item{background:var(--bg4);border:1px solid var(--border);border-radius:8px;
-  padding:9px 11px;margin-bottom:6px;font-size:12px;display:flex;flex-wrap:wrap;
-  align-items:center;gap:8px}
-.wr-date{font-size:10px;color:var(--text3);font-weight:700}
 
 /* ===== TOPBAR ===== */
 .topbar{position:sticky;top:0;z-index:100;
@@ -122,7 +88,7 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 .sec-body{overflow:hidden;transition:max-height .25s ease;padding:0 2px}
 
 /* ===== セクションカード（色分け） ===== */
-#sec-today, #sec-notes, #sec-xposts, #sec-archive, #sec-research {
+#sec-today, #sec-notes, #sec-xposts, #sec-archive {
   border-radius:16px;
   margin-bottom:18px;
   border:1.5px solid var(--border2);
@@ -132,7 +98,6 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 #sec-xposts   { border-left:5px solid #1a1a2e; }
 #sec-archive  { border-left:5px solid #7c3aed; }
 #sec-today    { border-left:5px solid var(--yellow); }
-#sec-research { border-left:5px solid var(--blue); }
 
 /* notes section header gets a warm orange tint */
 #sec-notes > .sec-head {
@@ -258,6 +223,24 @@ select option{background:var(--bg3)}
   letter-spacing:.5px;display:block;margin-bottom:5px}
 .input-group{margin-bottom:12px}
 .input-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+
+/* ===== テキスト選択時の視認性（ホワイトアウト防止） ===== */
+::selection { background-color:rgba(58,102,80,.35); color:#1a1208; }
+::-moz-selection { background-color:rgba(58,102,80,.35); color:#1a1208; }
+.copy-box::selection,.copy-box *::selection,
+.result-box::selection,.result-box *::selection {
+  background-color:rgba(58,102,80,.45); color:#1a1208;
+}
+.copy-box::-moz-selection,.copy-box *::-moz-selection,
+.result-box::-moz-selection,.result-box *::-moz-selection {
+  background-color:rgba(58,102,80,.45); color:#1a1208;
+}
+textarea::selection,input::selection,textarea *::selection {
+  background-color:rgba(58,102,80,.35); color:#1a1208;
+}
+textarea::-moz-selection,input::-moz-selection {
+  background-color:rgba(58,102,80,.35); color:#1a1208;
+}
 
 /* ===== COPY BOX ===== */
 .copy-box{background:var(--bg);border:1px solid var(--border2);border-radius:var(--r);
@@ -771,12 +754,11 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 
   /* 1. コンテンツ余白縮小 */
   .main { padding:8px !important; padding-bottom:80px !important; }
-  .secretary-bar { padding:10px; }
   .stat-box { padding:8px 4px; }
   .stat-num { font-size:18px; }
 
   /* セクション：小画面での余白・文字調整 */
-  #sec-today,#sec-notes,#sec-xposts,#sec-archive,#sec-research {
+  #sec-today,#sec-notes,#sec-xposts,#sec-archive {
     margin-bottom:12px !important;
     border-radius:12px !important;
   }
@@ -842,16 +824,8 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   .ftab { flex:1 !important; min-width:calc(50% - 4px) !important; text-align:center; }
   .copy-btn { min-height:44px !important; font-size:13px; }
 
-  /* 7. 今日の予定・週次レビュー */
-  .wr-row { grid-template-columns:1fr 1fr; gap:6px; }
-  .wr-row input { font-size:16px !important; }
-
-  /* 8. ネタストック入力 */
+  /* 7. ネタストック入力 */
   #neta-input { font-size:16px !important; }
-
-  /* 9. 秘書バーの入力欄 */
-  .sec-btns { gap:5px; }
-  .sec-btn { padding:9px 12px; font-size:12px; }
 }
 
 /* ----- 600px以下：X投稿フッターボタン折り返し ----- */
@@ -882,30 +856,6 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 .finish-btn{flex:1;min-height:44px;min-width:100px;border-radius:8px;border:1.5px solid var(--border2);background:var(--bg2);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;padding:0 8px}
 .finish-btn:active{transform:scale(.95)}
 .finish-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-
-/* ===== RESEARCH WORKFLOW ===== */
-.rw-steps{display:flex;align-items:center;gap:6px;margin-bottom:14px;flex-wrap:wrap}
-.rw-step{display:flex;align-items:center;gap:5px;padding:8px 14px;border-radius:20px;
-  border:1.5px solid var(--border2);background:var(--bg2);cursor:pointer;
-  font-size:13px;font-weight:600;color:var(--text3);transition:all .15s;flex-shrink:0}
-.rw-step.active{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
-.rw-step.done{border-color:var(--green);background:rgba(122,154,106,.1);color:var(--green)}
-.rw-step:active{transform:scale(.95)}
-.rw-step-num{display:flex;align-items:center;justify-content:center;width:20px;height:20px;
-  border-radius:50%;background:currentColor;color:#fff;font-size:11px;font-weight:700;flex-shrink:0}
-.rw-step.active .rw-step-num,.rw-step.done .rw-step-num{background:currentColor}
-.rw-step-lbl{font-size:12px}
-.rw-step-arrow{color:var(--text3);font-size:14px;flex-shrink:0}
-.rw-panel{background:var(--bg2);border:1.5px solid var(--border2);border-radius:14px;padding:14px;margin-bottom:2px}
-.rw-panel-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.rw-badge{font-size:10px;font-weight:700;color:#fff;border-radius:6px;padding:2px 8px;flex-shrink:0;letter-spacing:.04em}
-.rw-panel-title{font-size:13px;font-weight:700;color:var(--text)}
-.rw-hint{font-size:12px;color:var(--text3);margin-bottom:12px;line-height:1.6}
-@media(max-width:480px){
-  .rw-steps{gap:4px}
-  .rw-step{padding:7px 10px;font-size:12px}
-  .rw-step-arrow{font-size:12px}
-}
 
 
 /* ================================================================
@@ -1001,7 +951,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
 #st-xprep{animation-delay:.25s}#st-idea{animation-delay:.3s}
 
 /* ---- セクションカード（frosted glass）---- */
-#sec-today, #sec-notes, #sec-xposts, #sec-archive, #sec-research {
+#sec-today, #sec-notes, #sec-xposts, #sec-archive {
   background: var(--glass) !important;
   backdrop-filter: blur(6px) !important;
   box-shadow: 0 4px 24px var(--glass-shadow), 0 1px 0 rgba(255,255,255,.5) !important;
@@ -1274,11 +1224,6 @@ input:focus, textarea:focus, select:focus {
   color: #fff !important;
 }
 
-/* ---- sec-btn (secretary) ---- */
-.sec-btn.active {
-  background: linear-gradient(135deg, #5a9870 0%, #e8a030 55%, #d06828 100%) !important;
-  border-color: transparent !important;
-}
 
 </style>
 </head>
@@ -1313,7 +1258,6 @@ input:focus, textarea:focus, select:focus {
     <button class="tpill" id="tp-xposts" onclick="scrollToSec('sec-xposts')"><span class="tpill-icon">𝕏</span><span class="tpill-label"> X投稿</span></button>
     <button class="tpill" id="tp-today"  onclick="scrollToSec('sec-today')"><span class="tpill-icon">📅</span><span class="tpill-label"> 今日</span></button>
     <button class="tpill" id="tp-tmpl"   onclick="openSettings();switchStab('gemini')"><span class="tpill-icon">📋</span><span class="tpill-label"> 指示文</span></button>
-    <button class="tpill" id="tp-research" onclick="scrollToSec('sec-research')"><span class="tpill-icon">🔍</span><span class="tpill-label"> リサーチ</span></button>
     <button class="tpill" id="tp-archive" onclick="scrollToSec('sec-archive')"><span class="tpill-icon">📦</span><span class="tpill-label"> アーカイブ</span></button>
   </div>
   <button class="topbar-gear" onclick="openSettings()" aria-label="設定">⚙️</button>
@@ -1479,27 +1423,6 @@ input:focus, textarea:focus, select:focus {
 
 <div class="main">
 
-  <!-- ===== 秘書 ===== -->
-  <div class="secretary-bar">
-    <div class="secretary-label">🤵 秘書 — どこに行きますか？</div>
-    <div class="sec-btns">
-      <button class="sec-btn" id="secbtn-notes"    onclick="secBtnClick('notes')">📝 note書く</button>
-      <button class="sec-btn" id="secbtn-xposts"   onclick="secBtnClick('xposts')">𝕏 X投稿</button>
-      <button class="sec-btn" id="secbtn-today"    onclick="secBtnClick('today')">📅 今日の予定</button>
-      <button class="sec-btn" id="secbtn-settings" onclick="secBtnClick('settings')">📋 指示文</button>
-      <button class="sec-btn" id="secbtn-config"   onclick="secBtnClick('config')">⚙️ 設定</button>
-      <button class="sec-btn" id="secbtn-share"    onclick="secBtnClick('share')" style="border-color:#7c3aed44;color:#c4b5fd;">🤝 クロ共有</button>
-    </div>
-    <div class="secretary-input-row" style="margin-top:10px">
-      <input class="secretary-input" id="sec-input" type="text"
-        placeholder="またはここに入力してEnter"
-        enterkeyhint="send"
-        onkeydown="if(event.key==='Enter')secretaryRoute()">
-      <button class="secretary-send" onclick="secretaryRoute()">→</button>
-    </div>
-    <div class="secretary-reply" id="sec-reply"></div>
-  </div>
-
   <!-- ===== 統計 ===== -->
   <div class="stats-row" style="margin-top:4px">
     <div class="stat-box">
@@ -1535,19 +1458,6 @@ input:focus, textarea:focus, select:focus {
     </div>
     <div class="sec-body" id="body-today" style="padding:12px 14px 8px">
       <div id="today-routine"></div>
-
-      <!-- 週次レビュー -->
-      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
-        <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📊 週次レビュー</div>
-        <div class="wr-row">
-          <input type="number" id="wr-followers" placeholder="フォロワー数" min="0">
-          <input type="number" id="wr-imp" placeholder="週間インプレ" min="0">
-          <input type="number" id="wr-likes" placeholder="週間いいね数" min="0">
-          <input type="text" id="wr-memo" placeholder="一言メモ" style="font-size:16px">
-        </div>
-        <button class="btn btn-ghost btn-sm" onclick="saveWeeklyReview()" style="width:100%;min-height:42px;font-size:13px">📝 記録する</button>
-        <div id="wr-list" style="margin-top:10px"></div>
-      </div>
     </div>
   </div>
 
@@ -1559,6 +1469,11 @@ input:focus, textarea:focus, select:focus {
       <svg class="sec-chevron open" id="chev-notes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="sec-body" id="body-notes" style="padding:12px 14px 8px">
+      <!-- クロへ執筆予定一覧コピー -->
+      <button onclick="copyNoteListForClaude()"
+        style="width:100%;min-height:44px;margin-bottom:10px;background:linear-gradient(135deg,#1e1233,#3b1f6e);border:1.5px solid #7c3aed55;border-radius:10px;color:#c4b5fd;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px">
+        🤝 執筆予定一覧をクロにコピー
+      </button>
       <div class="filter-bar" id="filter-bar"></div>
       <div class="search-wrap">
         <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -1647,169 +1562,8 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
-  <!-- ===== AI副業リサーチワークフロー ===== -->
-  <div id="sec-research">
-    <div class="sec-head" onclick="toggleSec('research')">
-      <div class="sec-head-title">🔍 AI副業リサーチワークフロー</div>
-      <div class="sec-head-count" style="font-size:11px;color:var(--text3)">パペ → ジミィ → クロ</div>
-      <svg class="sec-chevron open" id="chev-research" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-    </div>
-    <div class="sec-body" id="body-research" style="padding:12px 14px 8px">
-
-      <!-- ステップインジケーター -->
-      <div class="rw-steps">
-        <div class="rw-step active" id="rws-1" onclick="showRwStep(1)"><span class="rw-step-num">1</span><span class="rw-step-lbl">パペ</span></div>
-        <div class="rw-step-arrow">→</div>
-        <div class="rw-step" id="rws-2" onclick="showRwStep(2)"><span class="rw-step-num">2</span><span class="rw-step-lbl">ジミィ</span></div>
-        <div class="rw-step-arrow">→</div>
-        <div class="rw-step" id="rws-3" onclick="showRwStep(3)"><span class="rw-step-num">3</span><span class="rw-step-lbl">クロ</span></div>
-      </div>
-
-      <!-- STEP 1: パペ -->
-      <div class="rw-panel" id="rw-panel-1">
-        <div class="rw-panel-head">
-          <div class="rw-badge" style="background:#0ea5e9">STEP 1</div>
-          <div class="rw-panel-title">🔵 パペ（Perplexity）用プロンプト生成</div>
-        </div>
-        <div class="rw-hint">テーマと期間を設定して、Perplexityに渡すリサーチプロンプトを生成します。</div>
-        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-          <div style="flex:1;min-width:160px">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">テーマ</div>
-            <input type="text" id="rw-theme" value="AI副業・AI×副収入" style="width:100%;font-size:16px">
-          </div>
-          <div style="min-width:140px">
-            <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">期間</div>
-            <select id="rw-period" style="width:100%;font-size:16px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit">
-              <option value="直近1週間">直近1週間</option>
-              <option value="直近1〜2週間" selected>直近1〜2週間</option>
-              <option value="直近1ヶ月">直近1ヶ月</option>
-              <option value="直近3ヶ月">直近3ヶ月</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn btn-accent" style="width:100%;min-height:48px;font-size:14px;margin-bottom:12px" onclick="genRwStep1()">
-          ✨ STEP1プロンプトを生成
-        </button>
-        <div id="rw-out-1" style="display:none">
-          <div class="copy-box" id="rw-result-1" style="white-space:pre-wrap;font-size:13px;line-height:1.75"></div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="copy-btn" style="flex:1" onclick="rwCopy(1)">📋 コピー</button>
-            <button class="copy-btn" style="flex:1;background:#0ea5e920;color:#0ea5e9;border-color:#0ea5e9" onclick="window.open('https://www.perplexity.ai','_blank');toast('Perplexityが開きます')">🔵 パペで開く</button>
-          </div>
-          <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px;min-height:44px" onclick="showRwStep(2)">
-            結果をコピーしたら → STEP 2へ進む ▶
-          </button>
-        </div>
-      </div>
-
-      <!-- STEP 2: ジミィ -->
-      <div class="rw-panel" id="rw-panel-2" style="display:none">
-        <div class="rw-panel-head">
-          <div class="rw-badge" style="background:#f59e0b">STEP 2</div>
-          <div class="rw-panel-title">🟡 ジミィ（Gemini）用プロンプト生成</div>
-        </div>
-        <div class="rw-hint">パペのリサーチ結果を貼り付けて、Geminiに渡す分析プロンプトを生成します。</div>
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">パペの結果を貼り付け</div>
-          <textarea id="rw-pape-result" rows="5" placeholder="Perplexityの回答をここに貼り付けてください…" style="width:100%;font-size:15px;line-height:1.6;resize:vertical"></textarea>
-          <button onclick="rwPasteFromClipboard('rw-pape-result')" style="margin-top:6px;background:none;border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-size:12px;color:var(--text2);cursor:pointer;font-family:inherit">📋 クリップボードから貼り付け</button>
-        </div>
-        <button class="btn btn-accent" style="width:100%;min-height:48px;font-size:14px;margin-bottom:12px;background:#f59e0b;border-color:#f59e0b" onclick="genRwStep2()">
-          ✨ STEP2プロンプトを生成
-        </button>
-        <div id="rw-out-2" style="display:none">
-          <div class="copy-box" id="rw-result-2" style="white-space:pre-wrap;font-size:13px;line-height:1.75"></div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="copy-btn" style="flex:1" onclick="rwCopy(2)">📋 コピー</button>
-            <button class="copy-btn" style="flex:1;background:#f59e0b20;color:#d97706;border-color:#f59e0b" onclick="openInGemini(document.getElementById('rw-result-2').textContent)">🟡 ジミィで開く</button>
-          </div>
-          <button class="btn btn-ghost btn-sm" style="width:100%;margin-top:10px;min-height:44px" onclick="showRwStep(3)">
-            結果をコピーしたら → STEP 3へ進む ▶
-          </button>
-        </div>
-      </div>
-
-      <!-- STEP 3: クロ -->
-      <div class="rw-panel" id="rw-panel-3" style="display:none">
-        <div class="rw-panel-head">
-          <div class="rw-badge" style="background:#7c3aed">STEP 3</div>
-          <div class="rw-panel-title">🟣 クロ（Claude）用プロンプト生成</div>
-        </div>
-        <div class="rw-hint">ジミィの分析結果を貼り付けて、Claudeに渡す構成作成プロンプトを生成します。</div>
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">ジミィの結果を貼り付け</div>
-          <textarea id="rw-jimmy-result" rows="5" placeholder="Geminiの回答をここに貼り付けてください…" style="width:100%;font-size:15px;line-height:1.6;resize:vertical"></textarea>
-          <button onclick="rwPasteFromClipboard('rw-jimmy-result')" style="margin-top:6px;background:none;border:1px solid var(--border2);border-radius:8px;padding:6px 14px;font-size:12px;color:var(--text2);cursor:pointer;font-family:inherit">📋 クリップボードから貼り付け</button>
-        </div>
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">記事の種類</div>
-          <select id="rw-article-type" style="width:100%;font-size:16px;background:var(--bg2);border:1.5px solid var(--border2);border-radius:8px;padding:9px 10px;color:var(--text);font-family:inherit">
-            <option value="無料note記事">無料note記事</option>
-            <option value="有料note記事">有料note記事</option>
-            <option value="X投稿（ツイートスレッド）">X投稿（ツイートスレッド）</option>
-          </select>
-        </div>
-        <button class="btn btn-accent" style="width:100%;min-height:48px;font-size:14px;margin-bottom:12px;background:#7c3aed;border-color:#7c3aed" onclick="genRwStep3()">
-          ✨ STEP3プロンプトを生成
-        </button>
-        <div id="rw-out-3" style="display:none">
-          <div class="copy-box" id="rw-result-3" style="white-space:pre-wrap;font-size:13px;line-height:1.75"></div>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button class="copy-btn" style="flex:1" onclick="rwCopy(3)">📋 コピー</button>
-            <button class="copy-btn" style="flex:1;background:#7c3aed20;color:#7c3aed;border-color:#7c3aed" onclick="openInClaude(document.getElementById('rw-result-3').textContent)">🟣 クロで開く</button>
-          </div>
-          <div style="margin-top:10px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:12px;color:var(--green);font-weight:600;text-align:center">
-            ✅ 3ステップ完了！Claudeで構成案が出たらnote記事カードに追加しましょう。
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
 
 </div><!-- /main -->
-
-<!-- ===== MODAL: 見出し画像生成 ===== -->
-<div class="overlay" id="modal-imggen" onclick="if(event.target===this)closeOverlay('modal-imggen')">
-  <div class="modal" style="max-width:520px">
-    <div class="modal-header">
-      <div class="modal-title">🖼️ 見出し画像生成</div>
-      <button class="modal-close" onclick="closeOverlay('modal-imggen')">✕</button>
-    </div>
-    <div style="padding:16px">
-      <!-- ローディング -->
-      <div id="imggen-loading" style="text-align:center;padding:24px 0;display:none">
-        <div style="font-size:22px;margin-bottom:8px">✨</div>
-        <div id="imggen-status" style="font-size:13px;color:var(--accent);font-weight:600">ジミーが生成中...</div>
-        <div style="width:100%;height:3px;background:var(--bg5);border-radius:2px;margin-top:12px;overflow:hidden">
-          <div id="imggen-pbar" style="height:100%;width:30%;background:var(--accent);border-radius:2px;animation:pbarAnim 1.2s ease-in-out infinite alternate;transition:width .4s"></div>
-        </div>
-      </div>
-      <!-- 結果：画像 -->
-      <div id="imggen-img-wrap" style="display:none;margin-bottom:12px">
-        <img id="imggen-img" src="#" alt="生成された見出し画像"
-          style="width:100%;border-radius:10px;display:block;border:1px solid var(--border)">
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button onclick="imggenDownload()" style="flex:1;min-height:44px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
-            ⬇️ 保存
-          </button>
-          <button onclick="imggenRegenerate()" style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit">
-            🔄 再生成
-          </button>
-        </div>
-      </div>
-      <!-- 結果：プロンプトテキスト -->
-      <div id="imggen-result-wrap" style="display:none">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">使用したプロンプト：</div>
-        <textarea id="imggen-prompt-text" rows="3" style="width:100%;font-size:13px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit"></textarea>
-        <button onclick="navigator.clipboard.writeText(document.getElementById('imggen-prompt-text').value).then(()=>toast('コピーしました'))" style="width:100%;min-height:44px;margin-top:6px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 プロンプトをコピー</button>
-      </div>
-      <!-- エラー -->
-      <div id="imggen-error" style="display:none;color:var(--red);font-size:13px;padding:10px;background:rgba(204,68,68,.08);border-radius:8px;line-height:1.6"></div>
-      <button onclick="window.open('https://editor.note.com/notes/n96474a002525/edit/','_blank')" style="width:100%;min-height:48px;margin-top:14px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">📝 noteで書く</button>
-    </div>
-  </div>
-</div>
 
 <!-- ===== MODAL: 楽天カード生成 ===== -->
 <div class="overlay" id="modal-rakuten" onclick="if(event.target===this)closeOverlay('modal-rakuten')">
@@ -1860,10 +1614,14 @@ input:focus, textarea:focus, select:focus {
 
     <!-- 作業フロータブ -->
     <div class="flow-tabs">
-      <button class="ftab active" data-tab="gemini" onclick="switchTab(this,'gemini')">① Gemini</button>
-      <button class="ftab" data-tab="chatgpt" onclick="switchTab(this,'chatgpt')">② クロ執筆</button>
-      <button class="ftab" data-tab="format" onclick="switchTab(this,'format')">③ 整形</button>
-      <button class="ftab" data-tab="xgen" onclick="switchTab(this,'xgen')">④ X投稿</button>
+      <button class="ftab active" data-tab="gemini"   onclick="switchTab(this,'gemini')">① リサーチ</button>
+      <button class="ftab" data-tab="chatgpt"  onclick="switchTab(this,'chatgpt')">② 執筆</button>
+      <button class="ftab" data-tab="format"   onclick="switchTab(this,'format')">③ 整形</button>
+      <button class="ftab" data-tab="imggen"   onclick="switchTab(this,'imggen');renderImgPromptVault()">④ 見出し画像</button>
+      <button class="ftab" data-tab="imgcheck" onclick="switchTab(this,'imgcheck');refreshImgCheckTab()">⑤ 画像チェック</button>
+      <button class="ftab" data-tab="note"     onclick="switchTab(this,'note')">⑥ note執筆</button>
+      <button class="ftab" data-tab="rakuten"  onclick="switchTab(this,'rakuten')">⑦ 楽天アフィ</button>
+      <button class="ftab" data-tab="xgen"     onclick="switchTab(this,'xgen')">⑧ X投稿</button>
     </div>
 
     <!-- ① Gemini (API連携) -->
@@ -1995,10 +1753,13 @@ input:focus, textarea:focus, select:focus {
         <button class="copy-btn" onclick="cp('mw-formatted')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー（note用）
         </button>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%;font-size:13px" onclick="switchTabByName('imggen');renderImgPromptVault()">
+          ④ 見出し画像へ進む →
+        </button>
       </div>
     </div>
 
-    <!-- ④ X投稿生成 -->
+    <!-- ⑧ X投稿生成（最終工程） -->
     <div class="fpanel" id="fp-xgen">
       <div class="hint">ベース案をタップすると編集欄にコピーされます。編集後にストックへ保存。</div>
       <div id="mw-xbases"></div>
@@ -2012,6 +1773,121 @@ input:focus, textarea:focus, select:focus {
         <button class="type-btn" id="mw-tpb" onclick="setWorkType('B')">タイプB<br><span style="font-size:10px;font-weight:400">夜21時・note導線</span></button>
       </div>
       <button class="btn btn-accent" onclick="saveFromWork()">ストックに追加</button>
+    </div>
+
+    <!-- ④ 見出し画像生成 -->
+    <div class="fpanel" id="fp-imggen">
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6">ジミーが記事情報からテンプレートに沿ったプロンプトを生成 → Imagen APIで1280×720px画像を作成します</div>
+      <button class="btn btn-accent" id="btn-run-imggen" onclick="runImgGen()"
+        style="width:100%;min-height:52px;font-size:15px;margin-bottom:12px">
+        🖼️ 見出し画像を生成
+      </button>
+      <!-- loading -->
+      <div id="mwimg-loading" style="display:none;text-align:center;padding:16px 0">
+        <div id="mwimg-status" style="font-size:13px;color:var(--accent);font-weight:600">生成中...</div>
+        <div style="width:100%;height:3px;background:var(--bg5);border-radius:2px;margin-top:10px;overflow:hidden">
+          <div id="mwimg-pbar" style="height:100%;width:20%;background:var(--accent);border-radius:2px;animation:pbarAnim 1.2s ease-in-out infinite alternate;transition:width .4s"></div>
+        </div>
+      </div>
+      <!-- image result -->
+      <div id="mwimg-result" style="display:none;margin-bottom:12px">
+        <img id="mwimg-img" src="#" alt="生成された見出し画像"
+          style="width:100%;border-radius:10px;display:block;border:1px solid var(--border);margin-bottom:8px">
+        <div style="display:flex;gap:8px">
+          <button onclick="mwImgDownload()"
+            style="flex:1;min-height:44px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+            ⬇️ ダウンロード
+          </button>
+          <button onclick="runImgGen()"
+            style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit">
+            🔄 再生成
+          </button>
+        </div>
+      </div>
+      <!-- error -->
+      <div id="mwimg-error" style="display:none;color:var(--red);font-size:13px;padding:10px;background:rgba(204,68,68,.08);border-radius:8px;line-height:1.6;margin-bottom:10px"></div>
+      <!-- prompt display（生成後表示） -->
+      <div id="mwimg-prompt-wrap" style="display:none;margin-bottom:4px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">生成プロンプト（テンプレート準拠）：</div>
+        <textarea id="mwimg-prompt" rows="5"
+          style="width:100%;font-size:12px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit"></textarea>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button onclick="navigator.clipboard.writeText(document.getElementById('mwimg-prompt').value).then(()=>toast('コピーしました'))"
+            style="flex:1;min-height:40px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 コピー</button>
+          <button onclick="saveImgPromptFromWork()"
+            style="flex:1;min-height:40px;background:var(--orange-dim);border:1.5px solid var(--orange);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--orange);font-weight:700">📚 保管庫へ保存</button>
+        </div>
+      </div>
+      <!-- prompt vault（常時表示） -->
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2)">📚 プロンプト保管庫</div>
+          <div style="font-size:10px;color:var(--text3)" id="imgprompt-vault-count"></div>
+        </div>
+        <div id="imgprompt-vault-list"></div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%;font-size:13px" onclick="switchTabByName('imgcheck');refreshImgCheckTab()">
+        ⑤ 画像チェックへ進む →
+      </button>
+    </div>
+
+    <!-- ⑤ 画像チェック（手動・クロ確認） -->
+    <div class="fpanel" id="fp-imgcheck">
+      <div class="hint" style="line-height:1.7">記事本文と見出し画像の内容に相違がないかクロに確認させます。<br>確認後、自分で判断して必要なら修正してください。</div>
+      <!-- image preview -->
+      <div style="margin-bottom:12px">
+        <img id="ccheck-img" src="#" alt="" style="display:none;width:100%;border-radius:8px;border:1px solid var(--border);margin-bottom:6px">
+        <div id="ccheck-no-img" style="font-size:12px;color:var(--text3);padding:10px;background:var(--bg3);border-radius:8px;text-align:center">④で見出し画像を生成すると、ここにサムネが表示されます</div>
+      </div>
+      <!-- check prompt -->
+      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">クロへの確認依頼文（自動生成）</div>
+      <div class="copy-box result-box" id="ccheck-prompt" style="max-height:180px;overflow-y:auto;font-size:12px;line-height:1.6;white-space:pre-wrap"></div>
+      <button onclick="(()=>{const t=document.getElementById('ccheck-prompt').textContent;navigator.clipboard.writeText(t).then(()=>{toast('コピーしました！クロで開きます');setTimeout(()=>openInClaude(t),600)}).catch(()=>openInClaude(t))})()"
+        style="width:100%;min-height:52px;margin-top:8px;background:#7c3aed;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
+        📋 クロで記事・画像チェック →
+      </button>
+      <!-- memo / result -->
+      <div style="margin-top:12px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">チェック結果・メモ（任意）</div>
+        <textarea id="ccheck-result" rows="4" placeholder="クロの指摘・自分のメモをここに…"
+          style="width:100%;font-size:14px;line-height:1.6;resize:vertical"></textarea>
+        <button onclick="navigator.clipboard.readText().then(t=>{document.getElementById('ccheck-result').value=t;toast('貼り付けました')}).catch(()=>toast('貼り付け失敗'))"
+          style="width:100%;min-height:40px;margin-top:6px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 貼り付け</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%;font-size:13px" onclick="switchTabByName('note')">
+        ⑥ note執筆へ進む →
+      </button>
+    </div>
+
+    <!-- ⑥ note執筆 -->
+    <div class="fpanel" id="fp-note">
+      <div class="hint" style="line-height:1.7">③整形済みの記事をnoteエディタに貼り付けて投稿します。</div>
+      <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:14px;font-size:13px;color:var(--text2);line-height:1.8">
+        <div style="font-weight:700;color:var(--text);margin-bottom:8px">📝 note投稿チェックリスト</div>
+        <div>✅ ③整形済みの本文をコピー済み</div>
+        <div>✅ ⑤で画像チェック完了</div>
+        <div>✅ 見出し画像（1280×720）を保存済み</div>
+        <div>✅ タイトル・カテゴリを確認済み</div>
+      </div>
+      <button onclick="window.open('https://editor.note.com/notes/n96474a002525/edit/','_blank')"
+        style="width:100%;min-height:56px;background:var(--accent);border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
+        📝 noteエディタを開く →
+      </button>
+      <button class="btn btn-ghost btn-sm" style="width:100%;font-size:13px" onclick="switchTabByName('rakuten')">
+        ⑦ 楽天アフィへ進む →
+      </button>
+    </div>
+
+    <!-- ⑦ 楽天アフィ登録 -->
+    <div class="fpanel" id="fp-rakuten">
+      <div class="hint" style="line-height:1.7">記事に紹介する楽天商品のアフィリエイトリンクを生成します。</div>
+      <button onclick="openRakutenModal(curId)"
+        style="width:100%;min-height:56px;background:linear-gradient(135deg,#bf0000,#e60012);border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
+        🛒 楽天アフィリエイトカード生成 →
+      </button>
+      <button class="btn btn-ghost btn-sm" style="width:100%;font-size:13px" onclick="switchTabByName('xgen')">
+        ⑧ X投稿へ進む →
+      </button>
     </div>
 
     <!-- フッターボタン -->
@@ -2113,7 +1989,7 @@ let S = (() => {
     ],
     notes: [
     { id:101, title:'副業ライターが「腱鞘炎」で詰んだ話→楽天で揃えた神ガジェット5選', type:'ハウツー(B)', cat:'ライティング', status:'done', publishDate:'10月', rakuten:true, memo:'エルゴノミクスマウス、リストレスト。健康×仕事。', prevLink:'', nextLink:'体を大事にする', researchNote:'ジミー：腱鞘炎対策グッズ' },
-    { id:102, title:'noteとクラウドワークス、どっちで稼ぐべきか　1年検証の結論', type:'エッセイ(A)', cat:'ライティング', status:'done', publishDate:'10月', rakuten:false, memo:'', prevLink:'', nextLink:'どっちで稼ぐべきか3ヶ月検証の1年版', researchNote:'バディ：note vs CW最新動向' },
+    { id:102, title:'noteとクラウドワークス、どっちで稼ぐべきか　1年検証の結論', type:'エッセイ(A)', cat:'ライティング', status:'done', publishDate:'10月', rakuten:false, memo:'', prevLink:'', nextLink:'どっちで稼ぐべきか3ヶ月検証の1年版', researchNote:'' },
     { id:103, title:'有料楽天経済圏×副業ライター【入門編】年間10万円ポイント獲得の全財', type:'エッセイ(A)', cat:'ライティング', status:'done', publishDate:'11月', rakuten:true, memo:'', prevLink:'', nextLink:'', researchNote:'' },
     { id:104, title:'副業ライター1年目の総まとめ　0部から→1部に変えた全記録', type:'エッセイ(A)', cat:'振り返り', status:'done', publishDate:'11月', rakuten:false, memo:'', prevLink:'', nextLink:'', researchNote:'' },
     { id:105, title:'副業ライター1年目、楽天経済圏で暮らしてて気がついたこと', type:'タイプ', cat:'カテゴリ', status:'done', publishDate:'2月', rakuten:true, memo:'', prevLink:'', nextLink:'', researchNote:'' },
@@ -2132,13 +2008,13 @@ let S = (() => {
     { id:118, title:'確定申告で詰んだ→楽天マネーフォワード連携で解決', type:'ハウツー(B)', cat:'楽天', status:'idea', publishDate:'5月', rakuten:true, memo:'失敗談→解決策。楽天カード・銀行の連携で自動化。', prevLink:'「副業ライターのリアルな思考ログ」の延長', nextLink:'', researchNote:'ジミー：マネーフォワード連携方法' },
     { id:119, title:'「いつか始める」をやめて、今すぐ動くために買った3つのもの', type:'エッセイ(A)', cat:'楽天', status:'idea', publishDate:'6月', rakuten:true, memo:'タイマー、タスク管理ツール、環境改善グッズ。', prevLink:'「いつか始める、はなぜ永遠に来ないのか」の解決編', nextLink:'', researchNote:'ジミー：行動を促すための楽天グッズ' },
     { id:120, title:'文字単価0.5円から2円→3円に上げるために投資した楽天の書籍・ツール10選', type:'ハウツー(B)', cat:'楽天', status:'idea', publishDate:'6月', rakuten:true, memo:'回収シミュレーション付き。投資の正当化。', prevLink:'「単価0.5円から抜け出した」の続き', nextLink:'', researchNote:'ジミー：ライター向けスキルアップ書籍' },
-    { id:121, title:'AIに依存しすぎると実力が落ちる、は本当か？1年間使い続けて分かったこと', type:'エッセイ(A)', cat:'AI活用', status:'idea', publishDate:'8月', rakuten:true, memo:'AI学習用の書籍紹介。1年の振り返り。', prevLink:'「AIに依存しすぎると…」の1年後レビュー', nextLink:'', researchNote:'バディ：AI活用と実力の関係' },
-    { id:122, title:'副業ライターの防災マニュアル　月5万円の経費を実質ゼロにする全手順', type:'ハウツー(B)', cat:'楽天', status:'idea', publishDate:'9月', rakuten:true, memo:'ポータブル電源、モバイルWi-Fi。高額ガジェット狙い。', prevLink:'「何でも書けます、をやめた日」の流れ', nextLink:'', researchNote:'バディ：防災用ポータブル電源最新情報' },
-    { id:123, title:'売れなかった理由はプロンプトだった、その0部→20部に変えた全記録', type:'エッセイ(A)', cat:'AI活用', status:'idea', publishDate:'10月', rakuten:true, memo:'プロンプト改善の具体例。ライティング書籍の紹介。', prevLink:'「売れなかった理由はプロンプトだった」の続編', nextLink:'', researchNote:'バディ：プロンプト最新トレンド' },
+    { id:121, title:'AIに依存しすぎると実力が落ちる、は本当か？1年間使い続けて分かったこと', type:'エッセイ(A)', cat:'AI活用', status:'idea', publishDate:'8月', rakuten:true, memo:'AI学習用の書籍紹介。1年の振り返り。', prevLink:'「AIに依存しすぎると…」の1年後レビュー', nextLink:'', researchNote:'' },
+    { id:122, title:'副業ライターの防災マニュアル　月5万円の経費を実質ゼロにする全手順', type:'ハウツー(B)', cat:'楽天', status:'idea', publishDate:'9月', rakuten:true, memo:'ポータブル電源、モバイルWi-Fi。高額ガジェット狙い。', prevLink:'「何でも書けます、をやめた日」の流れ', nextLink:'', researchNote:'' },
+    { id:123, title:'売れなかった理由はプロンプトだった、その0部→20部に変えた全記録', type:'エッセイ(A)', cat:'AI活用', status:'idea', publishDate:'10月', rakuten:true, memo:'プロンプト改善の具体例。ライティング書籍の紹介。', prevLink:'「売れなかった理由はプロンプトだった」の続編', nextLink:'', researchNote:'' },
     { id:124, title:'有料楽天経済圏×副業ライター　月5万円の経費を実質ゼロにする全手順', type:'有料note', cat:'楽天', status:'idea', publishDate:'11月', rakuten:true, memo:'体系化＋独自ノウハウ。価格680円。', prevLink:'第1サイクルの総まとめ', nextLink:'', researchNote:'ジミー：SPU最大化の方法' },
     { id:125, title:'副業ライター半年の振り返り　失敗10本から学んだこと', type:'エッセイ(A)', cat:'振り返り', status:'idea', publishDate:'12月', rakuten:false, memo:'半年間の成長記録。次のステージへの布石。', prevLink:'「0部記事を5部に変えた」の延長', nextLink:'', researchNote:'なし' },
     { id:126, title:'楽天ポイントを使った「自己投資の回し方」　ライター業の複利効果', type:'エッセイ(A)', cat:'楽天', status:'idea', publishDate:'13月', rakuten:true, memo:'ポイントを書籍に再投資→スキルアップ。', prevLink:'「時間がない人ほど…」の応用編', nextLink:'', researchNote:'ジミー：楽天ポイント活用術' },
-    { id:127, title:'提案文150件送って刻達した、文字単価3円に到達した声', type:'エッセイ(A)', cat:'ライティング', status:'idea', publishDate:'14月', rakuten:false, memo:'成長の軌跡の最新版。単価3円到達までの道。', prevLink:'「提案文60件」の続編', nextLink:'', researchNote:'バディ：高単価案件獲得のノウハウ' },
+    { id:127, title:'提案文150件送って刻達した、文字単価3円に到達した声', type:'エッセイ(A)', cat:'ライティング', status:'idea', publishDate:'14月', rakuten:false, memo:'成長の軌跡の最新版。単価3円到達までの道。', prevLink:'「提案文60件」の続編', nextLink:'', researchNote:'' },
   
     ],
   };
@@ -2177,7 +2053,7 @@ const cp = id => navigator.clipboard.writeText(document.getElementById(id).textC
 // ================================================================
 // SECTION COLLAPSE
 // ================================================================
-const secState = {today:true, notes:true, xposts:true, research:true, archive:false};
+const secState = {today:true, notes:true, xposts:true, archive:false};
 function toggleSec(name) {
   secState[name] = !secState[name];
   const body = document.getElementById('body-'+name);
@@ -3006,104 +2882,6 @@ async function runClaude() {
   }
 }
 
-// ================================================================
-// AI副業リサーチワークフロー
-// ================================================================
-function showRwStep(n) {
-  [1,2,3].forEach(i => {
-    document.getElementById('rw-panel-'+i).style.display = i===n ? 'block' : 'none';
-    const s = document.getElementById('rws-'+i);
-    s.classList.remove('active','done');
-    if (i < n) s.classList.add('done');
-    else if (i === n) s.classList.add('active');
-  });
-}
-
-function rwPasteFromClipboard(id) {
-  navigator.clipboard.readText().then(t => {
-    document.getElementById(id).value = t;
-    toast('貼り付けました');
-  }).catch(() => toast('クリップボードへのアクセスを許可してください'));
-}
-
-function rwCopy(step) {
-  const el = document.getElementById('rw-result-'+step);
-  const text = el.textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    toast('📋 コピーしました');
-    // ステップ完了マーク
-    document.getElementById('rws-'+step).classList.remove('active');
-    document.getElementById('rws-'+step).classList.add('done');
-    if (step < 3) document.getElementById('rws-'+(step+1)).classList.remove('done');
-  }).catch(() => toast('コピーに失敗しました'));
-}
-
-function genRwStep1() {
-  const theme = document.getElementById('rw-theme').value.trim() || 'AI副業・AI×副収入';
-  const period = document.getElementById('rw-period').value;
-  const prompt = `以下の条件でリサーチしてください。
-
-【テーマ】${theme}の最新動向
-【期間】${period}
-【対象】X（旧Twitter）・note・Webメディア
-
-【調べること】
-1. バズっている投稿・記事のタイトルと要点
-2. 繰り返し出てくるキーワードやフレーズ
-3. 批判・失敗・本音系の投稿の傾向
-4. 先週と比べて新しく出てきたトピック
-
-【出力形式】
-- 媒体別に分けて箇条書き
-- 実在するURLがあれば添付
-- 不明な場合は「傾向のみ」と明記`;
-  document.getElementById('rw-result-1').textContent = prompt;
-  document.getElementById('rw-out-1').style.display = 'block';
-  document.getElementById('rws-1').classList.add('active');
-}
-
-function genRwStep2() {
-  const papeResult = document.getElementById('rw-pape-result').value.trim();
-  if (!papeResult) { toast('パペの結果を貼り付けてください'); return; }
-  const prompt = `以下はパペ（Perplexity）のリサーチ結果です。
-
-${papeResult}
-
-上記を分析して、以下を出力してください。
-
-1. noteネタとして使えるインサイトを3〜5個
-2. 各インサイトの「正直・本音ポジション」での切り口提案
-3. 実在確認できない情報は「傾向のみ」と明記
-4. 架空のタイトルや事例は絶対に生成しないこと`;
-  document.getElementById('rw-result-2').textContent = prompt;
-  document.getElementById('rw-out-2').style.display = 'block';
-  document.getElementById('rws-1').classList.remove('active');
-  document.getElementById('rws-1').classList.add('done');
-  document.getElementById('rws-2').classList.add('active');
-}
-
-function genRwStep3() {
-  const jimmyResult = document.getElementById('rw-jimmy-result').value.trim();
-  if (!jimmyResult) { toast('ジミィの結果を貼り付けてください'); return; }
-  const type = document.getElementById('rw-article-type').value;
-  const prompt = `以下はリサーチ結果と分析です。
-
-${jimmyResult}
-
-このインサイトをもとに、${type}の構成案を作成してください。
-
-条件：
-- 「正直・本音」ポジションで書く
-- ハイプ（誇大な表現）は使わない
-- 読者が「自分のことだ」と感じる導入にする
-- 見出し構成＋各セクションの要点を出力`;
-  document.getElementById('rw-result-3').textContent = prompt;
-  document.getElementById('rw-out-3').style.display = 'block';
-  document.getElementById('rws-2').classList.remove('active');
-  document.getElementById('rws-2').classList.add('done');
-  document.getElementById('rws-3').classList.add('active');
-}
-// ================================================================
 
 // ================================================================
 // 自動保存（執筆中草稿）
@@ -3353,7 +3131,6 @@ renderNotes();
 renderXPosts();
 renderArchive();
 renderToday();
-renderWeeklyReviews();
 renderNetaList();
 loadApiKey();
 // sec-bodyのoverflow修正（ホバーアニメーションで切れないよう）
@@ -3652,60 +3429,6 @@ function resetClaudeTmpl() {
 
 
 // ================================================================
-// SECRETARY ROUTING
-// ================================================================
-function secBtnClick(target) {
-  document.querySelectorAll('.sec-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('secbtn-' + target);
-  if (btn) btn.classList.add('active');
-  if      (target === 'notes')    scrollToSec('sec-notes');
-  else if (target === 'xposts')   scrollToSec('sec-xposts');
-  else if (target === 'today')    scrollToSec('sec-today');
-  else if (target === 'settings') { openSettings(); switchStab('gemini'); }
-  else if (target === 'config')   { openSettings(); switchStab('claude'); }
-  else if (target === 'research') { scrollToSec('sec-research'); }
-  else if (target === 'share')    { openShareModal(); }
-}
-
-function secretaryRoute() {
-  const input = document.getElementById('sec-input');
-  const reply = document.getElementById('sec-reply');
-  const text = input.value.trim();
-  if (!text) return;
-
-  const t = text.toLowerCase();
-  let dest = null, msg = '';
-
-  let btnId = null;
-  if (/記事|note|執筆|書く|ネタ|アイデア|ブログ|下書き|公開/.test(t)) {
-    dest = 'sec-notes'; btnId = 'notes';
-    msg = '📝 note進捗表に移動しました。';
-  } else if (/^x$|x投稿|ツイート|ツイ|ポスト|投稿|x |xpost/.test(t)) {
-    dest = 'sec-xposts'; btnId = 'xposts';
-    msg = '𝕏 X投稿ストックに移動しました。';
-  } else if (/今日|予定|タスク|スケジュール|ルーティン|朝|夜|作業/.test(t)) {
-    dest = 'sec-today'; btnId = 'today';
-    msg = '📅 今日の予定に移動しました。';
-  } else if (/リサーチ|調べ|ジミー|gemini|research|調査/.test(t)) {
-    dest = 'sec-notes'; btnId = 'notes';
-    msg = '🔍 リサーチは記事カードから「作業」ボタンで開始できます。記事一覧に移動しました。';
-  } else {
-    msg = '🤵 キーワードを認識できませんでした。「記事」「X投稿」「今日」などを含めてみてください。';
-  }
-
-  if (btnId) {
-    document.querySelectorAll('.sec-btn').forEach(b => b.classList.remove('active'));
-    const btn = document.getElementById('secbtn-' + btnId);
-    if (btn) btn.classList.add('active');
-  }
-  reply.textContent = msg;
-  reply.style.display = 'block';
-  input.value = '';
-  input.blur();
-  if (dest) setTimeout(() => scrollToSec(dest), 120);
-}
-
-// ================================================================
 // 外部連携ヘルパー
 // ================================================================
 function openInGemini(text) {
@@ -3756,42 +3479,60 @@ function toggleResearch(id, event) {
 }
 
 // ================================================================
-// 機能2: 週次レビュー
+// 機能2: 執筆予定一覧をクロにコピー
 // ================================================================
-function saveWeeklyReview() {
-  const followers = parseInt(document.getElementById('wr-followers').value) || 0;
-  const imp       = parseInt(document.getElementById('wr-imp').value)       || 0;
-  const likes     = parseInt(document.getElementById('wr-likes').value)     || 0;
-  const memo      = document.getElementById('wr-memo').value.trim();
-  if (!followers && !imp && !likes && !memo) { toast('数値かメモを入力してください'); return; }
-  const now = new Date();
-  const date = `${now.getMonth()+1}/${now.getDate()}`;
-  S.weeklyReviews.unshift({ date, followers, imp, likes, memo });
-  if (S.weeklyReviews.length > 20) S.weeklyReviews = S.weeklyReviews.slice(0, 20);
-  save();
-  ['wr-followers','wr-imp','wr-likes','wr-memo'].forEach(id => document.getElementById(id).value = '');
-  renderWeeklyReviews();
-  toast('週次レビューを記録しました ✓');
-  // todayセクション高さ再計算
-  const body = document.getElementById('body-today');
-  if (secState.today) body.style.maxHeight = body.scrollHeight + 4000 + 'px';
-}
-function renderWeeklyReviews() {
-  const list = (S.weeklyReviews || []).slice(0, 5);
-  const el = document.getElementById('wr-list');
-  if (!el) return;
-  if (!list.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:8px 0">まだ記録がありません</div>';
-    return;
+function copyNoteListForClaude() {
+  const notes = S.notes || [];
+  if (!notes.length) { toast('記事がありません'); return; }
+  const now = new Date().toLocaleDateString('ja-JP');
+  const statusLabel = { idea:'アイデア', writing:'執筆中', review:'確認中', xprep:'X準備中', done:'公開済み' };
+
+  const active = notes.filter(n => n.status !== 'done');
+  const done   = notes.filter(n => n.status === 'done');
+
+  const lines = [
+    `【執筆予定一覧】${now} 現在`,
+    '',
+    '以下はnabebaseの執筆予定一覧です。',
+    '変更（並び替え・追加・削除・差し替え）を指示してください。',
+    '変更後は全件をJSON形式で出力してください（アプリの「テーマをまとめて登録」に貼り付けて反映できます）。',
+    '',
+    '--- 執筆予定 ---',
+  ];
+
+  active.forEach((n, i) => {
+    lines.push(`#${i+1} [${statusLabel[n.status]||n.status}] ${n.title}`);
+    lines.push(`  カテゴリ：${n.cat||'-'} | タイプ：${n.type||'-'} | 公開予定：${n.publishDate||'未定'}${n.rakuten?' | 🛒楽天あり':''}`);
+    if (n.memo) lines.push(`  メモ：${n.memo}`);
+    if (n.researchNote) lines.push(`  リサーチ：${n.researchNote}`);
+  });
+
+  if (done.length) {
+    lines.push('');
+    lines.push(`--- 公開済み（${done.length}件） ---`);
+    done.forEach((n, i) => {
+      lines.push(`#${active.length+i+1} [公開済み] ${n.title}（${n.publishDate||'-'}）`);
+    });
   }
-  el.innerHTML = list.map(r => `
-    <div class="wr-item">
-      <span class="wr-date">${r.date}</span>
-      ${r.followers ? `<span>👥 ${Number(r.followers).toLocaleString()}</span>` : ''}
-      ${r.imp       ? `<span>👁 ${Number(r.imp).toLocaleString()}</span>`       : ''}
-      ${r.likes     ? `<span>❤️ ${Number(r.likes).toLocaleString()}</span>`     : ''}
-      ${r.memo      ? `<span style="color:var(--text2)">💬 ${r.memo}</span>`    : ''}
-    </div>`).join('');
+
+  lines.push('');
+  lines.push('--- 変更時のJSON出力フォーマット（全件・このまま出力してください） ---');
+  lines.push(JSON.stringify(notes.map(n => ({
+    id: n.id, title: n.title, type: n.type||'', cat: n.cat||'',
+    status: n.status, publishDate: n.publishDate||'', memo: n.memo||'',
+    prevLink: n.prevLink||'', nextLink: n.nextLink||'',
+    researchNote: n.researchNote||'', rakuten: !!n.rakuten
+  })), null, 2));
+
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text)
+    .then(() => toast(`✅ ${active.length}件の執筆予定をコピーしました！クロに貼り付けてください`))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast('✅ 執筆予定一覧をコピーしました！');
+    });
 }
 
 // ================================================================
@@ -3872,200 +3613,285 @@ let imggenNoteId = null;
 let _imggenCurrentNote = null;
 
 function openImgGenModal(id) {
-  imggenNoteId = id;
-  const n = S.notes.find(x => x.id === id);
-  if (!n) return;
-  _imggenCurrentNote = n;
-  // リセット
-  ['imggen-loading','imggen-result-wrap','imggen-error','imggen-img-wrap']
-    .forEach(i => document.getElementById(i).style.display = 'none');
-  openOverlay('modal-imggen');
-  genImgFull(n);
+  // 作業モーダルの⑤見出し画像タブを開く
+  openWork(id);
+  switchTabByName('imggen');
+  renderImgPromptVault();
 }
 
-function imggenRegenerate() {
-  if (!_imggenCurrentNote) return;
-  ['imggen-loading','imggen-result-wrap','imggen-error','imggen-img-wrap']
-    .forEach(i => document.getElementById(i).style.display = 'none');
-  genImgFull(_imggenCurrentNote);
-}
-
-async function genImgFull(n) {
+// ================================================================
+// 見出し画像生成（作業モーダル ④）
+// ================================================================
+async function runImgGen() {
+  const n = S.notes.find(x => x.id === curId);
+  if (!n) { toast('記事が選択されていません'); return; }
   const apiKey = localStorage.getItem('beyan_gemini_key') || '';
-  if (!apiKey) {
-    showImggenError('⚠️ Gemini APIキーが設定されていません。設定から保存してください。');
-    return;
-  }
-  const loadEl = document.getElementById('imggen-loading');
-  const statusEl = document.getElementById('imggen-status');
-  const pbar = document.getElementById('imggen-pbar');
-  loadEl.style.display = 'block';
+  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
 
-  // STEP 1: 英語画像プロンプト生成
-  statusEl.textContent = '① 画像プロンプトを生成中...';
-  pbar.style.width = '20%';
-  let imagePrompt = '';
-  try {
-    const r1 = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: 'You are an expert at creating image generation prompts for blog header images. Given a Japanese article title and memo, output a single English image generation prompt (under 100 words). Style: minimalist, modern, no text in image, 16:9 landscape, suitable for a blog header. Output only the prompt, no explanation.' }] },
-        contents: [{ role: 'user', parts: [{ text: `Title: ${n.title}\nMemo: ${n.memo || 'none'}` }] }],
-        generationConfig: { temperature: 0.8, maxOutputTokens: 200 }
-      })
-    });
-    const d1 = await r1.json();
-    if (!r1.ok) throw new Error(d1.error?.message || 'プロンプト生成エラー');
-    imagePrompt = d1.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-    if (!imagePrompt) throw new Error('プロンプトが空でした');
-  } catch(e) {
-    showImggenError('⚠️ プロンプト生成エラー: ' + e.message);
-    return;
-  }
-
-  // STEP 2: 画像生成（複数モデルを順番に試す）
-  statusEl.textContent = '② 画像を生成中...';
-  pbar.style.width = '55%';
-
-  // 候補モデル（順番に試す）
-  const imgModels = [
-    { model: 'gemini-2.5-flash-image', type: 'generateContent' },
-    { model: 'gemini-3.1-flash-image-preview', type: 'generateContent' },
-    { model: 'imagen-4.0-fast-generate-001', type: 'predict' },
-    { model: 'imagen-4.0-generate-001', type: 'predict' },
-  ];
-
-  for (const m of imgModels) {
-    statusEl.textContent = `② 画像生成中 (${m.model})...`;
-    try {
-      let imgB64, imgMime;
-
-      if (m.type === 'generateContent') {
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.model}:generateContent?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: imagePrompt }] }],
-            generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
-          })
-        });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error?.message);
-        const imgPart = (d.candidates?.[0]?.content?.parts || []).find(p => p.inlineData);
-        if (!imgPart) throw new Error('no image in response');
-        imgB64 = imgPart.inlineData.data;
-        imgMime = imgPart.inlineData.mimeType;
-
-      } else { // predict (Imagen)
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.model}:predict?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            instances: [{ prompt: imagePrompt }],
-            parameters: { sampleCount: 1, aspectRatio: '16:9' }
-          })
-        });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error?.message);
-        const pred = d.predictions?.[0];
-        if (!pred) throw new Error('no prediction');
-        imgB64 = pred.bytesBase64Encoded;
-        imgMime = pred.mimeType || 'image/png';
-      }
-
-      // 成功
-      pbar.style.width = '100%';
-      displayImggenResult(imgMime, imgB64, imagePrompt);
-      return;
-
-    } catch(e) {
-      console.warn(`[imggen] ${m.model} failed:`, e.message);
-      // 次のモデルへ
-    }
-  }
-
-  // 全モデル失敗 → pollinations.ai フォールバック（無料・APIキー不要）
-  statusEl.textContent = '② pollinations.ai で生成中...';
-  pbar.style.width = '80%';
-  const pollinationsPrompt = imagePrompt + ', minimalist blog header, 16:9, no text overlay';
-  const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(pollinationsPrompt)}?width=1280&height=720&model=flux&nologo=true&seed=${Date.now()}`;
-
-  await new Promise((resolve) => {
-    const tmpImg = new Image();
-    const _timeout = setTimeout(() => {
-      // タイムアウト → URL直接表示を試みる
-      pbar.style.width = '100%';
-      displayImggenResult_url(pollinationsUrl, imagePrompt);
-      resolve();
-    }, 30000);
-    tmpImg.onload = () => {
-      clearTimeout(_timeout);
-      pbar.style.width = '100%';
-      displayImggenResult_url(pollinationsUrl, imagePrompt);
-      resolve();
-    };
-    tmpImg.onerror = () => {
-      clearTimeout(_timeout);
-      // pollinationsは直接imgタグでは表示できることが多い → URLをそのまま表示
-      pbar.style.width = '100%';
-      displayImggenResult_url(pollinationsUrl, imagePrompt);
-      resolve();
-    };
-    tmpImg.src = pollinationsUrl;
+  // リセット
+  ['mwimg-result','mwimg-prompt-wrap','mwimg-error'].forEach(i => {
+    const el = document.getElementById(i); if (el) el.style.display = 'none';
   });
+  const loadEl = document.getElementById('mwimg-loading');
+  const statusEl = document.getElementById('mwimg-status');
+  const pbar = document.getElementById('mwimg-pbar');
+  const btn = document.getElementById('btn-run-imggen');
+  loadEl.style.display = 'block';
+  btn.disabled = true;
+
+  const TEXT_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+
+  // ── STEP 1: テンプレート変数を記事情報で埋めた日本語プロンプト生成 ──
+  statusEl.textContent = '① テンプレートプロンプト生成中...';
+  pbar.style.width = '20%';
+
+  const fillSystem = `あなたはnote記事のアイキャッチ画像プロンプト専門家です。
+記事情報をもとに以下のテンプレートの全変数を適切な値で埋め、完成したプロンプトを出力してください。
+前置き・説明不要。プロンプト本文のみ出力。末尾に「 --ar 16:9 --v 6 --style raw」を付加。
+
+テンプレート：
+note記事用アイキャッチ画像、1280x720px、プロフェッショナル・クリック欲求高めるデザイン
+
+【[カテゴリ/実績]】[数字]を[期間]で達成！
+[メイン成果]！[ターゲット]のための[解決策]
+[感情に訴えるサブタイトル]
+
+レイアウト：
+- 上段：【タイトル】太字[メインカラー1]、白抜き縁取り
+- 中段：[メイン文] [アクセントカラー]グラデ強調、成果数字特大
+- 下段：[サブタイトル]太字、励まし/疑問トーン
+- 右側：[テーマアイコン1]+[テーマアイコン2]（グラフ/電球/ハート等）、シャープ
+
+視覚要素：
+- 背景：[明るめグラデ]（[カラー1]-[カラー2]、70%ベース）、クリーン
+- 配色：[メインカラー1](70%) × [アクセントカラー](25%) × 白(5%)、3色厳守
+- noteロゴ：左上微か配置、余白バランス最適化
+- 全体：信頼感+注目度UP、初見で「読みたい！」となる構図
+
+変数選択基準：
+[カテゴリ/実績]→「実体験」「検証済み」「初心者必見」等
+[数字+期間]→記事の成果数字（例：PV80・5日、売上30万・1ヶ月）
+[メイン成果]→短い成果フレーズ（例：初動80%UP、無から利益）
+[ターゲット]→読者像（例：心折れそうなあなた、忙しい会社員）
+[解決策]→行動促進フレーズ（例：1週間で！、コピペ術）
+[メインカラー1]→ネイビー/深緑/濃紺など記事カテゴリに合う濃色
+[アクセントカラー]→オレンジ/ゴールド/ブルーなどコントラスト色`;
+
+  const userInput = `タイトル: ${n.title}\nカテゴリ: ${n.cat || 'ライティング'}\nメモ: ${n.memo || 'なし'}`;
+
+  let jaPrompt = '';
+  for (const model of TEXT_MODELS) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: fillSystem }] },
+          contents: [{ role: 'user', parts: [{ text: userInput }] }],
+          generationConfig: { temperature: 0.85, maxOutputTokens: 600 }
+        })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message || r.status);
+      jaPrompt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      if (jaPrompt) break;
+    } catch(e) { console.warn('[imggen] step1', model, e.message); }
+  }
+  if (!jaPrompt) {
+    loadEl.style.display = 'none'; btn.disabled = false;
+    showMwImgError('⚠️ プロンプト生成に失敗しました。APIキーを確認してください。');
+    return;
+  }
+
+  // ── STEP 2: 日本語プロンプト → Imagen用英語プロンプトに変換 ──
+  statusEl.textContent = '② Imagen用プロンプトに変換中...';
+  pbar.style.width = '45%';
+
+  const engSystem = `Convert the following Japanese image prompt to English for Google Imagen API.
+Keep the visual design intent: gradient background, 3-color scheme, layout structure (top badge, center bold stats, bottom subtitle, right icons).
+Remove Midjourney flags (--ar --v --style). Describe text elements as visual design areas.
+Output only the English prompt, 120 words max.`;
+
+  let engPrompt = jaPrompt; // fallback: use Japanese if conversion fails
+  for (const model of TEXT_MODELS) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: engSystem }] },
+          contents: [{ role: 'user', parts: [{ text: jaPrompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 250 }
+        })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message || r.status);
+      const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      if (t) { engPrompt = t; break; }
+    } catch(e) { console.warn('[imggen] step2', model, e.message); }
+  }
+
+  // ── STEP 3: Imagen APIで画像生成 ──
+  statusEl.textContent = '③ 画像生成中...';
+  pbar.style.width = '65%';
+
+  const IMG_MODELS = ['imagen-3.0-fast-generate-001', 'imagen-3.0-generate-001'];
+  for (const model of IMG_MODELS) {
+    statusEl.textContent = `③ 画像生成中 (${model})...`;
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instances: [{ prompt: engPrompt }],
+          parameters: { sampleCount: 1, aspectRatio: '16:9' }
+        })
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error?.message || r.status);
+      const pred = d.predictions?.[0];
+      if (!pred?.bytesBase64Encoded) throw new Error('no image data');
+      pbar.style.width = '100%';
+      loadEl.style.display = 'none'; btn.disabled = false;
+      displayMwImg(pred.mimeType || 'image/png', pred.bytesBase64Encoded, jaPrompt);
+      return;
+    } catch(e) { console.warn('[imggen] imagen', model, e.message); }
+  }
+
+  // ── フォールバック: pollinations.ai ──
+  statusEl.textContent = '③ フォールバック生成中...';
+  pbar.style.width = '90%';
+  const polUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(engPrompt + ', professional blog thumbnail, 16:9')}?width=1280&height=720&model=flux&nologo=true&seed=${Date.now()}`;
+  setTimeout(() => {
+    pbar.style.width = '100%';
+    loadEl.style.display = 'none'; btn.disabled = false;
+    displayMwImgUrl(polUrl, jaPrompt);
+  }, 300);
 }
 
-function displayImggenResult(mimeType, b64, prompt) {
-  const imgEl = document.getElementById('imggen-img');
+function displayMwImg(mimeType, b64, prompt) {
+  const imgEl = document.getElementById('mwimg-img');
   imgEl.src = `data:${mimeType};base64,${b64}`;
-  imgEl.dataset.mime = mimeType;
-  imgEl.dataset.b64 = b64;
-  imgEl.dataset.url = '';
-  document.getElementById('imggen-loading').style.display = 'none';
-  document.getElementById('imggen-img-wrap').style.display = 'block';
-  document.getElementById('imggen-prompt-text').value = prompt;
-  document.getElementById('imggen-result-wrap').style.display = 'block';
+  imgEl.dataset.mime = mimeType; imgEl.dataset.b64 = b64; imgEl.dataset.url = '';
+  document.getElementById('mwimg-result').style.display = 'block';
+  document.getElementById('mwimg-prompt').value = prompt;
+  document.getElementById('mwimg-prompt-wrap').style.display = 'block';
+  updateCcheckImg(`data:${mimeType};base64,${b64}`);
   toast('🖼️ 画像生成完了！');
 }
 
-function displayImggenResult_url(url, prompt) {
-  const imgEl = document.getElementById('imggen-img');
-  imgEl.src = url;
-  imgEl.dataset.mime = 'image/jpeg';
-  imgEl.dataset.b64 = '';
-  imgEl.dataset.url = url;
-  document.getElementById('imggen-loading').style.display = 'none';
-  document.getElementById('imggen-img-wrap').style.display = 'block';
-  document.getElementById('imggen-prompt-text').value = prompt;
-  document.getElementById('imggen-result-wrap').style.display = 'block';
+function displayMwImgUrl(url, prompt) {
+  const imgEl = document.getElementById('mwimg-img');
+  imgEl.src = url; imgEl.dataset.mime = 'image/jpeg'; imgEl.dataset.b64 = ''; imgEl.dataset.url = url;
+  document.getElementById('mwimg-result').style.display = 'block';
+  document.getElementById('mwimg-prompt').value = prompt;
+  document.getElementById('mwimg-prompt-wrap').style.display = 'block';
+  updateCcheckImg(url);
   toast('🖼️ 画像生成完了！(pollinations.ai)');
 }
 
-function showImggenError(msg) {
-  document.getElementById('imggen-loading').style.display = 'none';
-  const el = document.getElementById('imggen-error');
-  el.style.display = 'block';
-  el.textContent = msg;
+function showMwImgError(msg) {
+  document.getElementById('mwimg-loading').style.display = 'none';
+  const el = document.getElementById('mwimg-error');
+  el.style.display = 'block'; el.textContent = msg;
 }
 
-function imggenDownload() {
-  const img = document.getElementById('imggen-img');
-  const b64 = img.dataset.b64;
-  const url = img.dataset.url;
+function mwImgDownload() {
+  const img = document.getElementById('mwimg-img');
+  const b64 = img.dataset.b64; const url = img.dataset.url;
   const mime = img.dataset.mime || 'image/png';
-  if (url) {
-    // URL-based image (pollinations.ai) → open in new tab for manual save
+  const n = S.notes.find(x => x.id === curId);
+  const fname = (n?.title || 'eyecatch').slice(0, 30).replace(/[\\/:*?"<>|]/g, '_') + '.png';
+  if (b64) {
+    const a = document.createElement('a'); a.href = `data:${mime};base64,${b64}`;
+    a.download = fname; a.click(); toast('画像を保存しました');
+  } else if (url) {
     window.open(url, '_blank');
-    toast('画像を新しいタブで開きました。長押し or 右クリックで保存してください');
+    toast('画像を新しいタブで開きました。長押しor右クリックで保存してください');
+  }
+}
+
+// ----- プロンプト保管庫 -----
+function saveImgPromptFromWork() {
+  const prompt = document.getElementById('mwimg-prompt').value.trim();
+  if (!prompt) { toast('プロンプトがありません'); return; }
+  const n = S.notes.find(x => x.id === curId);
+  const entry = { date: new Date().toLocaleDateString('ja-JP'), title: n?.title || '', prompt };
+  const list = JSON.parse(localStorage.getItem('beyan_imgprompts') || '[]');
+  list.unshift(entry);
+  if (list.length > 30) list.pop();
+  localStorage.setItem('beyan_imgprompts', JSON.stringify(list));
+  renderImgPromptVault();
+  toast('📚 保管庫に保存しました');
+}
+
+function deleteImgPrompt(idx) {
+  const list = JSON.parse(localStorage.getItem('beyan_imgprompts') || '[]');
+  list.splice(idx, 1);
+  localStorage.setItem('beyan_imgprompts', JSON.stringify(list));
+  renderImgPromptVault();
+}
+
+function renderImgPromptVault() {
+  const el = document.getElementById('imgprompt-vault-list');
+  if (!el) return;
+  const list = JSON.parse(localStorage.getItem('beyan_imgprompts') || '[]');
+  const cnt = document.getElementById('imgprompt-vault-count');
+  if (cnt) cnt.textContent = list.length ? `${list.length}件保存済み` : '';
+  if (!list.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">まだ保存されたプロンプトはありません</div>';
     return;
   }
-  if (!b64) return;
-  const a = document.createElement('a');
-  a.href = `data:${mime};base64,${b64}`;
-  a.download = `note-header-${Date.now()}.png`;
-  a.click();
-  toast('画像を保存しました');
+  el.innerHTML = list.map((e, i) => `
+    <div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:6px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-bottom:2px">${e.title || '(タイトルなし)'}</div>
+      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">${e.date}</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:48px;overflow:hidden;margin-bottom:6px">${e.prompt}</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="navigator.clipboard.writeText(${JSON.stringify(e.prompt)}).then(()=>toast('コピーしました'))" style="flex:1;min-height:32px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 コピー</button>
+        <button onclick="deleteImgPrompt(${i})" style="min-height:32px;width:36px;background:rgba(152,64,64,.08);border:1px solid rgba(152,64,64,.2);border-radius:6px;font-size:13px;cursor:pointer">🗑️</button>
+      </div>
+    </div>`).join('');
+}
+
+// ----- クロチェックタブ -----
+function updateCcheckImg(src) {
+  const cimg = document.getElementById('ccheck-img');
+  const noimg = document.getElementById('ccheck-no-img');
+  if (!cimg || !noimg) return;
+  cimg.src = src; cimg.style.display = 'block'; noimg.style.display = 'none';
+}
+
+function buildCcheckPrompt() {
+  const n = S.notes.find(x => x.id === curId);
+  if (!n) return '';
+  const formatted = document.getElementById('mw-formatted')?.textContent?.trim() ||
+                     document.getElementById('mw-draft')?.value?.trim() || '（まだ整形されていません）';
+  const imgPrompt = document.getElementById('mwimg-prompt')?.value?.trim() || '（まだ見出し画像が生成されていません）';
+  return `以下の記事原稿と見出し画像プロンプトを確認してください。内容が一致しているかチェックし、矛盾や改善点を具体的に指摘してください。
+
+【記事タイトル】${n.title}
+
+【整形済み記事原稿】
+${formatted.slice(0, 2000)}${formatted.length > 2000 ? '\n…（以下省略）' : ''}
+
+【見出し画像プロンプト（Imagen API用）】
+${imgPrompt}
+
+チェック項目：
+1. 記事の内容と見出し画像の雰囲気・テーマが一致しているか
+2. 読者が「読みたい」と思えるアイキャッチになっているか
+3. 修正が必要な場合は修正案を提示してください`;
+}
+
+function refreshImgCheckTab() {
+  const promptEl = document.getElementById('ccheck-prompt');
+  if (promptEl) promptEl.textContent = buildCcheckPrompt();
+  // 画像がすでに生成されていれば表示を同期
+  const mwImg = document.getElementById('mwimg-img');
+  if (mwImg && mwImg.src && mwImg.src !== window.location.href + '#' && mwImg.src !== '#') {
+    updateCcheckImg(mwImg.src);
+  }
 }
 
 // ================================================================
@@ -4178,11 +4004,11 @@ async function runNabebaseTests() {
 
   // 4. モーダル表示・非表示テスト
   try {
-    const m = document.getElementById('modal-imggen');
-    if (!m) throw new Error('modal-imggen not found');
-    openOverlay('modal-imggen');
+    const m = document.getElementById('modal-rakuten');
+    if (!m) throw new Error('modal-rakuten not found');
+    openOverlay('modal-rakuten');
     if (!m.classList.contains('open')) throw new Error('open failed');
-    closeOverlay('modal-imggen');
+    closeOverlay('modal-rakuten');
     if (m.classList.contains('open')) throw new Error('close failed');
     ok('モーダル表示・非表示テスト');
   } catch(e) { fail('モーダル表示・非表示テスト', e.message); }
