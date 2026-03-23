@@ -85,7 +85,7 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 .sec-head-count{font-size:11px;color:var(--text3);flex-shrink:0;white-space:nowrap}
 .sec-chevron{transition:transform .2s;color:var(--text3);flex-shrink:0}
 .sec-chevron.open{transform:rotate(180deg)}
-.sec-body{overflow:hidden;transition:max-height .25s ease;padding:0 2px}
+.sec-body{overflow:hidden;transition:max-height .25s ease;padding:0 2px;will-change:max-height}
 
 /* ===== セクションカード（色分け） ===== */
 #sec-today, #sec-notes, #sec-xposts, #sec-archive {
@@ -1566,7 +1566,7 @@ input:focus, textarea:focus, select:focus {
       <div class="filter-bar" id="filter-bar"></div>
       <div class="search-wrap">
         <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="note-search" type="text" placeholder="タイトル・メモで絞り込み" oninput="renderNotes()">
+        <input id="note-search" type="text" placeholder="タイトル・メモで絞り込み" oninput="_renderNotesD()">
       </div>
       <div id="note-list" style="padding:4px 3px;"></div>
 
@@ -1792,7 +1792,7 @@ input:focus, textarea:focus, select:focus {
           <label class="input-label" style="margin-bottom:0;font-size:11px">Geminiのリサーチ結果</label>
           <button onclick="navigator.clipboard.readText().then(t=>{document.getElementById('mw-gemini-result').value=t;genChatGPT()}).catch(()=>toast('貼り付け失敗'))" style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit;min-height:32px">📋 貼り付け</button>
         </div>
-        <textarea id="mw-gemini-result" rows="5" placeholder="①Geminiタブのリサーチ結果、またはここに直接貼り付け…" oninput="genChatGPT()" style="min-height:100px;resize:vertical"></textarea>
+        <textarea id="mw-gemini-result" rows="5" placeholder="①Geminiタブのリサーチ結果、またはここに直接貼り付け…" oninput="_genChatGPTD()" style="min-height:100px;resize:vertical"></textarea>
       </div>
 
       <!-- STEP 2 -->
@@ -2182,7 +2182,7 @@ function toggleSec(name) {
   const body = document.getElementById('body-'+name);
   const chev = document.getElementById('chev-'+name);
   if (secState[name]) {
-    body.style.maxHeight = body.scrollHeight + 4000 + 'px';
+    body.style.maxHeight = '99999px';
     chev.classList.add('open');
   } else {
     body.style.maxHeight = '0';
@@ -2314,7 +2314,7 @@ function renderNotes() {
 
   // セクション高さを再計算
   const body = document.getElementById('body-notes');
-  if (secState.notes) { body.style.maxHeight = body.scrollHeight + 4000 + 'px'; body.style.overflow = 'visible'; }
+  if (secState.notes) { body.style.maxHeight = '99999px'; body.style.overflow = 'visible'; }
 }
 function setNf(v) { nf = v; renderNotes(); }
 
@@ -2463,7 +2463,7 @@ function renderXPosts() {
       </div>`;
     }).join('');
   const body = document.getElementById('body-xposts');
-  if (secState.xposts) body.style.maxHeight = body.scrollHeight + 4000 + 'px';
+  if (secState.xposts) body.style.maxHeight = '99999px';
 }
 
 function markPosted(id){const p=S.xposts.find(x=>x.id===id);if(p){p.status='posted';save();renderXPosts();renderArchive();toast('投稿済みにしました ✓ — アーカイブへ移動しました');}}
@@ -2513,7 +2513,7 @@ function renderArchive() {
       </div>`).join('');
 
   const body = document.getElementById('body-archive');
-  if (body && secState.archive) { body.style.maxHeight = body.scrollHeight + 4000 + 'px'; body.style.overflow = 'visible'; }
+  if (body && secState.archive) { body.style.maxHeight = '99999px'; body.style.overflow = 'visible'; }
 }
 function unarchiveNote(id) {
   const n = S.notes.find(x => x.id === id);
@@ -2652,13 +2652,21 @@ function buildGemini(n) {
       n.researchNote ? '\n特記事項：' + n.researchNote : '');
 }
 
+// ユーティリティ: debounce
+function debounce(fn, ms) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+const _renderNotesD = debounce(renderNotes, 250);
+const _genChatGPTD  = debounce(() => { genChatGPT(); save(); }, 450);
+
 function genChatGPT() {
   const result = document.getElementById('mw-gemini-result').value.trim();
   const wrap = document.getElementById('mw-chatgpt-wrap');
   if(!result){wrap.style.display='none';return;}
   const n = S.notes.find(x=>x.id===curId); if(!n) return;
-  // 手動ペースト分も含めてgeminiResultとして保存
-  if (n.geminiResult !== result) { n.geminiResult = result; save(); }
+  // 手動ペースト分も含めてgeminiResultとして保存（save()はdebounce済みハンドラに委譲）
+  if (n.geminiResult !== result) { n.geminiResult = result; }
   const isYuryou = n.type==='有料note';
   // カスタムテンプレがあればそちらを使う（変数は動的に埋め込む）
   const claudeSaved = localStorage.getItem(CLAUDE_TMPL_KEY);
@@ -3839,15 +3847,12 @@ function toggleNetaSection() {
   const body = document.getElementById('neta-body');
   const chev = document.getElementById('neta-chev');
   if (netaOpen) {
-    body.style.maxHeight = body.scrollHeight + 2000 + 'px';
+    body.style.maxHeight = '99999px';
     chev.style.transform = 'rotate(180deg)';
   } else {
     body.style.maxHeight = '0';
     chev.style.transform = '';
   }
-  // xpostsセクション高さ再計算
-  const xb = document.getElementById('body-xposts');
-  if (secState.xposts) setTimeout(() => { xb.style.maxHeight = xb.scrollHeight + 4000 + 'px'; }, 320);
 }
 function addSingleNeta() {
   const input = document.getElementById('neta-input');
