@@ -224,6 +224,81 @@ select option{background:var(--bg3)}
 .input-group{margin-bottom:12px}
 .input-2col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
 
+/* ===== BOTTOM NAV（モバイル左手一本操作） ===== */
+.bottom-nav {
+  display: none;
+}
+@media (max-width:600px) {
+  /* ボトムナビ本体 */
+  .bottom-nav {
+    display: flex;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    background: rgba(14,32,20,0.98);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(80,140,90,.3);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .bnav-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 56px;
+    background: none;
+    border: none;
+    color: rgba(180,220,185,.55);
+    font-family: inherit;
+    cursor: pointer;
+    padding: 8px 2px;
+    position: relative;
+    transition: color .15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bnav-btn:active { transform: scale(0.9); }
+  .bnav-btn.active { color: #a0d0a8; }
+  .bnav-btn.active::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 28px; height: 2px;
+    background: #a0d0a8;
+    border-radius: 0 0 3px 3px;
+  }
+  .bnav-icon {
+    font-size: 21px;
+    line-height: 1;
+    display: block;
+  }
+  .bnav-lbl {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    display: block;
+    white-space: nowrap;
+  }
+
+  /* トップバー：ブランド＋設定のみ */
+  .topbar { min-height: 44px !important; padding: 0 14px !important; gap: 0 !important; }
+  .topbar-pills { display: none !important; }
+  .brand { display: block !important; font-size: 18px !important; flex: 1; }
+  .topbar-gear { min-height: 44px !important; min-width: 44px !important; }
+
+  /* メインコンテンツの下部余白をボトムナビ分追加 */
+  .main { padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important; }
+
+  /* FABはボトムナビの上に */
+  .fab { bottom: calc(68px + env(safe-area-inset-bottom)) !important; }
+  .settings-fab { bottom: calc(68px + env(safe-area-inset-bottom)) !important; }
+
+  /* セクションヘッダーのタップ領域を大きく */
+  .sec-head { min-height: 52px !important; padding: 14px 16px !important; }
+}
+
 /* ===== テーマ登録折りたたみ ===== */
 details[open] .paste-chev { transform:rotate(180deg); }
 details summary { list-style:none; }
@@ -773,37 +848,9 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   .sec-head-title { font-size:13px !important; }
   .sec-body[style*="padding"] { padding:10px 10px 6px !important; }
 
-  /* 2. トップバー：アイコンのみ・均等幅 */
-  .brand { display:none; }
-  .topbar { padding:0; gap:0; min-height:56px; }
-  .topbar-pills { flex:1; gap:0; overflow:hidden; }
-  .tpill {
-    flex:1 !important;
-    border-radius:0 !important;
-    padding:0 !important;
-    min-height:56px !important;
-    font-size:20px !important;
-    background:transparent !important;
-    border:none !important;
-    box-shadow:none !important;
-    color:rgba(200,230,205,.75) !important;
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    animation:none !important;
-  }
-  .tpill.active {
-    background:rgba(58,102,80,.35) !important;
-    box-shadow:inset 0 -3px 0 #a0d0a8 !important;
-    color:#a0d0a8 !important;
-    animation:none !important;
-  }
+  /* 2. トップバー：480px以下は既にボトムナビCSSで制御済み */
   .tpill-label { display:none; }
   .tpill-icon { display:inline; }
-  .topbar-gear {
-    min-height:56px !important; min-width:48px !important;
-    font-size:20px; border-radius:0;
-  }
 
   /* 3. モーダル全画面 */
   .overlay { align-items:stretch !important; }
@@ -1269,6 +1316,28 @@ input:focus, textarea:focus, select:focus {
   </div>
   <button class="topbar-gear" onclick="openSettings()" aria-label="設定">⚙️</button>
 </header>
+
+<!-- ボトムナビ（モバイル左手操作用） -->
+<nav class="bottom-nav" id="bottom-nav">
+  <button class="bnav-btn" id="bn-top"     onclick="window.scrollTo({top:0,behavior:'smooth'});setNavActive('top')">
+    <span class="bnav-icon">📊</span><span class="bnav-lbl">ダッシュ</span>
+  </button>
+  <button class="bnav-btn active" id="bn-notes"  onclick="scrollToSec('sec-notes');setNavActive('notes')">
+    <span class="bnav-icon">📝</span><span class="bnav-lbl">note</span>
+  </button>
+  <button class="bnav-btn" id="bn-xposts" onclick="scrollToSec('sec-xposts');setNavActive('xposts')">
+    <span class="bnav-icon">𝕏</span><span class="bnav-lbl">X投稿</span>
+  </button>
+  <button class="bnav-btn" id="bn-today"  onclick="scrollToSec('sec-today');setNavActive('today')">
+    <span class="bnav-icon">📅</span><span class="bnav-lbl">今日</span>
+  </button>
+  <button class="bnav-btn" id="bn-tmpl"   onclick="openSettings();switchStab('gemini')">
+    <span class="bnav-icon">📋</span><span class="bnav-lbl">指示文</span>
+  </button>
+  <button class="bnav-btn" id="bn-archive" onclick="scrollToSec('sec-archive');setNavActive('archive')">
+    <span class="bnav-icon">📦</span><span class="bnav-lbl">アーカイブ</span>
+  </button>
+</nav>
 
 
 
@@ -2087,12 +2156,18 @@ function initSec() {
     else { body.style.maxHeight = '0'; chev.classList.remove('open'); }
   });
 }
+function setNavActive(key) {
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  const bn = document.getElementById('bn-' + key);
+  if (bn) bn.classList.add('active');
+}
+
 function scrollToSec(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  // セクションが閉じてたら開く
   const name = id.replace('sec-','');
   if (!secState[name]) toggleSec(name);
+  setNavActive(name);
   setTimeout(() => el.scrollIntoView({behavior:'smooth', block:'start'}), 80);
 }
 
