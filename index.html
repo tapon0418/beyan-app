@@ -2716,67 +2716,96 @@ function doFormat() {
   if (!raw.trim()) { toast('草稿を貼り付けてください'); return; }
 
   // STEP 1: AI記号・マークダウン除去
-  let cleaned = raw
+  let text = raw
     .replace(/#{1,6}\s*/g, '')
     .replace(/\*\*/g, '').replace(/\*/g, '')
     .replace(/※/g, '')
-    .replace(/^\s*[-・]\s*/gm, '')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
-  // STEP 2: まえがき・あとがき除去
-  // Claudeが記事本文の外に付け足す冒頭・末尾コメントを検出して除去
-  const INTRO = [
-    /^以下[にはがを]/,
-    /^ご依頼/,
-    /^承りました/,
-    /^(執筆|作成|記事を).*(しました|します)/,
-    /^記事の?草稿/,
-    /^下記[のに]/,
-    /どうぞ(ご確認|お使い)/,
-    /^(はい[。、]|わかりました|承知しました)/,
-    /^[-=─━＝]{3,}$/,
+  let removedIntro = false, removedOutro = false;
+
+  // STEP 2: まえがき除去
+  // パターンA: 「以下、本文（プレーンテキスト）です」などの区切り行を見つけてその前を全削除
+  const bsMatch = text.match(/^以下[、，]?\s*本文[（(（\s（][^\n]*$/m);
+  if (bsMatch) {
+    const cutAt = text.indexOf(bsMatch[0]) + bsMatch[0].length;
+    // 区切り行の直後にある `-` `--` `---` の行も除去
+    text = text.slice(cutAt).replace(/^\s*[-─━=＝]{1,}\s*\n/, '').trim();
+    removedIntro = true;
+  } else {
+    // パターンB: 先頭段落が既知のまえがきパターンに一致→除去（段落の長さ問わず）
+    const INTRO_STRONG = [
+      /^プロジェクトファイル.*確認しました/,
+      /STEP\d+\s*(抽出メモ|内部確認)/,
+      /^以下の分析をもとに記事を執筆/,
+      /^リサーチデータ.*確認しました/,
+    ];
+    const INTRO_WEAK = [   // 短い段落（3行以内）のみ
+      /^以下[にはがを]/,
+      /^ご依頼/,
+      /^承りました/,
+      /^(執筆|作成|記事を).*(しました|します)/,
+      /^記事の?草稿/,
+      /^下記[のに]/,
+      /^(はい[。、]|わかりました|承知しました)/,
+      /^[-=─━＝]{2,}$/,
+    ];
+    const paras = text.split(/\n\n+/);
+    let start = 0;
+    while (start < Math.min(5, paras.length - 1)) {
+      const p = paras[start].trim();
+      const lines = p.split('\n').filter(l => l.trim());
+      const strong = INTRO_STRONG.some(r => r.test(p));
+      const weak   = lines.length <= 3 && INTRO_WEAK.some(r => r.test(p));
+      if (strong || weak) { start++; removedIntro = true; } else break;
+    }
+    if (removedIntro) text = paras.slice(start).join('\n\n').trim();
+  }
+
+  // STEP 3: あとがき除去
+  // 強パターン: 段落の長さ問わず一致したら除去
+  const OUTRO_STRONG = [
+    /申し送り/,
+    /ポイント整理/,
+    /文字数は約\d+字/,
+    /AI臭い表現の除去は済み/,
+    /確認項目と状態をまとめ/,
+    /執筆時の[ポ注確]/,
+    /べーやんへの/,
   ];
-  const OUTRO = [
+  // 弱パターン: 3行以内の短い段落のみ
+  const OUTRO_WEAK = [
     /いかがでしょうか[。！？]?$/,
     /ご確認(ください|よろしくお願い)[。！]?$/,
     /お役に立て[れ幸].*[。！]?$/,
     /修正.*ご連絡[。！]?$/,
-    /ご意見.*ください[。！]?$/,
     /以上.*でした[。！]?$/,
     /以上です[。！]?$/,
     /以上.*なります[。！]?$/,
     /よろしくお願い(します|いたします)[。！]?$/,
     /ご活用ください[。！]?$/,
     /お読みいただき.*ありがとう/,
-    /^[-=─━＝]{3,}$/,
+    /^[-=─━＝]{2,}$/,
   ];
-
-  const paras = cleaned.split(/\n\n+/);
-
-  // まえがき: 先頭から最大3段落、2行以内の短い段落でパターン一致→除去
-  let start = 0;
-  while (start < Math.min(3, paras.length - 1)) {
-    const p = paras[start].trim();
+  const paras2 = text.split(/\n\n+/);
+  let end = paras2.length - 1;
+  while (end > 0) {
+    const p = paras2[end].trim();
     const lines = p.split('\n').filter(l => l.trim());
-    if (lines.length <= 2 && INTRO.some(r => r.test(p))) { start++; } else break;
+    const strong = OUTRO_STRONG.some(r => r.test(p));
+    const weak   = lines.length <= 3 && OUTRO_WEAK.some(r => r.test(p));
+    if (strong || weak) { end--; removedOutro = true; } else break;
   }
+  text = paras2.slice(0, end + 1).join('\n\n').trim();
 
-  // あとがき: 末尾から最大3段落、2行以内の短い段落でパターン一致→除去
-  let end = paras.length - 1;
-  while (end > start) {
-    const p = paras[end].trim();
-    const lines = p.split('\n').filter(l => l.trim());
-    if (lines.length <= 2 && OUTRO.some(r => r.test(p))) { end--; } else break;
-  }
-
-  const result = paras.slice(start, end + 1).join('\n\n').trim();
   const box = document.getElementById('mw-formatted');
-  box.textContent = result;
+  box.textContent = text;
   document.getElementById('mw-formatted-wrap').style.display = 'block';
-  const removed = (start > 0 || end < paras.length - 1)
-    ? `（まえがき/あとがき ${start + (paras.length - 1 - end)}段落を除去）` : '';
-  toast(`整形しました${removed}`);
+  const msgs = [];
+  if (removedIntro) msgs.push('まえがき');
+  if (removedOutro) msgs.push('あとがき');
+  toast(msgs.length ? `整形しました（${msgs.join('・')}を除去）` : '整形しました');
 }
 
 function buildXBases(n) {
