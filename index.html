@@ -3926,24 +3926,28 @@ function renderNetaList() {
 // ================================================================
 // 見出し画像生成 — テンプレート管理
 // ================================================================
-const DEFAULT_IMG_TEMPLATE = `記事情報から以下のJSON変数を決定してください。JSONのみ出力（コードブロック不要）。
+const DEFAULT_IMG_TEMPLATE = `記事本文を読み込み、内容に合わせたJSON変数を決定してください。JSONのみ出力（コードブロック不要）。
+
+【重要】記事本文から実際に使われているワード・数字・テーマを必ず抽出して使うこと。デフォルト値を使わないこと。
 
 変数の選択基準：
-- badge: 「実体験」「検証済み」「初心者必見」のどれかを記事カテゴリに合わせて選択
-- number: 記事の具体的な成果数字（例：PV80、売上30万、3倍）
-- unit: 数字の単位（例：PV、万円、倍、件）
-- period: 達成期間（例：5日、1ヶ月、2週間）
-- achievement: 短い成果フレーズ（例：初動UP、無から利益）10字以内
-- target: 読者像（例：心折れそうなあなた、忙しい会社員）15字以内
-- solution: 行動促進フレーズ（例：1週間で解決、コピペ術）10字以内
-- subtitle: 感情に訴えるサブタイトル（例：同じ悩み、ありませんか？）20字以内
-- mainColor: ネイビー / 深緑 / 濃紺（記事カテゴリに合う濃色をひとつ）
-- accentColor: オレンジ / ゴールド / ブルー（コントラスト色をひとつ）
+- badge: 「実体験」「検証済み」「初心者必見」「比較レポ」のどれかを記事内容に合わせて選択
+- number: 記事本文に登場する具体的な数字（PV数・金額・日数・件数など）。なければタイトルから推測
+- unit: 数字の単位（PV、万円、倍、件、時間 など）
+- period: 記事に登場する期間（5日、1ヶ月、2週間 など）。なければ「短期間」
+- achievement: 記事の核心的な成果・気づきを10字以内で（本文から抽出）
+- target: 記事が想定する読者像を15字以内で（本文から抽出）
+- solution: 記事で提示する解決策・行動を10字以内で（本文から抽出）
+- subtitle: 読者の共感を引く一言・問いかけを20字以内で（本文のトーンに合わせる）
+- keywords: 記事本文から抽出した重要ワード3つをカンマ区切り（例：クラウドワークス,ランサーズ,使い比べ）
+- icons: 記事テーマに合う絵文字アイコン2つをスペース区切り（例：📊💡 / ✍️📈 / 💰🔑 / 🏭⏰ / 📝🎯）
+- mainColor: 記事テーマに合う濃色（ネイビー/深緑/濃紺/ダークブラウン/チャコール）
+- accentColor: コントラスト色（オレンジ/ゴールド/ライムグリーン/スカイブルー/ホワイト）
 - mainColorHex: mainColorの16進数カラーコード
 - accentColorHex: accentColorの16進数カラーコード
 
 出力JSONフォーマット例：
-{"badge":"実体験","number":"PV80","unit":"PV","period":"5日","achievement":"初動UP","target":"心折れそうなあなた","solution":"1週間で解決","subtitle":"同じ悩み、ありませんか？","mainColor":"ネイビー","accentColor":"ゴールド","mainColorHex":"#1a237e","accentColorHex":"#ffd700"}`;
+{"badge":"比較レポ","number":"2社","unit":"社","period":"1ヶ月","achievement":"使い比べ完了","target":"フリーランス志望","solution":"選び方わかる","subtitle":"どっちが稼げる？","keywords":"クラウドワークス,ランサーズ,案件","icons":"✍️📊","mainColor":"深緑","accentColor":"ゴールド","mainColorHex":"#1b5e20","accentColorHex":"#ffd700"}`;
 
 function getImgPromptTemplate() {
   return localStorage.getItem('beyan_img_template') || DEFAULT_IMG_TEMPLATE;
@@ -4035,7 +4039,13 @@ async function runImgGen() {
   pbar.style.width = '20%';
 
   const varInstruction = getImgPromptTemplate();
-  const articleInfo = `記事タイトル: ${n.title}\nカテゴリ: ${n.cat || 'ライティング'}\nメモ: ${n.memo || 'なし'}`;
+  // 整形済み or 草稿から本文を取得（最大1500字）
+  const bodyText = (n.formattedText || n.draftText || '').trim().slice(0, 1500);
+  const articleInfo = `記事タイトル: ${n.title}
+カテゴリ: ${n.cat || 'ライティング'}
+メモ: ${n.memo || 'なし'}
+記事本文（抜粋）:
+${bodyText || '（本文なし：タイトルから推測してください）'}`;
 
   let vars = null, step1Err = '';
   for (const model of TEXT_MODELS) {
@@ -4060,31 +4070,36 @@ async function runImgGen() {
     } catch(e) { step1Err = e.message; console.warn('[imggen] step1', model, e.message); }
   }
 
-  // デフォルト変数（取得失敗時）
+  // デフォルト変数（取得失敗時：タイトルから最低限の変数を作る）
   if (!vars) vars = {
-    badge:'実体験', number:'PV80', unit:'PV', period:'5日',
-    achievement:'初動UP', target:'心折れそうなあなた', solution:'1週間で解決',
-    subtitle:'同じ悩み、ありませんか？',
+    badge:'実体験', number:'体験談', unit:'', period:'実践',
+    achievement: n.title.slice(0, 10), target:'同じ悩みのあなた', solution:'解決策あり',
+    subtitle: n.title.slice(0, 20) + '…',
+    keywords: n.title, icons:'📝💡',
     mainColor:'ネイビー', accentColor:'ゴールド',
     mainColorHex:'#1a237e', accentColorHex:'#ffd700'
   };
 
   // ── 変数からクリーンな日本語プロンプトを組み立て ──
+  const kw = vars.keywords ? vars.keywords.split(',').map(s=>s.trim()).filter(Boolean) : [];
+  const kwLine = kw.length ? `キーワード：${kw.join('・')}` : '';
+  const icons = vars.icons || '📊💡';
   const jaPrompt = `note記事用アイキャッチ画像、1280x720px、プロフェッショナル・クリック欲求高めるデザイン
 記事タイトル：${n.title}
+${kwLine}
 
 【${vars.badge}】${vars.number}${vars.unit}を${vars.period}で達成！
 ${vars.achievement}！${vars.target}への${vars.solution}
 ${vars.subtitle}
 
 レイアウト：
-- 上段：「${vars.badge} ${vars.number}${vars.unit}を${vars.period}で達成！」太字${vars.mainColor}、白抜き縁取り
+- 上段：「【${vars.badge}】${vars.number}${vars.unit}を${vars.period}で達成！」太字${vars.mainColor}、白抜き縁取り
 - 中段：「${vars.achievement}」${vars.accentColor}グラデ強調、数字「${vars.number}」特大
 - 下段：「${vars.subtitle}」太字、励まし/疑問トーン
-- 右側：グラフアイコン＋電球アイコン、シャープ
+- 右側：${icons}（記事テーマに合うアイコン）、シャープ
 
 視覚要素：
-- 背景：${vars.mainColor}（${vars.mainColorHex}）から${vars.accentColor}（${vars.accentColorHex}）グラデ、70%ベース、クリーン
+- 背景：${vars.mainColor}（${vars.mainColorHex}）から濃い${vars.mainColor}へのグラデ、70%ベース
 - 配色：${vars.mainColor}(70%) × ${vars.accentColor}(25%) × 白(5%)、3色厳守
 - noteロゴ：左上に微か配置
 - 全体：信頼感+注目度UP、初見で「読みたい！」となる構図 --ar 16:9 --v 6 --style raw`;
@@ -4099,6 +4114,7 @@ ${vars.subtitle}
 すべての文字は日本語で表示すること。英語テキストは絶対に使わないこと。
 
 ■ 記事タイトル（画像のテーマ）：${n.title}
+■ 記事のキーワード：${kw.length ? kw.join('、') : '（タイトルから判断）'}
 ■ 画像サイズ：1280×720px（横長16:9）
 ■ テキスト配置：
   - 左上：noteロゴ（小さく）
@@ -4106,12 +4122,13 @@ ${vars.subtitle}
   - 中央大：「${vars.number}」超特大数字・${vars.accentColor}色・インパクト重視
   - 中段：「${vars.achievement}！${vars.target}への${vars.solution}」白太字
   - 下段：「${vars.subtitle}」白中字・励ましトーン
-  - 右側：グラフ上昇アイコン＋電球アイコン（シャープなデザイン）
+  - 右側：${icons}（記事テーマに合ったアイコン・シャープなデザイン）
 ■ デザイン：
   - 背景：${vars.mainColor}（${vars.mainColorHex}）から濃い${vars.mainColor}へのグラデーション
   - アクセント：${vars.accentColor}（${vars.accentColorHex}）を数字・重要部分に使用
   - スタイル：プロフェッショナル・信頼感・クリック率最大化・note向け
-  - 日本語フォント：太いゴシック体`;
+  - 日本語フォント：太いゴシック体
+  - 記事テーマ「${n.title}」の内容・雰囲気が伝わるビジュアルにすること`;
 
   const NB2_MODELS = ['gemini-3.1-flash-image-preview', 'imagen-3.0-fast-generate-001', 'imagen-3.0-generate-001'];
   for (const model of NB2_MODELS) {
