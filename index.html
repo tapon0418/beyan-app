@@ -1717,7 +1717,7 @@ input:focus, textarea:focus, select:focus {
       <button class="ftab active" data-tab="gemini"   onclick="switchTab(this,'gemini')">① リサーチ</button>
       <button class="ftab" data-tab="chatgpt"  onclick="switchTab(this,'chatgpt')">② 執筆</button>
       <button class="ftab" data-tab="format"   onclick="switchTab(this,'format')">③ 整形</button>
-      <button class="ftab" data-tab="imggen"   onclick="switchTab(this,'imggen');renderImgPromptVault();loadImgTemplateEditor()">④ 見出し画像</button>
+      <button class="ftab" data-tab="imggen"   onclick="switchTab(this,'imggen');renderImgPromptVault();loadImgTemplateEditor();refreshImggenTitle()">④ 見出し画像</button>
       <button class="ftab" data-tab="imgcheck" onclick="switchTab(this,'imgcheck');refreshImgCheckTab()">⑤ 画像チェック</button>
       <button class="ftab" data-tab="note"     onclick="switchTab(this,'note')">⑥ note執筆</button>
       <button class="ftab" data-tab="rakuten"  onclick="switchTab(this,'rakuten')">⑦ 楽天アフィ</button>
@@ -1853,7 +1853,7 @@ input:focus, textarea:focus, select:focus {
         <button class="copy-btn" onclick="cp('mw-formatted')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー（note用）
         </button>
-        <button class="btn btn-accent" style="margin-top:10px;width:100%;min-height:50px;font-size:15px;font-weight:700" onclick="switchTabByName('imggen');renderImgPromptVault();setTimeout(runImgGen,150)">
+        <button class="btn btn-accent" style="margin-top:10px;width:100%;min-height:50px;font-size:15px;font-weight:700" onclick="switchTabByName('imggen');renderImgPromptVault();refreshImggenTitle();setTimeout(runImgGen,150)">
           🖼️ ④ 見出し画像を作成する →
         </button>
       </div>
@@ -1877,6 +1877,7 @@ input:focus, textarea:focus, select:focus {
 
     <!-- ④ 見出し画像生成 -->
     <div class="fpanel" id="fp-imggen">
+      <div id="mwimg-note-title" style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:6px;padding:6px 10px;background:var(--accent-dim);border-radius:8px;display:none"></div>
       <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6">ジミーが記事情報からテンプレートに沿ったプロンプトを生成 → Imagen APIで1280×720px画像を作成します</div>
       <button class="btn btn-accent" id="btn-run-imggen" onclick="runImgGen()"
         style="width:100%;min-height:52px;font-size:15px;margin-bottom:12px">
@@ -2600,8 +2601,20 @@ function openWork(id) {
     document.getElementById('claude-manual-input').value = '';
     document.getElementById('mw-draft').value = '';
   }
-  document.getElementById('mw-formatted').textContent='';
-  document.getElementById('mw-formatted-wrap').style.display='none';
+  // 整形済みテキストを復元（なければリセット）
+  if (n.formattedText) {
+    document.getElementById('mw-formatted').textContent = n.formattedText;
+    document.getElementById('mw-formatted-wrap').style.display = 'block';
+  } else {
+    document.getElementById('mw-formatted').textContent = '';
+    document.getElementById('mw-formatted-wrap').style.display = 'none';
+  }
+  // ④タブの画像エリアをリセット（別記事の画像が残らないように）
+  ['mwimg-result','mwimg-prompt-wrap','mwimg-error','mwimg-loading'].forEach(function(eid) {
+    const el = document.getElementById(eid); if (el) el.style.display = 'none';
+  });
+  const imgEl = document.getElementById('mwimg-img');
+  if (imgEl) imgEl.src = '#';
   document.getElementById('mw-xedit').value='';
   document.getElementById('mw-xbases').innerHTML = buildXBases(n);
   setWorkType('A'); updateXcc();
@@ -2665,8 +2678,8 @@ function genChatGPT() {
   const wrap = document.getElementById('mw-chatgpt-wrap');
   if(!result){wrap.style.display='none';return;}
   const n = S.notes.find(x=>x.id===curId); if(!n) return;
-  // 手動ペースト分も含めてgeminiResultとして保存（save()はdebounce済みハンドラに委譲）
-  if (n.geminiResult !== result) { n.geminiResult = result; }
+  // 手動ペースト分も含めてgeminiResultとして即時保存
+  if (n.geminiResult !== result) { n.geminiResult = result; save(); }
   const isYuryou = n.type==='有料note';
   // カスタムテンプレがあればそちらを使う（変数は動的に埋め込む）
   const claudeSaved = localStorage.getItem(CLAUDE_TMPL_KEY);
@@ -2810,6 +2823,9 @@ function doFormat() {
   const box = document.getElementById('mw-formatted');
   box.textContent = text;
   document.getElementById('mw-formatted-wrap').style.display = 'block';
+  // 整形済みテキストをlocalStorageに保存
+  const nf = S.notes.find(x => x.id === curId);
+  if (nf) { nf.formattedText = text; save(); }
   const msgs = [];
   if (removedIntro) msgs.push('まえがき');
   if (removedOutro) msgs.push('あとがき');
@@ -3971,11 +3987,24 @@ function loadImgTemplateEditor() {
 let imggenNoteId = null;
 let _imggenCurrentNote = null;
 
+function refreshImggenTitle() {
+  const titleEl = document.getElementById('mwimg-note-title');
+  if (!titleEl) return;
+  const n = S.notes.find(x => x.id === curId);
+  if (n) {
+    titleEl.textContent = '📝 ' + n.title;
+    titleEl.style.display = 'block';
+  } else {
+    titleEl.style.display = 'none';
+  }
+}
+
 function openImgGenModal(id) {
   openWork(id);
   switchTabByName('imggen');
   renderImgPromptVault();
   loadImgTemplateEditor();
+  refreshImggenTitle();
 }
 
 // ================================================================
