@@ -2713,14 +2713,70 @@ ${result}
 
 function doFormat() {
   const raw = document.getElementById('mw-draft').value;
-  if(!raw.trim()){toast('草稿を貼り付けてください');return;}
-  const cleaned = raw.replace(/#{1,6}\s*/g,'').replace(/\*\*/g,'')
-    .replace(/※/g,'').replace(/^\s*[-・]\s*/gm,'')
-    .replace(/\n{3,}/g,'\n\n').trim();
+  if (!raw.trim()) { toast('草稿を貼り付けてください'); return; }
+
+  // STEP 1: AI記号・マークダウン除去
+  let cleaned = raw
+    .replace(/#{1,6}\s*/g, '')
+    .replace(/\*\*/g, '').replace(/\*/g, '')
+    .replace(/※/g, '')
+    .replace(/^\s*[-・]\s*/gm, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  // STEP 2: まえがき・あとがき除去
+  // Claudeが記事本文の外に付け足す冒頭・末尾コメントを検出して除去
+  const INTRO = [
+    /^以下[にはがを]/,
+    /^ご依頼/,
+    /^承りました/,
+    /^(執筆|作成|記事を).*(しました|します)/,
+    /^記事の?草稿/,
+    /^下記[のに]/,
+    /どうぞ(ご確認|お使い)/,
+    /^(はい[。、]|わかりました|承知しました)/,
+    /^[-=─━＝]{3,}$/,
+  ];
+  const OUTRO = [
+    /いかがでしょうか[。！？]?$/,
+    /ご確認(ください|よろしくお願い)[。！]?$/,
+    /お役に立て[れ幸].*[。！]?$/,
+    /修正.*ご連絡[。！]?$/,
+    /ご意見.*ください[。！]?$/,
+    /以上.*でした[。！]?$/,
+    /以上です[。！]?$/,
+    /以上.*なります[。！]?$/,
+    /よろしくお願い(します|いたします)[。！]?$/,
+    /ご活用ください[。！]?$/,
+    /お読みいただき.*ありがとう/,
+    /^[-=─━＝]{3,}$/,
+  ];
+
+  const paras = cleaned.split(/\n\n+/);
+
+  // まえがき: 先頭から最大3段落、2行以内の短い段落でパターン一致→除去
+  let start = 0;
+  while (start < Math.min(3, paras.length - 1)) {
+    const p = paras[start].trim();
+    const lines = p.split('\n').filter(l => l.trim());
+    if (lines.length <= 2 && INTRO.some(r => r.test(p))) { start++; } else break;
+  }
+
+  // あとがき: 末尾から最大3段落、2行以内の短い段落でパターン一致→除去
+  let end = paras.length - 1;
+  while (end > start) {
+    const p = paras[end].trim();
+    const lines = p.split('\n').filter(l => l.trim());
+    if (lines.length <= 2 && OUTRO.some(r => r.test(p))) { end--; } else break;
+  }
+
+  const result = paras.slice(start, end + 1).join('\n\n').trim();
   const box = document.getElementById('mw-formatted');
-  box.textContent = cleaned;
-  document.getElementById('mw-formatted-wrap').style.display='block';
-  toast('整形しました');
+  box.textContent = result;
+  document.getElementById('mw-formatted-wrap').style.display = 'block';
+  const removed = (start > 0 || end < paras.length - 1)
+    ? `（まえがき/あとがき ${start + (paras.length - 1 - end)}段落を除去）` : '';
+  toast(`整形しました${removed}`);
 }
 
 function buildXBases(n) {
