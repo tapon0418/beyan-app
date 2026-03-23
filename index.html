@@ -1909,7 +1909,7 @@ input:focus, textarea:focus, select:focus {
       <!-- prompt display（生成後表示） -->
       <div id="mwimg-prompt-wrap" style="display:none;margin-bottom:4px">
         <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">生成プロンプト（テンプレート準拠）：</div>
-        <textarea id="mwimg-prompt" rows="5"
+        <textarea id="mwimg-prompt" rows="10"
           style="width:100%;font-size:12px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit"></textarea>
         <div style="display:flex;gap:8px;margin-top:6px">
           <button onclick="navigator.clipboard.writeText(document.getElementById('mwimg-prompt').value).then(()=>toast('コピーしました'))"
@@ -4042,6 +4042,7 @@ async function runImgGen() {
 
   // ── 変数からクリーンな日本語プロンプトを組み立て ──
   const jaPrompt = `note記事用アイキャッチ画像、1280x720px、プロフェッショナル・クリック欲求高めるデザイン
+記事タイトル：${n.title}
 
 【${vars.badge}】${vars.number}${vars.unit}を${vars.period}で達成！
 ${vars.achievement}！${vars.target}への${vars.solution}
@@ -4059,48 +4060,39 @@ ${vars.subtitle}
 - noteロゴ：左上に微か配置
 - 全体：信頼感+注目度UP、初見で「読みたい！」となる構図 --ar 16:9 --v 6 --style raw`;
 
-  // ── STEP 2: 英語プロンプトに変換 ──
-  statusEl.textContent = '② 英語プロンプトに変換中...';
-  pbar.style.width = '40%';
+  // ── STEP 2: Nano Banana 2 で画像生成（日本語プロンプトをそのまま送信） ──
+  // Nano Banana 2 はGeminiベースなので日本語直送・英語変換不要
+  statusEl.textContent = '② 画像生成中 (Nano Banana 2)...';
+  pbar.style.width = '55%';
 
-  const engInstruction = `Convert the following Japanese image prompt to English for Google image generation API.
-Keep the visual design intent: gradient background, 3-color scheme, layout structure (top badge, center bold stats, bottom subtitle, right icons).
-Remove Midjourney flags (--ar --v --style). Describe text elements as visual design areas.
-Output only the English prompt, 120 words max.
+  // Nano Banana 2 向けの詳細指示付きプロンプト
+  const nb2Prompt = `日本語テキストを使ったnote記事アイキャッチ画像を生成してください。
+すべての文字は日本語で表示すること。英語テキストは絶対に使わないこと。
 
-Japanese prompt:`;
-
-  let engPrompt = jaPrompt;
-  for (const model of TEXT_MODELS) {
-    try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: engInstruction + '\n' + jaPrompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 250 }
-        })
-      });
-      const d = await r.json();
-      if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; break; }
-      const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      if (t) { engPrompt = t; break; }
-    } catch(e) { console.warn('[imggen] step2', model, e.message); }
-  }
-
-  // ── STEP 3: Nano Banana 2 (gemini-3.1-flash-image-preview) で画像生成 ──
-  statusEl.textContent = '③ 画像生成中 (Nano Banana 2)...';
-  pbar.style.width = '65%';
+■ 記事タイトル（画像のテーマ）：${n.title}
+■ 画像サイズ：1280×720px（横長16:9）
+■ テキスト配置：
+  - 左上：noteロゴ（小さく）
+  - 上段：「【${vars.badge}】${vars.number}${vars.unit}を${vars.period}で達成！」白太字・${vars.mainColor}背景
+  - 中央大：「${vars.number}」超特大数字・${vars.accentColor}色・インパクト重視
+  - 中段：「${vars.achievement}！${vars.target}への${vars.solution}」白太字
+  - 下段：「${vars.subtitle}」白中字・励ましトーン
+  - 右側：グラフ上昇アイコン＋電球アイコン（シャープなデザイン）
+■ デザイン：
+  - 背景：${vars.mainColor}（${vars.mainColorHex}）から濃い${vars.mainColor}へのグラデーション
+  - アクセント：${vars.accentColor}（${vars.accentColorHex}）を数字・重要部分に使用
+  - スタイル：プロフェッショナル・信頼感・クリック率最大化・note向け
+  - 日本語フォント：太いゴシック体`;
 
   const NB2_MODELS = ['gemini-3.1-flash-image-preview', 'imagen-3.0-fast-generate-001', 'imagen-3.0-generate-001'];
   for (const model of NB2_MODELS) {
-    statusEl.textContent = `③ 画像生成中 (${model === 'gemini-3.1-flash-image-preview' ? 'Nano Banana 2' : model})...`;
+    statusEl.textContent = `② 画像生成中 (${model === 'gemini-3.1-flash-image-preview' ? 'Nano Banana 2' : model})...`;
     try {
       if (model === 'gemini-3.1-flash-image-preview') {
-        // Gemini Native Image Generation (Nano Banana 2)
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: engPrompt }] }],
+            contents: [{ role: 'user', parts: [{ text: nb2Prompt }] }],
             generationConfig: { responseModalities: ['image'], temperature: 1.0 }
           })
         });
@@ -4113,7 +4105,13 @@ Japanese prompt:`;
         displayMwImg(part.inlineData.mimeType || 'image/png', part.inlineData.data, jaPrompt);
         return;
       } else {
-        // Imagen API
+        // Imagen APIはEnglish変換して送信
+        const engPrompt = `Professional Japanese blog thumbnail 1280x720px.
+All text in Japanese bold gothic font. Dark ${vars.mainColor} (${vars.mainColorHex}) gradient background.
+Top-left: note logo small. Center-large: "${vars.number}" in giant ${vars.accentColor} (${vars.accentColorHex}) numbers.
+Upper text: 【${vars.badge}】white bold. Middle: "${vars.achievement}" bold white.
+Lower: "${vars.subtitle}" white. Right icons: bar chart + lightbulb sharp icons.
+Style: professional, high click-rate, trustworthy Japanese note.com article thumbnail.`;
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ instances:[{prompt:engPrompt}], parameters:{sampleCount:1,aspectRatio:'16:9'} })
