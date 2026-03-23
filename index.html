@@ -1613,6 +1613,12 @@ input:focus, textarea:focus, select:focus {
         </div>
       </div>
 
+      <!-- クロへX投稿一覧コピー -->
+      <button onclick="copyXPostsForClaude()"
+        style="width:100%;min-height:38px;margin-bottom:8px;background:rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.18);border-radius:8px;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+        🤝 X投稿一覧をクロにコピー
+      </button>
+
       <button class="btn btn-accent" style="margin-bottom:10px;font-size:14px;min-height:48px;font-weight:700" onclick="openAddXPost()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         ＋ 投稿を追加
@@ -3572,38 +3578,54 @@ function copyNoteListForClaude() {
   const notes = S.notes || [];
   if (!notes.length) { toast('記事がありません'); return; }
   const now = new Date().toLocaleDateString('ja-JP');
-  const statusLabel = { idea:'アイデア', writing:'執筆中', review:'確認中', xprep:'X準備中', done:'公開済み' };
-
-  const active = notes.filter(n => n.status !== 'done');
-  const done   = notes.filter(n => n.status === 'done');
+  const SL = { idea:'📝 アイデア', writing:'✍️ 執筆中', review:'🔍 確認中', xprep:'📣 X準備中', done:'✅ 公開済み' };
+  const groups = { idea:[], writing:[], review:[], xprep:[], done:[] };
+  notes.forEach(n => { (groups[n.status] || groups.idea).push(n); });
 
   const lines = [
-    `【執筆予定一覧】${now} 現在`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `【note執筆予定一覧】${now} 現在`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
     '',
-    '以下はnabebaseの執筆予定一覧です。',
-    '変更（並び替え・追加・削除・差し替え）を指示してください。',
-    '変更後は全件をJSON形式で出力してください（アプリの「テーマをまとめて登録」に貼り付けて反映できます）。',
+    '◆ 依頼内容',
+    '・記事の並び替え・追加・削除・差し替えをお願いします',
+    '・変更後は全件をJSONで出力してください（アプリに貼り付けて反映）',
     '',
-    '--- 執筆予定 ---',
   ];
 
-  active.forEach((n, i) => {
-    lines.push(`#${i+1} [${statusLabel[n.status]||n.status}] ${n.title}`);
-    lines.push(`  カテゴリ：${n.cat||'-'} | タイプ：${n.type||'-'} | 公開予定：${n.publishDate||'未定'}${n.rakuten?' | 🛒楽天あり':''}`);
-    if (n.memo) lines.push(`  メモ：${n.memo}`);
-    if (n.researchNote) lines.push(`  リサーチ：${n.researchNote}`);
+  // ステータス別に出力（done以外）
+  const activeStatuses = ['writing','review','xprep','idea'];
+  let idx = 1;
+  activeStatuses.forEach(st => {
+    const list = groups[st];
+    if (!list.length) return;
+    lines.push(`── ${SL[st]}（${list.length}件）──`);
+    list.forEach(n => {
+      lines.push(`#${idx++}  ${n.title}`);
+      const meta = [`カテゴリ：${n.cat||'未設定'}`, `タイプ：${n.type||'未設定'}`, `公開予定：${n.publishDate||'未定'}`];
+      if (n.rakuten) meta.push('🛒楽天あり');
+      lines.push(`    ${meta.join(' ／ ')}`);
+      if (n.memo) lines.push(`    内容メモ：${n.memo}`);
+      if (n.researchNote) lines.push(`    リサーチ済み：${n.researchNote}`);
+      if (n.prevLink || n.nextLink) {
+        if (n.prevLink) lines.push(`    ◀ 前記事：${n.prevLink}`);
+        if (n.nextLink) lines.push(`    ▶ 次記事：${n.nextLink}`);
+      }
+    });
+    lines.push('');
   });
 
-  if (done.length) {
-    lines.push('');
-    lines.push(`--- 公開済み（${done.length}件） ---`);
-    done.forEach((n, i) => {
-      lines.push(`#${active.length+i+1} [公開済み] ${n.title}（${n.publishDate||'-'}）`);
+  if (groups.done.length) {
+    lines.push(`── ${SL.done}（${groups.done.length}件）──`);
+    groups.done.forEach(n => {
+      lines.push(`#${idx++}  ${n.title}（${n.publishDate||'-'}公開）`);
     });
+    lines.push('');
   }
 
-  lines.push('');
-  lines.push('--- 変更時のJSON出力フォーマット（全件・このまま出力してください） ---');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('◆ 変更後のJSON出力フォーマット（全件・そのまま出力してください）');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━');
   lines.push(JSON.stringify(notes.map(n => ({
     id: n.id, title: n.title, type: n.type||'', cat: n.cat||'',
     status: n.status, publishDate: n.publishDate||'', memo: n.memo||'',
@@ -3611,14 +3633,79 @@ function copyNoteListForClaude() {
     researchNote: n.researchNote||'', rakuten: !!n.rakuten
   })), null, 2));
 
+  const active = notes.filter(n => n.status !== 'done');
   const text = lines.join('\n');
   navigator.clipboard.writeText(text)
-    .then(() => toast(`✅ ${active.length}件の執筆予定をコピーしました！クロに貼り付けてください`))
+    .then(() => toast(`✅ note ${active.length}件をコピーしました！クロに貼り付けてください`))
     .catch(() => {
       const ta = document.createElement('textarea');
       ta.value = text; document.body.appendChild(ta); ta.select();
       document.execCommand('copy'); document.body.removeChild(ta);
-      toast('✅ 執筆予定一覧をコピーしました！');
+      toast('✅ note一覧をコピーしました！');
+    });
+}
+
+function copyXPostsForClaude() {
+  const xposts = S.xposts || [];
+  if (!xposts.length) { toast('X投稿がありません'); return; }
+  const now = new Date().toLocaleDateString('ja-JP');
+  const stock  = xposts.filter(p => p.status !== 'posted');
+  const posted = xposts.filter(p => p.status === 'posted');
+  const typeA  = stock.filter(p => p.type === 'A');
+  const typeB  = stock.filter(p => p.type === 'B');
+
+  const lines = [
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    `【X投稿ストック一覧】${now} 現在`,
+    `ストック：${stock.length}件（A:${typeA.length}件 ／ B:${typeB.length}件）　投稿済み：${posted.length}件`,
+    `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+    '',
+    '◆ 依頼内容',
+    '・追加・削除・書き直し・タイプ変更をお願いします',
+    '・タイプA：朝7時投稿（拡散狙い・noteリンクなし・フォロワー増加目的）',
+    '・タイプB：夜21時投稿（信頼構築・noteリンクあり・読者化目的）',
+    '・変更後は全件をJSONで出力してください（アプリに貼り付けて反映）',
+    '',
+  ];
+
+  if (typeA.length) {
+    lines.push('── タイプA（朝7時・拡散狙い）──');
+    typeA.forEach((p, i) => {
+      const cc = p.content.replace(/\n/g,'').length;
+      lines.push(`#${i+1}  登録日：${p.createdAt||'-'}　${cc}字`);
+      lines.push('▼');
+      lines.push(p.content);
+      lines.push('');
+    });
+  }
+
+  if (typeB.length) {
+    lines.push('── タイプB（夜21時・noteリンクあり）──');
+    typeB.forEach((p, i) => {
+      const cc = p.content.replace(/\n/g,'').length;
+      lines.push(`#${typeA.length+i+1}  登録日：${p.createdAt||'-'}　${cc}字`);
+      lines.push('▼');
+      lines.push(p.content);
+      lines.push('');
+    });
+  }
+
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('◆ 変更後のJSON出力フォーマット（ストック分のみ・そのまま出力してください）');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push(JSON.stringify(stock.map(p => ({
+    id: p.id, type: p.type, content: p.content,
+    status: 'stock', createdAt: p.createdAt||''
+  })), null, 2));
+
+  const text = lines.join('\n');
+  navigator.clipboard.writeText(text)
+    .then(() => toast(`✅ X投稿 ${stock.length}件をコピーしました！クロに貼り付けてください`))
+    .catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast('✅ X投稿一覧をコピーしました！');
     });
 }
 
