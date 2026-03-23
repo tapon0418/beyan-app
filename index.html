@@ -3267,6 +3267,7 @@ async function runGemini() {
 
   // 利用可能なモデルを順番に試す（フォールバック）
   const GEMINI_MODELS = [
+    'gemini-3.0-flash',
     'gemini-2.5-flash',
     'gemini-2.0-flash',
     'gemini-1.5-flash',
@@ -4021,11 +4022,11 @@ async function runImgGen() {
   loadEl.style.display = 'block';
   btn.disabled = true;
 
-  // リサーチと同じモデルリスト（gemini-2.5-flash を優先）
-  const TEXT_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  // gemini-3.0-flash を優先したモデルリスト
+  const TEXT_MODELS = ['gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
 
   // ── STEP 1: テンプレート変数を記事情報で埋めた日本語プロンプト生成 ──
-  statusEl.textContent = '① テンプレートプロンプト生成中...';
+  statusEl.textContent = '① プロンプト生成中 (gemini-3.0-flash)...';
   pbar.style.width = '20%';
 
   const fillSystem = getImgPromptTemplate();
@@ -4059,69 +4060,80 @@ async function runImgGen() {
     return;
   }
 
-  // ── STEP 2: 日本語プロンプト → Imagen用英語プロンプトに変換 ──
-  statusEl.textContent = '② Imagen用プロンプトに変換中...';
-  pbar.style.width = '45%';
+  // ── STEP 2: 英語プロンプトに変換 ──
+  statusEl.textContent = '② 英語プロンプトに変換中...';
+  pbar.style.width = '40%';
 
-  const engInstruction = `Convert the following Japanese image prompt to English for Google Imagen API.
+  const engInstruction = `Convert the following Japanese image prompt to English for Google image generation API.
 Keep the visual design intent: gradient background, 3-color scheme, layout structure (top badge, center bold stats, bottom subtitle, right icons).
 Remove Midjourney flags (--ar --v --style). Describe text elements as visual design areas.
 Output only the English prompt, 120 words max.
 
 Japanese prompt:`;
 
-  let engPrompt = jaPrompt; // fallback: use Japanese if conversion fails
+  let engPrompt = jaPrompt;
   for (const model of TEXT_MODELS) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: engInstruction + '\n' + jaPrompt }] }],
           generationConfig: { temperature: 0.7, maxOutputTokens: 250 }
         })
       });
       const d = await r.json();
-      if (!r.ok) {
-        const st = d.error?.status || '';
-        if (st === 'NOT_FOUND' || st === 'INVALID_ARGUMENT') continue;
-        break; // その他エラーはjaPromptのフォールバックで続行
-      }
+      if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; break; }
       const t = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
       if (t) { engPrompt = t; break; }
     } catch(e) { console.warn('[imggen] step2', model, e.message); }
   }
 
-  // ── STEP 3: Imagen APIで画像生成 ──
-  statusEl.textContent = '③ 画像生成中...';
+  // ── STEP 3: Nano Banana 2 (gemini-3.1-flash-image-preview) で画像生成 ──
+  statusEl.textContent = '③ 画像生成中 (Nano Banana 2)...';
   pbar.style.width = '65%';
 
-  const IMG_MODELS = ['imagen-3.0-fast-generate-001', 'imagen-3.0-generate-001'];
-  for (const model of IMG_MODELS) {
-    statusEl.textContent = `③ 画像生成中 (${model})...`;
+  const NB2_MODELS = ['gemini-3.1-flash-image-preview', 'imagen-3.0-fast-generate-001', 'imagen-3.0-generate-001'];
+  for (const model of NB2_MODELS) {
+    statusEl.textContent = `③ 画像生成中 (${model === 'gemini-3.1-flash-image-preview' ? 'Nano Banana 2' : model})...`;
     try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          instances: [{ prompt: engPrompt }],
-          parameters: { sampleCount: 1, aspectRatio: '16:9' }
-        })
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error?.message || r.status);
-      const pred = d.predictions?.[0];
-      if (!pred?.bytesBase64Encoded) throw new Error('no image data');
-      pbar.style.width = '100%';
-      loadEl.style.display = 'none'; btn.disabled = false;
-      displayMwImg(pred.mimeType || 'image/png', pred.bytesBase64Encoded, jaPrompt);
-      return;
-    } catch(e) { console.warn('[imggen] imagen', model, e.message); }
+      if (model === 'gemini-3.1-flash-image-preview') {
+        // Gemini Native Image Generation (Nano Banana 2)
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: engPrompt }] }],
+            generationConfig: { responseModalities: ['image'], temperature: 1.0 }
+          })
+        });
+        const d = await r.json();
+        if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
+        const part = d.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+        if (!part?.inlineData?.data) throw new Error('no image data');
+        pbar.style.width = '100%';
+        loadEl.style.display = 'none'; btn.disabled = false;
+        displayMwImg(part.inlineData.mimeType || 'image/png', part.inlineData.data, jaPrompt);
+        return;
+      } else {
+        // Imagen API
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instances:[{prompt:engPrompt}], parameters:{sampleCount:1,aspectRatio:'16:9'} })
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message || r.status);
+        const pred = d.predictions?.[0];
+        if (!pred?.bytesBase64Encoded) throw new Error('no image data');
+        pbar.style.width = '100%';
+        loadEl.style.display = 'none'; btn.disabled = false;
+        displayMwImg(pred.mimeType || 'image/png', pred.bytesBase64Encoded, jaPrompt);
+        return;
+      }
+    } catch(e) { console.warn('[imggen]', model, e.message); }
   }
 
   // ── フォールバック: Gemini → SVG → Canvas PNG ──
-  statusEl.textContent = '③ サムネイル生成中 (Gemini)...';
-  pbar.style.width = '75%';
+  statusEl.textContent = '③ サムネイル生成中 (SVG)...';
+  pbar.style.width = '80%';
   try {
     const b64 = await runImgGenSVG(n, jaPrompt, apiKey, TEXT_MODELS);
     pbar.style.width = '100%';
