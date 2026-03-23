@@ -4119,15 +4119,34 @@ Japanese prompt:`;
     } catch(e) { console.warn('[imggen] imagen', model, e.message); }
   }
 
-  // ── フォールバック: pollinations.ai ──
-  statusEl.textContent = '③ フォールバック生成中...';
-  pbar.style.width = '90%';
-  const polUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(engPrompt + ', professional blog thumbnail, 16:9')}?width=1280&height=720&model=flux&nologo=true&seed=${Date.now()}`;
-  setTimeout(() => {
-    pbar.style.width = '100%';
+  // ── フォールバック: pollinations.ai (fetch→base64化) ──
+  statusEl.textContent = '③ フォールバック生成中 (pollinations.ai)...';
+  pbar.style.width = '75%';
+  const polModels = ['flux', 'flux-realism', 'turbo'];
+  let polSuccess = false;
+  for (const polModel of polModels) {
+    try {
+      const seed = Math.floor(Math.random() * 1e9);
+      const polPrompt = engPrompt + ', professional eye-catch blog thumbnail, 16:9';
+      const polUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(polPrompt)}?width=1280&height=720&model=${polModel}&nologo=true&seed=${seed}`;
+      statusEl.textContent = `③ フォールバック生成中 (${polModel})...`;
+      const polRes = await fetch(polUrl);
+      if (!polRes.ok) throw new Error(`pollinations ${polModel}: HTTP ${polRes.status}`);
+      const ct = polRes.headers.get('content-type') || 'image/jpeg';
+      if (!ct.startsWith('image/')) throw new Error(`pollinations ${polModel}: not an image (${ct})`);
+      const buf = await polRes.arrayBuffer();
+      const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      pbar.style.width = '100%';
+      loadEl.style.display = 'none'; btn.disabled = false;
+      displayMwImg(ct, b64, jaPrompt);
+      polSuccess = true;
+      break;
+    } catch(e) { console.warn('[imggen] pollinations', polModel, e.message); }
+  }
+  if (!polSuccess) {
     loadEl.style.display = 'none'; btn.disabled = false;
-    displayMwImgUrl(polUrl, jaPrompt);
-  }, 300);
+    showMwImgError('⚠️ 画像生成に失敗しました。しばらく待ってから再試行してください。');
+  }
 }
 
 function displayMwImg(mimeType, b64, prompt) {
