@@ -1704,7 +1704,7 @@ input:focus, textarea:focus, select:focus {
       <button class="ftab active" data-tab="gemini"   onclick="switchTab(this,'gemini')">① リサーチ</button>
       <button class="ftab" data-tab="chatgpt"  onclick="switchTab(this,'chatgpt')">② 執筆</button>
       <button class="ftab" data-tab="format"   onclick="switchTab(this,'format')">③ 整形</button>
-      <button class="ftab" data-tab="imggen"   onclick="switchTab(this,'imggen');renderImgPromptVault()">④ 見出し画像</button>
+      <button class="ftab" data-tab="imggen"   onclick="switchTab(this,'imggen');renderImgPromptVault();loadImgTemplateEditor()">④ 見出し画像</button>
       <button class="ftab" data-tab="imgcheck" onclick="switchTab(this,'imgcheck');refreshImgCheckTab()">⑤ 画像チェック</button>
       <button class="ftab" data-tab="note"     onclick="switchTab(this,'note')">⑥ note執筆</button>
       <button class="ftab" data-tab="rakuten"  onclick="switchTab(this,'rakuten')">⑦ 楽天アフィ</button>
@@ -1840,8 +1840,8 @@ input:focus, textarea:focus, select:focus {
         <button class="copy-btn" onclick="cp('mw-formatted')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー（note用）
         </button>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px;width:100%;font-size:13px" onclick="switchTabByName('imggen');renderImgPromptVault()">
-          ④ 見出し画像へ進む →
+        <button class="btn btn-accent" style="margin-top:10px;width:100%;min-height:50px;font-size:15px;font-weight:700" onclick="switchTabByName('imggen');renderImgPromptVault();setTimeout(runImgGen,150)">
+          🖼️ ④ 見出し画像を作成する →
         </button>
       </div>
     </div>
@@ -1905,10 +1905,33 @@ input:focus, textarea:focus, select:focus {
             style="flex:1;min-height:40px;background:var(--orange-dim);border:1.5px solid var(--orange);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--orange);font-weight:700">📚 保管庫へ保存</button>
         </div>
       </div>
+      <!-- 指示文テンプレート編集エリア -->
+      <details id="imgtemplate-details" style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
+        <summary style="font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:2px 0">
+          <span>📝 指示文テンプレート（編集可）</span>
+          <svg id="imgtemplate-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
+        </summary>
+        <div style="margin-top:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;line-height:1.6">ジミーへの指示文テンプレートです。変数例も含めて自由に編集できます。変更後は「保存」を押してください。</div>
+          <textarea id="imgtemplate-textarea" rows="18"
+            style="width:100%;font-size:12px;line-height:1.65;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;min-height:300px"></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button onclick="saveImgPromptTemplate()"
+              style="flex:2;min-height:44px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
+              💾 保存
+            </button>
+            <button onclick="resetImgPromptTemplate()"
+              style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">
+              🔄 デフォルトに戻す
+            </button>
+          </div>
+        </div>
+      </details>
+
       <!-- prompt vault（常時表示） -->
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:12px;font-weight:700;color:var(--text2)">📚 プロンプト保管庫</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text2)">📚 生成プロンプト保管庫</div>
           <div style="font-size:10px;color:var(--text3)" id="imgprompt-vault-count"></div>
         </div>
         <div id="imgprompt-vault-list"></div>
@@ -3781,45 +3804,9 @@ function renderNetaList() {
 }
 
 // ================================================================
-// 見出し画像生成
+// 見出し画像生成 — テンプレート管理
 // ================================================================
-let imggenNoteId = null;
-let _imggenCurrentNote = null;
-
-function openImgGenModal(id) {
-  // 作業モーダルの⑤見出し画像タブを開く
-  openWork(id);
-  switchTabByName('imggen');
-  renderImgPromptVault();
-}
-
-// ================================================================
-// 見出し画像生成（作業モーダル ④）
-// ================================================================
-async function runImgGen() {
-  const n = S.notes.find(x => x.id === curId);
-  if (!n) { toast('記事が選択されていません'); return; }
-  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
-  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
-
-  // リセット
-  ['mwimg-result','mwimg-prompt-wrap','mwimg-error'].forEach(i => {
-    const el = document.getElementById(i); if (el) el.style.display = 'none';
-  });
-  const loadEl = document.getElementById('mwimg-loading');
-  const statusEl = document.getElementById('mwimg-status');
-  const pbar = document.getElementById('mwimg-pbar');
-  const btn = document.getElementById('btn-run-imggen');
-  loadEl.style.display = 'block';
-  btn.disabled = true;
-
-  const TEXT_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
-
-  // ── STEP 1: テンプレート変数を記事情報で埋めた日本語プロンプト生成 ──
-  statusEl.textContent = '① テンプレートプロンプト生成中...';
-  pbar.style.width = '20%';
-
-  const fillSystem = `あなたはnote記事のアイキャッチ画像プロンプト専門家です。
+const DEFAULT_IMG_TEMPLATE = `あなたはnote記事のアイキャッチ画像プロンプト専門家です。
 記事情報をもとに以下のテンプレートの全変数を適切な値で埋め、完成したプロンプトを出力してください。
 前置き・説明不要。プロンプト本文のみ出力。末尾に「 --ar 16:9 --v 6 --style raw」を付加。
 
@@ -3849,7 +3836,95 @@ note記事用アイキャッチ画像、1280x720px、プロフェッショナル
 [ターゲット]→読者像（例：心折れそうなあなた、忙しい会社員）
 [解決策]→行動促進フレーズ（例：1週間で！、コピペ術）
 [メインカラー1]→ネイビー/深緑/濃紺など記事カテゴリに合う濃色
-[アクセントカラー]→オレンジ/ゴールド/ブルーなどコントラスト色`;
+[アクセントカラー]→オレンジ/ゴールド/ブルーなどコントラスト色
+
+変数例：
+         例1（PV系）  例2（収益系）  例3（スキル系）
+[カテゴリ/実績]  実体験       検証済み      初心者必見
+[数字]          PV80        売上30万      スキル3倍
+[期間]          5日         1ヶ月         2週間
+[メイン成果]     初動80%UP   無から利益     副業即開始
+[ターゲット]     心折れそうなあなた  0円スタート  忙しい会社員
+[解決策]        1週間で！   再現テンプレ   コピペ術
+[メインカラー1]  ネイビー    深緑          濃紺
+[アクセントカラー] オレンジ   ゴールド       ブルー`;
+
+function getImgPromptTemplate() {
+  return localStorage.getItem('beyan_img_template') || DEFAULT_IMG_TEMPLATE;
+}
+function saveImgPromptTemplate() {
+  const ta = document.getElementById('imgtemplate-textarea');
+  if (!ta) return;
+  localStorage.setItem('beyan_img_template', ta.value);
+  toast('✅ テンプレートを保存しました');
+}
+function resetImgPromptTemplate() {
+  const ta = document.getElementById('imgtemplate-textarea');
+  if (!ta) return;
+  ta.value = DEFAULT_IMG_TEMPLATE;
+  localStorage.removeItem('beyan_img_template');
+  toast('🔄 デフォルトに戻しました');
+}
+function loadImgTemplateEditor() {
+  const ta = document.getElementById('imgtemplate-textarea');
+  if (ta && !ta.dataset.loaded) {
+    ta.value = getImgPromptTemplate();
+    ta.dataset.loaded = '1';
+  }
+  // detailsのchevron同期
+  const det = document.getElementById('imgtemplate-details');
+  const chev = document.getElementById('imgtemplate-chev');
+  if (det && chev) {
+    det.addEventListener('toggle', () => {
+      chev.style.transform = det.open ? 'rotate(180deg)' : '';
+      if (det.open) {
+        const ta2 = document.getElementById('imgtemplate-textarea');
+        if (ta2) ta2.value = getImgPromptTemplate();
+      }
+    });
+  }
+}
+
+// ================================================================
+// 見出し画像生成
+// ================================================================
+let imggenNoteId = null;
+let _imggenCurrentNote = null;
+
+function openImgGenModal(id) {
+  openWork(id);
+  switchTabByName('imggen');
+  renderImgPromptVault();
+  loadImgTemplateEditor();
+}
+
+// ================================================================
+// 見出し画像生成（作業モーダル ④）
+// ================================================================
+async function runImgGen() {
+  const n = S.notes.find(x => x.id === curId);
+  if (!n) { toast('記事が選択されていません'); return; }
+  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
+  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
+
+  // リセット
+  ['mwimg-result','mwimg-prompt-wrap','mwimg-error'].forEach(i => {
+    const el = document.getElementById(i); if (el) el.style.display = 'none';
+  });
+  const loadEl = document.getElementById('mwimg-loading');
+  const statusEl = document.getElementById('mwimg-status');
+  const pbar = document.getElementById('mwimg-pbar');
+  const btn = document.getElementById('btn-run-imggen');
+  loadEl.style.display = 'block';
+  btn.disabled = true;
+
+  const TEXT_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+
+  // ── STEP 1: テンプレート変数を記事情報で埋めた日本語プロンプト生成 ──
+  statusEl.textContent = '① テンプレートプロンプト生成中...';
+  pbar.style.width = '20%';
+
+  const fillSystem = getImgPromptTemplate();
 
   const userInput = `タイトル: ${n.title}\nカテゴリ: ${n.cat || 'ライティング'}\nメモ: ${n.memo || 'なし'}`;
 
