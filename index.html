@@ -1878,10 +1878,28 @@ input:focus, textarea:focus, select:focus {
     <!-- ④ 見出し画像生成 -->
     <div class="fpanel" id="fp-imggen">
       <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6">ジミーが記事情報からテンプレートに沿ったプロンプトを生成 → Imagen APIで1280×720px画像を作成します</div>
-      <button class="btn btn-accent" id="btn-run-imggen" onclick="runImgGen()"
-        style="width:100%;min-height:52px;font-size:15px;margin-bottom:12px">
-        🖼️ 見出し画像を生成
+      <!-- ① 指示文を生成・確認 -->
+      <button class="btn btn-orange" id="btn-build-imgprompt" onclick="buildImgPrompt()"
+        style="width:100%;min-height:44px;font-size:14px;font-weight:700;margin-bottom:8px">
+        📝 指示文を生成・確認
       </button>
+      <!-- 指示文編集エリア（生成後に表示） -->
+      <div id="mwimg-prompt-wrap" style="display:none;margin-bottom:10px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">見出し画像プロンプト（自由に編集できます）：</div>
+        <textarea id="mwimg-prompt" rows="12"
+          style="width:100%;font-size:12px;line-height:1.65;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;min-height:180px"></textarea>
+        <div style="display:flex;gap:8px;margin-top:6px">
+          <button onclick="navigator.clipboard.writeText(document.getElementById('mwimg-prompt').value).then(()=>toast('コピーしました'))"
+            style="flex:1;min-height:40px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 コピー</button>
+          <button onclick="saveImgPromptFromWork()"
+            style="flex:1;min-height:40px;background:var(--orange-dim);border:1.5px solid var(--orange);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--orange);font-weight:700">📚 保管庫へ保存</button>
+        </div>
+        <!-- ② 編集後に画像生成 -->
+        <button class="btn btn-accent" id="btn-run-imggen" onclick="runImgGenFromPrompt()"
+          style="width:100%;min-height:52px;font-size:15px;margin-top:8px;font-weight:700">
+          🖼️ この内容で画像を生成
+        </button>
+      </div>
       <!-- loading -->
       <div id="mwimg-loading" style="display:none;text-align:center;padding:16px 0">
         <div id="mwimg-status" style="font-size:13px;color:var(--accent);font-weight:600">生成中...</div>
@@ -1898,7 +1916,7 @@ input:focus, textarea:focus, select:focus {
             style="flex:1;min-height:44px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
             ⬇️ ダウンロード
           </button>
-          <button onclick="runImgGen()"
+          <button onclick="runImgGenFromPrompt()"
             style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit">
             🔄 再生成
           </button>
@@ -1906,18 +1924,6 @@ input:focus, textarea:focus, select:focus {
       </div>
       <!-- error -->
       <div id="mwimg-error" style="display:none;color:var(--red);font-size:13px;padding:10px;background:rgba(204,68,68,.08);border-radius:8px;line-height:1.6;margin-bottom:10px"></div>
-      <!-- prompt display（生成後表示） -->
-      <div id="mwimg-prompt-wrap" style="display:none;margin-bottom:4px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">生成プロンプト（テンプレート準拠）：</div>
-        <textarea id="mwimg-prompt" rows="10"
-          style="width:100%;font-size:12px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit"></textarea>
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <button onclick="navigator.clipboard.writeText(document.getElementById('mwimg-prompt').value).then(()=>toast('コピーしました'))"
-            style="flex:1;min-height:40px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 コピー</button>
-          <button onclick="saveImgPromptFromWork()"
-            style="flex:1;min-height:40px;background:var(--orange-dim);border:1.5px solid var(--orange);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--orange);font-weight:700">📚 保管庫へ保存</button>
-        </div>
-      </div>
       <!-- 指示文テンプレート編集エリア -->
       <details id="imgtemplate-details" style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
         <summary style="font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:2px 0">
@@ -2615,6 +2621,10 @@ function openWork(id) {
   });
   const imgEl = document.getElementById('mwimg-img');
   if (imgEl) imgEl.src = '#';
+  const mwpEl = document.getElementById('mwimg-prompt');
+  if (mwpEl) mwpEl.value = '';
+  const buildBtn = document.getElementById('btn-build-imgprompt');
+  if (buildBtn) { buildBtn.disabled = false; buildBtn.textContent = '📝 指示文を生成・確認'; }
   document.getElementById('mw-xedit').value='';
   document.getElementById('mw-xbases').innerHTML = buildXBases(n);
   setWorkType('A'); updateXcc();
@@ -4014,32 +4024,11 @@ function openImgGenModal(id) {
 // ================================================================
 // 見出し画像生成（作業モーダル ④）
 // ================================================================
-async function runImgGen() {
-  const n = S.notes.find(x => x.id === curId);
-  if (!n) { toast('記事が選択されていません'); return; }
-  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
-  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
 
-  // リセット
-  ['mwimg-result','mwimg-prompt-wrap','mwimg-error'].forEach(i => {
-    const el = document.getElementById(i); if (el) el.style.display = 'none';
-  });
-  const loadEl = document.getElementById('mwimg-loading');
-  const statusEl = document.getElementById('mwimg-status');
-  const pbar = document.getElementById('mwimg-pbar');
-  const btn = document.getElementById('btn-run-imggen');
-  loadEl.style.display = 'block';
-  btn.disabled = true;
-
-  // gemini-3.0-flash を優先したモデルリスト
+// ── STEP1共通: 記事情報から変数取得 + nb2Prompt/jaPrompt を組み立てて返す ──
+async function _buildImgVarsAndPrompt(n, apiKey) {
   const TEXT_MODELS = ['gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-
-  // ── STEP 1: 記事情報から変数値をJSON取得 ──
-  statusEl.textContent = '① 変数生成中 (gemini-3.0-flash)...';
-  pbar.style.width = '20%';
-
   const varInstruction = getImgPromptTemplate();
-  // 整形済み or 草稿から本文を取得（最大1500字）
   const bodyText = (n.formattedText || n.draftText || '').trim().slice(0, 1500);
   const articleInfo = `記事タイトル: ${n.title}
 カテゴリ: ${n.cat || 'ライティング'}
@@ -4047,7 +4036,7 @@ async function runImgGen() {
 記事本文（抜粋）:
 ${bodyText || '（本文なし：タイトルから推測してください）'}`;
 
-  let vars = null, step1Err = '';
+  let vars = null;
   for (const model of TEXT_MODELS) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
@@ -4058,19 +4047,12 @@ ${bodyText || '（本文なし：タイトルから推測してください）'}
         })
       });
       const d = await r.json();
-      if (!r.ok) {
-        step1Err = d.error?.message || `HTTP ${r.status}`;
-        const st = d.error?.status || '';
-        if (st === 'NOT_FOUND' || st === 'INVALID_ARGUMENT') continue;
-        throw new Error(step1Err);
-      }
+      if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
       const txt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
       const m = txt.match(/\{[\s\S]*?\}/);
       if (m) { try { vars = JSON.parse(m[0]); break; } catch(e2) {} }
-    } catch(e) { step1Err = e.message; console.warn('[imggen] step1', model, e.message); }
+    } catch(e) { console.warn('[imggen] step1', model, e.message); }
   }
-
-  // デフォルト変数（取得失敗時：タイトルから最低限の変数を作る）
   if (!vars) vars = {
     badge:'実体験', number:'体験談', unit:'', period:'実践',
     achievement: n.title.slice(0, 10), target:'同じ悩みのあなた', solution:'解決策あり',
@@ -4080,10 +4062,10 @@ ${bodyText || '（本文なし：タイトルから推測してください）'}
     mainColorHex:'#1a237e', accentColorHex:'#ffd700'
   };
 
-  // ── 変数からクリーンな日本語プロンプトを組み立て ──
   const kw = vars.keywords ? vars.keywords.split(',').map(s=>s.trim()).filter(Boolean) : [];
   const kwLine = kw.length ? `キーワード：${kw.join('・')}` : '';
   const icons = vars.icons || '📊💡';
+
   const jaPrompt = `note記事用アイキャッチ画像、1280x720px、プロフェッショナル・クリック欲求高めるデザイン
 記事タイトル：${n.title}
 ${kwLine}
@@ -4104,12 +4086,6 @@ ${vars.subtitle}
 - noteロゴ：左上に微か配置
 - 全体：信頼感+注目度UP、初見で「読みたい！」となる構図 --ar 16:9 --v 6 --style raw`;
 
-  // ── STEP 2: Nano Banana 2 で画像生成（日本語プロンプトをそのまま送信） ──
-  // Nano Banana 2 はGeminiベースなので日本語直送・英語変換不要
-  statusEl.textContent = '② 画像生成中 (Nano Banana 2)...';
-  pbar.style.width = '55%';
-
-  // Nano Banana 2 向けの詳細指示付きプロンプト
   const nb2Prompt = `日本語テキストを使ったnote記事アイキャッチ画像を生成してください。
 すべての文字は日本語で表示すること。英語テキストは絶対に使わないこと。
 
@@ -4130,9 +4106,56 @@ ${vars.subtitle}
   - 日本語フォント：太いゴシック体
   - 記事テーマ「${n.title}」の内容・雰囲気が伝わるビジュアルにすること`;
 
+  return { vars, kw, icons, jaPrompt, nb2Prompt };
+}
+
+// ── 指示文を生成してtextareaに表示（編集できるように） ──
+async function buildImgPrompt() {
+  const n = S.notes.find(x => x.id === curId);
+  if (!n) { toast('記事が選択されていません'); return; }
+  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
+  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
+
+  const buildBtn = document.getElementById('btn-build-imgprompt');
+  buildBtn.disabled = true;
+  buildBtn.textContent = '⏳ 指示文を生成中...';
+  document.getElementById('mwimg-error').style.display = 'none';
+
+  try {
+    const { nb2Prompt } = await _buildImgVarsAndPrompt(n, apiKey);
+    document.getElementById('mwimg-prompt').value = nb2Prompt;
+    document.getElementById('mwimg-prompt-wrap').style.display = 'block';
+    toast('✅ 指示文を生成しました。編集後に「この内容で画像を生成」を押してください');
+  } catch(e) {
+    showMwImgError('⚠️ 指示文の生成に失敗しました: ' + e.message);
+  }
+  buildBtn.disabled = false;
+  buildBtn.textContent = '📝 指示文を再生成';
+}
+
+// ── textareaのプロンプトで画像生成 ──
+async function runImgGenFromPrompt() {
+  const nb2Prompt = (document.getElementById('mwimg-prompt').value || '').trim();
+  if (!nb2Prompt) { toast('先に「指示文を生成・確認」を押してください'); return; }
+  const n = S.notes.find(x => x.id === curId);
+  if (!n) { toast('記事が選択されていません'); return; }
+  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
+  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
+
+  document.getElementById('mwimg-result').style.display = 'none';
+  document.getElementById('mwimg-error').style.display = 'none';
+  const loadEl = document.getElementById('mwimg-loading');
+  const statusEl = document.getElementById('mwimg-status');
+  const pbar = document.getElementById('mwimg-pbar');
+  const btn = document.getElementById('btn-run-imggen');
+  loadEl.style.display = 'block';
+  if (btn) btn.disabled = true;
+  pbar.style.width = '20%';
+
   const NB2_MODELS = ['gemini-3.1-flash-image-preview', 'imagen-3.0-fast-generate-001', 'imagen-3.0-generate-001'];
   for (const model of NB2_MODELS) {
-    statusEl.textContent = `② 画像生成中 (${model === 'gemini-3.1-flash-image-preview' ? 'Nano Banana 2' : model})...`;
+    statusEl.textContent = `画像生成中 (${model === 'gemini-3.1-flash-image-preview' ? 'Nano Banana 2' : model})...`;
+    pbar.style.width = '55%';
     try {
       if (model === 'gemini-3.1-flash-image-preview') {
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
@@ -4147,46 +4170,77 @@ ${vars.subtitle}
         const part = d.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
         if (!part?.inlineData?.data) throw new Error('no image data');
         pbar.style.width = '100%';
-        loadEl.style.display = 'none'; btn.disabled = false;
-        displayMwImg(part.inlineData.mimeType || 'image/png', part.inlineData.data, jaPrompt);
+        loadEl.style.display = 'none'; if (btn) btn.disabled = false;
+        displayMwImg(part.inlineData.mimeType || 'image/png', part.inlineData.data, nb2Prompt);
         return;
       } else {
-        // Imagen APIはEnglish変換して送信
-        const engPrompt = `Professional Japanese blog thumbnail 1280x720px.
-All text in Japanese bold gothic font. Dark ${vars.mainColor} (${vars.mainColorHex}) gradient background.
-Top-left: note logo small. Center-large: "${vars.number}" in giant ${vars.accentColor} (${vars.accentColorHex}) numbers.
-Upper text: 【${vars.badge}】white bold. Middle: "${vars.achievement}" bold white.
-Lower: "${vars.subtitle}" white. Right icons: bar chart + lightbulb sharp icons.
-Style: professional, high click-rate, trustworthy Japanese note.com article thumbnail.`;
         const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instances:[{prompt:engPrompt}], parameters:{sampleCount:1,aspectRatio:'16:9'} })
+          body: JSON.stringify({ instances:[{prompt: nb2Prompt}], parameters:{sampleCount:1,aspectRatio:'16:9'} })
         });
         const d = await r.json();
         if (!r.ok) throw new Error(d.error?.message || r.status);
         const pred = d.predictions?.[0];
         if (!pred?.bytesBase64Encoded) throw new Error('no image data');
         pbar.style.width = '100%';
-        loadEl.style.display = 'none'; btn.disabled = false;
-        displayMwImg(pred.mimeType || 'image/png', pred.bytesBase64Encoded, jaPrompt);
+        loadEl.style.display = 'none'; if (btn) btn.disabled = false;
+        displayMwImg(pred.mimeType || 'image/png', pred.bytesBase64Encoded, nb2Prompt);
         return;
       }
     } catch(e) { console.warn('[imggen]', model, e.message); }
   }
 
-  // ── フォールバック: Gemini → SVG → Canvas PNG ──
-  statusEl.textContent = '③ サムネイル生成中 (SVG)...';
+  // フォールバック: SVG
+  statusEl.textContent = 'サムネイル生成中 (SVG)...';
   pbar.style.width = '80%';
   try {
-    const b64 = await runImgGenSVG(n, jaPrompt, apiKey, TEXT_MODELS);
+    const TEXT_MODELS = ['gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+    const b64 = await runImgGenSVG(n, nb2Prompt, apiKey, TEXT_MODELS);
     pbar.style.width = '100%';
-    loadEl.style.display = 'none'; btn.disabled = false;
-    displayMwImg('image/png', b64, jaPrompt);
+    loadEl.style.display = 'none'; if (btn) btn.disabled = false;
+    displayMwImg('image/png', b64, nb2Prompt);
   } catch(e) {
     console.warn('[imggen] svg fallback', e.message);
-    loadEl.style.display = 'none'; btn.disabled = false;
+    loadEl.style.display = 'none'; if (btn) btn.disabled = false;
     showMwImgError('⚠️ 画像生成に失敗しました。APIキーを確認してください。');
   }
+}
+
+// ── フル自動（③タブの「④見出し画像を作成」ボタン用） ──
+async function runImgGen() {
+  const n = S.notes.find(x => x.id === curId);
+  if (!n) { toast('記事が選択されていません'); return; }
+  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
+  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
+
+  document.getElementById('mwimg-result').style.display = 'none';
+  document.getElementById('mwimg-error').style.display = 'none';
+  const loadEl = document.getElementById('mwimg-loading');
+  const statusEl = document.getElementById('mwimg-status');
+  const pbar = document.getElementById('mwimg-pbar');
+  const btn = document.getElementById('btn-run-imggen');
+  loadEl.style.display = 'block';
+  if (btn) btn.disabled = true;
+
+  statusEl.textContent = '① 変数・指示文生成中...';
+  pbar.style.width = '20%';
+
+  const buildBtn = document.getElementById('btn-build-imgprompt');
+  if (buildBtn) { buildBtn.disabled = true; buildBtn.textContent = '⏳ 指示文を生成中...'; }
+
+  try {
+    const { nb2Prompt } = await _buildImgVarsAndPrompt(n, apiKey);
+    document.getElementById('mwimg-prompt').value = nb2Prompt;
+    document.getElementById('mwimg-prompt-wrap').style.display = 'block';
+    if (buildBtn) { buildBtn.disabled = false; buildBtn.textContent = '📝 指示文を再生成'; }
+  } catch(e) {
+    loadEl.style.display = 'none'; if (btn) btn.disabled = false;
+    if (buildBtn) { buildBtn.disabled = false; buildBtn.textContent = '📝 指示文を生成・確認'; }
+    showMwImgError('⚠️ 指示文の生成に失敗しました: ' + e.message);
+    return;
+  }
+
+  await runImgGenFromPrompt();
 }
 
 async function runImgGenSVG(n, jaPrompt, apiKey, models) {
@@ -4287,7 +4341,9 @@ function displayMwImg(mimeType, b64, prompt) {
   imgEl.src = `data:${mimeType};base64,${b64}`;
   imgEl.dataset.mime = mimeType; imgEl.dataset.b64 = b64; imgEl.dataset.url = '';
   document.getElementById('mwimg-result').style.display = 'block';
-  document.getElementById('mwimg-prompt').value = prompt;
+  // promptはtextareaに既に表示中なので上書きしない（編集内容を保持）
+  const promptEl = document.getElementById('mwimg-prompt');
+  if (promptEl && prompt && !promptEl.value) promptEl.value = prompt;
   document.getElementById('mwimg-prompt-wrap').style.display = 'block';
   updateCcheckImg(`data:${mimeType};base64,${b64}`);
   toast('🖼️ 画像生成完了！');
@@ -4297,7 +4353,8 @@ function displayMwImgUrl(url, prompt) {
   const imgEl = document.getElementById('mwimg-img');
   imgEl.src = url; imgEl.dataset.mime = 'image/jpeg'; imgEl.dataset.b64 = ''; imgEl.dataset.url = url;
   document.getElementById('mwimg-result').style.display = 'block';
-  document.getElementById('mwimg-prompt').value = prompt;
+  const promptEl = document.getElementById('mwimg-prompt');
+  if (promptEl && prompt && !promptEl.value) promptEl.value = prompt;
   document.getElementById('mwimg-prompt-wrap').style.display = 'block';
   updateCcheckImg(url);
   toast('🖼️ 画像生成完了！(pollinations.ai)');
