@@ -4618,7 +4618,11 @@ function mwImgDownload() {
   const b64 = img.dataset.b64; const url = img.dataset.url;
   const mime = img.dataset.mime || 'image/png';
   const n = S.notes.find(x => x.id === curId);
-  const fname = (n?.title || 'eyecatch').slice(0, 30).replace(/[\\/:*?"<>|]/g, '_') + '.png';
+  const d = new Date();
+  const dateStr = d.getFullYear().toString()
+    + String(d.getMonth()+1).padStart(2,'0')
+    + String(d.getDate()).padStart(2,'0');
+  const fname = (n?.title || 'eyecatch').slice(0, 30).replace(/[\\/:*?"<>|]/g, '_') + '_' + dateStr + '.png';
   if (b64) {
     const a = document.createElement('a'); a.href = `data:${mime};base64,${b64}`;
     a.download = fname; a.click(); toast('画像を保存しました');
