@@ -219,9 +219,10 @@ input[type=text],textarea,select{
   font-size:16px;font-family:inherit;outline:none;transition:border-color .2s;
   -webkit-appearance:none}
 input:focus,textarea:focus,select:focus{border-color:var(--accent);background:var(--bg5)}
-/* 設定モーダル（ダークUI）内のtextareaはフォーカスしてもダーク背景を維持 */
-#settings-modal textarea,#settings-modal textarea:focus{background:#111 !important;color:#e8e8e8 !important;border-color:#555 !important}
-#settings-modal textarea:focus{border-color:#7c7 !important}
+/* 設定モーダル（ダークUI）内のinput/textareaはフォーカスしてもダーク背景を維持 */
+#settings-modal textarea,#settings-modal textarea:focus,
+#settings-modal input[type=text],#settings-modal input[type=text]:focus{background:#1a1a2e !important;color:#e8e8e8 !important;border-color:#555 !important}
+#settings-modal textarea:focus,#settings-modal input[type=text]:focus{border-color:#7c7 !important}
 textarea{resize:vertical;line-height:1.7;min-height:90px}
 select option{background:var(--bg3)}
 .input-label{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;
@@ -1457,6 +1458,7 @@ input:focus, textarea:focus, select:focus {
       <button id="stab-gemini" class="stab active" onclick="switchStab('gemini')">🔍 ジミー指示文</button>
       <button id="stab-claude" class="stab" onclick="switchStab('claude')">✍️ クロ執筆指示文</button>
       <button id="stab-imgprompt" class="stab" onclick="switchStab('imgprompt')">🖼️ 見出し画像</button>
+      <button id="stab-vault" class="stab" onclick="switchStab('vault')">📚 保管庫</button>
     </div>
 
     <!-- ジミー指示文 -->
@@ -1532,7 +1534,43 @@ input:focus, textarea:focus, select:focus {
       </div>
       <div id="settings-imgprompt-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
     </div>
+
+    <!-- 📚 保管庫タブ -->
+    <div id="spanel-vault" style="display:none;">
+      <!-- 追加/編集フォーム -->
+      <div style="background:#111;border:1px solid #333;border-radius:10px;padding:14px;margin-bottom:14px;">
+        <div style="font-size:.78rem;color:#86efac;font-weight:700;margin-bottom:10px;" id="vault-form-title">✏️ プロンプトを追加</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input id="vault-name" type="text" placeholder="プロンプト名（例：べーやん執筆指示）"
+            style="width:100%;background:#1a1a2e;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#e8e8e8;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+          <input id="vault-memo" type="text" placeholder="用途メモ（例：note記事用・2000字）"
+            style="width:100%;background:#1a1a2e;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#e8e8e8;font-size:13px;font-family:inherit;outline:none;box-sizing:border-box;">
+          <textarea id="vault-body" rows="7" placeholder="プロンプト本文をここに入力…"
+            style="width:100%;background:#1a1a2e;border:1px solid #444;border-radius:8px;padding:10px 12px;color:#e8e8e8;font-size:12px;font-family:inherit;outline:none;resize:vertical;min-height:110px;line-height:1.6;box-sizing:border-box;"></textarea>
+          <div style="display:flex;gap:8px;">
+            <button id="vault-save-btn" onclick="saveVaultPrompt()"
+              style="flex:2;min-height:40px;background:linear-gradient(135deg,#3a6650,#e8732a);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">
+              💾 追加
+            </button>
+            <button id="vault-cancel-btn" onclick="cancelVaultEdit()"
+              style="display:none;flex:1;min-height:40px;background:#333;border:1px solid #555;border-radius:8px;color:#aaa;font-size:13px;cursor:pointer;font-family:inherit;">
+              ✕ キャンセル
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- 一覧 -->
+      <div style="border-top:1px solid #333;padding-top:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:.78rem;color:#86efac;font-weight:700;">📋 保存済みプロンプト</div>
+          <div id="vault-count" style="font-size:.72rem;color:#666;"></div>
+        </div>
+        <div id="vault-list"></div>
+      </div>
+    </div>
+
   </div>
+</div>
 </div>
 
 
@@ -3600,16 +3638,118 @@ function commitImportJson() {
   toast(`✅ ${_jsonParsedItems.length}件を追加登録しました`);
 }
 
+// ================================================================
+// プロンプト保管庫
+// ================================================================
+const PROMPT_VAULT_KEY = 'beyan_prompt_vault';
+let _vaultEditingId = null;
+
+function _escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function getVaultPrompts() {
+  return JSON.parse(localStorage.getItem(PROMPT_VAULT_KEY) || '[]');
+}
+function renderVaultList() {
+  const list = getVaultPrompts();
+  const el = document.getElementById('vault-list');
+  const countEl = document.getElementById('vault-count');
+  if (!el) return;
+  if (countEl) countEl.textContent = list.length + '件';
+  if (!list.length) {
+    el.innerHTML = '<div style="color:#666;font-size:13px;text-align:center;padding:24px 0;">まだ保存されていません</div>';
+    return;
+  }
+  el.innerHTML = list.map(p => `
+    <div style="background:#1a1a2e;border:1px solid #333;border-radius:10px;padding:12px;margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;">
+        <div style="min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:#e8e8e8;margin-bottom:3px;word-break:break-word;">${_escHtml(p.name)}</div>
+          ${p.memo?`<div style="font-size:11px;color:#888;line-height:1.5;">${_escHtml(p.memo)}</div>`:''}
+        </div>
+        <div style="display:flex;gap:5px;flex-shrink:0;">
+          <button onclick="copyVaultPrompt(${p.id})"
+            style="min-height:30px;padding:0 8px;background:#1a2e1a;border:1px solid #4a7a4a55;border-radius:6px;color:#86efac;font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;">📋</button>
+          <button onclick="startVaultEdit(${p.id})"
+            style="min-height:30px;padding:0 8px;background:#1a2040;border:1px solid #33448855;border-radius:6px;color:#88aaff;font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;">✏️</button>
+          <button onclick="deleteVaultPrompt(${p.id})"
+            style="min-height:30px;padding:0 8px;background:#2e1a1a;border:1px solid #5a2a2a55;border-radius:6px;color:#f88;font-size:11px;cursor:pointer;font-family:inherit;white-space:nowrap;">🗑️</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#555;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;">${_escHtml(p.body)}</div>
+    </div>
+  `).join('');
+}
+function saveVaultPrompt() {
+  const name = (document.getElementById('vault-name').value||'').trim();
+  const body = (document.getElementById('vault-body').value||'').trim();
+  const memo = (document.getElementById('vault-memo').value||'').trim();
+  if (!name) { toast('プロンプト名を入力してください'); return; }
+  if (!body) { toast('プロンプト本文を入力してください'); return; }
+  const list = getVaultPrompts();
+  if (_vaultEditingId !== null) {
+    const idx = list.findIndex(p => p.id === _vaultEditingId);
+    if (idx !== -1) list[idx] = { ...list[idx], name, body, memo };
+    _vaultEditingId = null;
+  } else {
+    list.unshift({ id: Date.now(), name, body, memo });
+  }
+  localStorage.setItem(PROMPT_VAULT_KEY, JSON.stringify(list));
+  document.getElementById('vault-name').value = '';
+  document.getElementById('vault-body').value = '';
+  document.getElementById('vault-memo').value = '';
+  document.getElementById('vault-save-btn').textContent = '💾 追加';
+  document.getElementById('vault-form-title').textContent = '✏️ プロンプトを追加';
+  document.getElementById('vault-cancel-btn').style.display = 'none';
+  renderVaultList();
+  toast('✅ 保管庫に保存しました');
+}
+function startVaultEdit(id) {
+  const p = getVaultPrompts().find(x => x.id === id);
+  if (!p) return;
+  _vaultEditingId = id;
+  document.getElementById('vault-name').value = p.name;
+  document.getElementById('vault-body').value = p.body;
+  document.getElementById('vault-memo').value = p.memo || '';
+  document.getElementById('vault-save-btn').textContent = '💾 更新';
+  document.getElementById('vault-form-title').textContent = '✏️ プロンプトを編集';
+  document.getElementById('vault-cancel-btn').style.display = '';
+  document.getElementById('vault-name').focus();
+}
+function cancelVaultEdit() {
+  _vaultEditingId = null;
+  document.getElementById('vault-name').value = '';
+  document.getElementById('vault-body').value = '';
+  document.getElementById('vault-memo').value = '';
+  document.getElementById('vault-save-btn').textContent = '💾 追加';
+  document.getElementById('vault-form-title').textContent = '✏️ プロンプトを追加';
+  document.getElementById('vault-cancel-btn').style.display = 'none';
+}
+function deleteVaultPrompt(id) {
+  if (!confirm('このプロンプトを削除しますか？')) return;
+  const list = getVaultPrompts().filter(p => p.id !== id);
+  localStorage.setItem(PROMPT_VAULT_KEY, JSON.stringify(list));
+  renderVaultList();
+  toast('削除しました');
+}
+function copyVaultPrompt(id) {
+  const p = getVaultPrompts().find(x => x.id === id);
+  if (!p) return;
+  navigator.clipboard.writeText(p.body)
+    .then(() => toast('📋 コピーしました：' + p.name))
+    .catch(() => toast('コピーに失敗しました'));
+}
+
 function switchStab(tab) {
-  ['gemini','claude','imgprompt'].forEach(t => {
+  ['gemini','claude','imgprompt','vault'].forEach(t => {
     document.getElementById('spanel-'+t).style.display = t === tab ? '' : 'none';
     document.getElementById('stab-'+t).classList.toggle('active', t === tab);
   });
-  // 見出し画像タブを開いたときにテンプレートを読み込む
   if (tab === 'imgprompt') {
     const ta = document.getElementById('settings-imgprompt-tmpl');
     if (ta) ta.value = getImgPromptTemplate();
   }
+  if (tab === 'vault') renderVaultList();
 }
 
 // ================================================================
