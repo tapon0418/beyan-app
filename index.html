@@ -1325,6 +1325,7 @@ input:focus, textarea:focus, select:focus {
     <button class="tpill" id="tp-xposts" onclick="scrollToSec('sec-xposts')"><span class="tpill-icon">𝕏</span><span class="tpill-label"> X投稿</span></button>
     <button class="tpill" id="tp-today"  onclick="scrollToSec('sec-today')"><span class="tpill-icon">📅</span><span class="tpill-label"> 今日</span></button>
     <button class="tpill" id="tp-tmpl"   onclick="openSettings();switchStab('gemini')"><span class="tpill-icon">📋</span><span class="tpill-label"> 指示文</span></button>
+    <button class="tpill" id="tp-imgprompt" onclick="openSettings();switchStab('imgprompt')"><span class="tpill-icon">🖼️</span><span class="tpill-label"> 見出し</span></button>
     <button class="tpill" id="tp-archive" onclick="scrollToSec('sec-archive')"><span class="tpill-icon">📦</span><span class="tpill-label"> アーカイブ</span></button>
   </div>
   <button class="topbar-gear" onclick="openSettings()" aria-label="設定">⚙️</button>
@@ -1346,6 +1347,9 @@ input:focus, textarea:focus, select:focus {
   </button>
   <button class="bnav-btn" id="bn-tmpl"   onclick="openSettings();switchStab('gemini')">
     <span class="bnav-icon">📋</span><span class="bnav-lbl">指示文</span>
+  </button>
+  <button class="bnav-btn" id="bn-imgprompt" onclick="openSettings();switchStab('imgprompt')">
+    <span class="bnav-icon">🖼️</span><span class="bnav-lbl">見出し</span>
   </button>
   <button class="bnav-btn" id="bn-archive" onclick="scrollToSec('sec-archive');setNavActive('archive')">
     <span class="bnav-icon">📦</span><span class="bnav-lbl">アーカイブ</span>
@@ -1447,6 +1451,7 @@ input:focus, textarea:focus, select:focus {
     <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px;">
       <button id="stab-gemini" class="stab active" onclick="switchStab('gemini')">🔍 ジミー指示文</button>
       <button id="stab-claude" class="stab" onclick="switchStab('claude')">✍️ クロ執筆指示文</button>
+      <button id="stab-imgprompt" class="stab" onclick="switchStab('imgprompt')">🖼️ 見出し画像</button>
     </div>
 
     <!-- ジミー指示文 -->
@@ -1505,6 +1510,22 @@ input:focus, textarea:focus, select:focus {
         <button onclick="openTmplInClaude()" style="background:#7c3aed;border:none;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.82rem;white-space:nowrap">🔗 クロで開く</button>
       </div>
       <div id="settings-claude-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
+    </div>
+
+    <!-- 見出し画像プロンプトテンプレート -->
+    <div id="spanel-imgprompt" style="display:none;">
+      <p style="color:#aaa;font-size:.82rem;margin-bottom:10px;line-height:1.6;">
+        ジミー（Gemini）が記事本文を読んでJSON変数を生成するための指示文です。<br>
+        このテンプレートを変更すると、④見出し画像タブの「指示文を生成・確認」に反映されます。
+      </p>
+      <textarea id="settings-imgprompt-tmpl" rows="16"
+        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;min-height:200px;"
+      ></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+        <button onclick="saveSettingsImgTemplate()" style="flex:1;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;min-width:80px">💾 保存</button>
+        <button onclick="resetSettingsImgTemplate()" style="background:var(--bg4);border:none;color:var(--text2);padding:10px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;">リセット</button>
+      </div>
+      <div id="settings-imgprompt-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
     </div>
   </div>
 </div>
@@ -3414,6 +3435,10 @@ function openSettings() {
   document.getElementById('settings-claude-api-msg').textContent =
     savedClaudeApi ? '✅ APIキー保存済み' : '';
 
+  // 見出し画像テンプレートも読み込む
+  const savedImg = document.getElementById('settings-imgprompt-tmpl');
+  if (savedImg) savedImg.value = getImgPromptTemplate();
+
   switchStab('gemini');
   document.getElementById('settings-modal').style.display = 'block';
 }
@@ -3559,10 +3584,15 @@ function commitImportJson() {
 }
 
 function switchStab(tab) {
-  document.getElementById('spanel-gemini').style.display = tab === 'gemini' ? '' : 'none';
-  document.getElementById('spanel-claude').style.display = tab === 'claude' ? '' : 'none';
-  document.getElementById('stab-gemini').classList.toggle('active', tab === 'gemini');
-  document.getElementById('stab-claude').classList.toggle('active', tab === 'claude');
+  ['gemini','claude','imgprompt'].forEach(t => {
+    document.getElementById('spanel-'+t).style.display = t === tab ? '' : 'none';
+    document.getElementById('stab-'+t).classList.toggle('active', t === tab);
+  });
+  // 見出し画像タブを開いたときにテンプレートを読み込む
+  if (tab === 'imgprompt') {
+    const ta = document.getElementById('settings-imgprompt-tmpl');
+    if (ta) ta.value = getImgPromptTemplate();
+  }
 }
 
 // ================================================================
@@ -3962,17 +3992,39 @@ const DEFAULT_IMG_TEMPLATE = `記事本文を読み込み、内容に合わせ�
 function getImgPromptTemplate() {
   return localStorage.getItem('beyan_img_template') || DEFAULT_IMG_TEMPLATE;
 }
+function _syncImgTemplateTAs(value) {
+  // 作業モーダル内のtextareaと設定モーダル内のtextareaを両方同期
+  const wta = document.getElementById('imgtemplate-textarea');
+  if (wta) { wta.value = value; wta.dataset.loaded = '1'; }
+  const sta = document.getElementById('settings-imgprompt-tmpl');
+  if (sta) sta.value = value;
+}
 function saveImgPromptTemplate() {
   const ta = document.getElementById('imgtemplate-textarea');
   if (!ta) return;
   localStorage.setItem('beyan_img_template', ta.value);
+  _syncImgTemplateTAs(ta.value);
   toast('✅ テンプレートを保存しました');
 }
 function resetImgPromptTemplate() {
-  const ta = document.getElementById('imgtemplate-textarea');
-  if (!ta) return;
-  ta.value = DEFAULT_IMG_TEMPLATE;
   localStorage.removeItem('beyan_img_template');
+  _syncImgTemplateTAs(DEFAULT_IMG_TEMPLATE);
+  toast('🔄 デフォルトに戻しました');
+}
+function saveSettingsImgTemplate() {
+  const ta = document.getElementById('settings-imgprompt-tmpl');
+  if (!ta) return;
+  localStorage.setItem('beyan_img_template', ta.value);
+  _syncImgTemplateTAs(ta.value);
+  const msg = document.getElementById('settings-imgprompt-msg');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 2000); }
+  toast('✅ 見出し画像テンプレートを保存しました');
+}
+function resetSettingsImgTemplate() {
+  localStorage.removeItem('beyan_img_template');
+  _syncImgTemplateTAs(DEFAULT_IMG_TEMPLATE);
+  const msg = document.getElementById('settings-imgprompt-msg');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 2000); }
   toast('🔄 デフォルトに戻しました');
 }
 function loadImgTemplateEditor() {
