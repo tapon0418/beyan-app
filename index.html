@@ -61,10 +61,12 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
   min-height:52px;display:flex;align-items:center;padding:4px 12px;gap:6px}
 .brand{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:700;
   color:#a0d0a8;flex-shrink:0;letter-spacing:.08em;text-shadow:0 1px 8px rgba(60,180,80,.2);padding-right:4px}
-.topbar-pills{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:0;flex:1}
+.topbar-pills{display:flex;gap:3px;overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;padding-bottom:0;flex:1;min-width:0}
 .topbar-pills::-webkit-scrollbar{display:none}
-.tpill{font-size:12px;padding:7px 13px;border-radius:20px;font-weight:700;border:none;
-  background:rgba(255,255,255,.1);color:rgba(210,235,210,.85);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap}
+.tpill{font-size:12px;padding:7px 11px;border-radius:20px;font-weight:700;border:none;
+  background:rgba(255,255,255,.1);color:rgba(210,235,210,.85);cursor:pointer;font-family:inherit;transition:all .15s;white-space:nowrap;flex-shrink:0}
+@media(max-width:820px){.tpill{font-size:11px;padding:6px 9px}}
+@media(max-width:640px){.tpill{font-size:10px;padding:5px 8px}.tpill .tpill-label{display:none}}
 .tpill.active{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,102,80,.45)}
 
 /* ===== MAIN ===== */
@@ -217,6 +219,9 @@ input[type=text],textarea,select{
   font-size:16px;font-family:inherit;outline:none;transition:border-color .2s;
   -webkit-appearance:none}
 input:focus,textarea:focus,select:focus{border-color:var(--accent);background:var(--bg5)}
+/* 設定モーダル（ダークUI）内のtextareaはフォーカスしてもダーク背景を維持 */
+#settings-modal textarea,#settings-modal textarea:focus{background:#111 !important;color:#e8e8e8 !important;border-color:#555 !important}
+#settings-modal textarea:focus{border-color:#7c7 !important}
 textarea{resize:vertical;line-height:1.7;min-height:90px}
 select option{background:var(--bg3)}
 .input-label{font-size:11px;color:var(--text2);font-weight:700;text-transform:uppercase;
@@ -1932,7 +1937,7 @@ input:focus, textarea:focus, select:focus {
       <div id="mwimg-result" style="display:none;margin-bottom:12px">
         <img id="mwimg-img" src="#" alt="生成された見出し画像"
           style="width:100%;border-radius:10px;display:block;border:1px solid var(--border);margin-bottom:8px">
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;margin-bottom:10px">
           <button onclick="mwImgDownload()"
             style="flex:1;min-height:44px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
             ⬇️ ダウンロード
@@ -1940,6 +1945,16 @@ input:focus, textarea:focus, select:focus {
           <button onclick="runImgGenFromPrompt()"
             style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit">
             🔄 再生成
+          </button>
+        </div>
+        <!-- 修正指示エリア -->
+        <div style="border-top:1px solid var(--border);padding-top:10px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600">💬 修正指示（このまま送ると上記プロンプトに追記して再生成）：</div>
+          <textarea id="mwimg-refine-input" rows="3" placeholder="例：背景をもっと明るくして&#10;例：タイトル文字を大きくして&#10;例：アイコンを📝🎯に変えて"
+            style="width:100%;font-size:13px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;min-height:80px"></textarea>
+          <button onclick="refineAndRegenImg()"
+            style="width:100%;min-height:46px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px">
+            ✏️ この指示で修正・再生成
           </button>
         </div>
       </div>
@@ -2644,6 +2659,8 @@ function openWork(id) {
   if (imgEl) imgEl.src = '#';
   const mwpEl = document.getElementById('mwimg-prompt');
   if (mwpEl) mwpEl.value = '';
+  const refineEl = document.getElementById('mwimg-refine-input');
+  if (refineEl) refineEl.value = '';
   const buildBtn = document.getElementById('btn-build-imgprompt');
   if (buildBtn) { buildBtn.disabled = false; buildBtn.textContent = '📝 指示文を生成・確認'; }
   document.getElementById('mw-xedit').value='';
@@ -4052,6 +4069,21 @@ function loadImgTemplateEditor() {
 // ================================================================
 let imggenNoteId = null;
 let _imggenCurrentNote = null;
+
+// 修正指示をプロンプトに追記して再生成
+function refineAndRegenImg() {
+  const refine = (document.getElementById('mwimg-refine-input').value || '').trim();
+  if (!refine) { toast('修正指示を入力してください'); return; }
+  const promptEl = document.getElementById('mwimg-prompt');
+  if (!promptEl || !promptEl.value.trim()) { toast('先に「指示文を生成・確認」を押してください'); return; }
+  // 修正指示を現在のプロンプトに追記
+  const refined = promptEl.value.trim() + '\n\n■ 修正指示：\n' + refine;
+  promptEl.value = refined;
+  // 修正指示をクリア
+  document.getElementById('mwimg-refine-input').value = '';
+  // 修正後のプロンプトで再生成
+  runImgGenFromPrompt();
+}
 
 function refreshImggenTitle() {
   const titleEl = document.getElementById('mwimg-note-title');
