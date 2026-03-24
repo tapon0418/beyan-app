@@ -122,6 +122,39 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 .search-wrap input:focus{border-color:var(--accent)}
 .search-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3)}
 
+/* ===== NOTE 3カラムレイアウト ===== */
+.notes-layout{display:block}
+@media(min-width:1024px){
+  .notes-layout{display:grid;grid-template-columns:200px 1fr 200px;gap:16px;align-items:start}
+}
+.notes-sidebar-l,.notes-sidebar-r{display:none}
+@media(min-width:1024px){
+  .notes-sidebar-l,.notes-sidebar-r{
+    display:block;background:var(--bg2);border:1px solid var(--border);
+    border-radius:var(--r);padding:12px;position:sticky;top:64px;
+  }
+}
+.nsb-head{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.nsb-sec{margin-bottom:10px}
+.nsb-label{font-size:10px;color:var(--text3);font-weight:700;margin-bottom:5px;
+  text-transform:uppercase;letter-spacing:.4px;display:block}
+.nsb-btn{display:block;width:100%;text-align:left;padding:5px 8px;
+  border:1px solid var(--border);border-radius:6px;background:var(--bg3);
+  color:var(--text2);font-size:12px;cursor:pointer;font-family:inherit;
+  margin-bottom:4px;transition:background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nsb-btn:hover{background:var(--bg4)}
+.nsb-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent);font-weight:700}
+.nsb-stat-row{display:flex;justify-content:space-between;align-items:center;
+  font-size:12px;padding:5px 0;border-bottom:1px solid var(--border)}
+.nsb-stat-row:last-child{border-bottom:none}
+.nsb-stat-val{font-weight:700;color:var(--accent)}
+.nsb-recent-item{font-size:11px;color:var(--text2);padding:4px 0;
+  border-bottom:1px solid var(--border);line-height:1.4;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.nsb-recent-item:last-child{border-bottom:none}
+.nsb-recent-item:hover{color:var(--accent)}
+
 /* ===== NOTE ITEM ===== */
 .note-item{background:var(--bg4);border:1px solid var(--border);border-radius:10px;
   margin-bottom:8px;cursor:pointer;display:block;overflow:hidden;
@@ -1622,37 +1655,50 @@ input:focus, textarea:focus, select:focus {
       <svg class="sec-chevron open" id="chev-notes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="sec-body" id="body-notes" style="padding:12px 14px 8px">
-      <!-- クロへ執筆予定一覧コピー -->
-      <button onclick="copyNoteListForClaude()"
-        style="width:100%;min-height:38px;margin-bottom:8px;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#7c3aed;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
-        🤝 執筆予定一覧をクロにコピー
-      </button>
-      <div class="filter-bar" id="filter-bar"></div>
-      <div class="search-wrap">
-        <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="note-search" type="text" placeholder="タイトル・メモで絞り込み" oninput="_renderNotesD()">
-      </div>
-      <div id="note-list" style="padding:4px 3px;"></div>
+      <div class="notes-layout">
 
-      <!-- テーマ一括登録 -->
-      <details style="margin-top:8px">
-        <summary style="list-style:none;cursor:pointer">
-          <div class="paste-card" style="margin-top:0;display:flex;align-items:center;gap:8px;padding:10px 14px">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            <span style="font-size:12px;color:var(--text2);font-weight:700;flex:1">テーマをまとめて登録（ClaudeのJSON出力をペースト）</span>
-            <svg class="paste-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text3);transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+        <!-- ▼ 左サイドバー（1024px以上で表示） -->
+        <div id="notes-sidebar-l" class="notes-sidebar-l"></div>
+
+        <!-- ▼ メインコンテンツ -->
+        <div class="notes-main">
+          <!-- クロへ執筆予定一覧コピー -->
+          <button onclick="copyNoteListForClaude()"
+            style="width:100%;min-height:38px;margin-bottom:8px;background:rgba(124,58,237,.1);border:1px solid rgba(124,58,237,.3);border-radius:8px;color:#7c3aed;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+            🤝 執筆予定一覧をクロにコピー
+          </button>
+          <div class="filter-bar" id="filter-bar"></div>
+          <div class="search-wrap">
+            <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input id="note-search" type="text" placeholder="タイトル・メモで絞り込み" oninput="_renderNotesD()">
           </div>
-        </summary>
-        <div style="padding:0 2px 2px">
-          <textarea id="theme-paste-input" rows="5" placeholder="[{&quot;title&quot;:&quot;タイトル&quot;,&quot;type&quot;:&quot;エッセイ(A)&quot;,&quot;status&quot;:&quot;idea&quot;,...}]" style="font-size:14px;line-height:1.6;border-radius:0 0 10px 10px;border-top:none;background:var(--bg3)"></textarea>
-          <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
-            <button class="btn btn-ghost btn-sm" id="btn-clipboard-paste" onclick="navigator.clipboard.readText().then(t=>{document.getElementById('theme-paste-input').value=t;toast('クリップボードから貼り付けました');}).catch(()=>toast('クリップボードへのアクセスを許可してください'))" style="flex:1;min-height:44px;font-size:13px">📋 貼り付け</button>
-            <button class="btn btn-accent btn-sm" id="btn-paste-themes" style="flex:1;min-height:44px;font-size:13px;font-weight:700">✅ 登録する</button>
-            <button class="btn btn-ghost btn-sm" id="btn-paste-clear" style="width:auto;min-width:56px;min-height:44px">クリア</button>
-          </div>
-          <div id="theme-paste-result" style="margin-top:6px;font-size:12px"></div>
-        </div>
-      </details>
+          <div id="note-list" style="padding:4px 3px;"></div>
+
+          <!-- テーマ一括登録 -->
+          <details style="margin-top:8px">
+            <summary style="list-style:none;cursor:pointer">
+              <div class="paste-card" style="margin-top:0;display:flex;align-items:center;gap:8px;padding:10px 14px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span style="font-size:12px;color:var(--text2);font-weight:700;flex:1">テーマをまとめて登録（ClaudeのJSON出力をペースト）</span>
+                <svg class="paste-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--text3);transition:transform .2s"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+            </summary>
+            <div style="padding:0 2px 2px">
+              <textarea id="theme-paste-input" rows="5" placeholder="[{&quot;title&quot;:&quot;タイトル&quot;,&quot;type&quot;:&quot;エッセイ(A)&quot;,&quot;status&quot;:&quot;idea&quot;,...}]" style="font-size:14px;line-height:1.6;border-radius:0 0 10px 10px;border-top:none;background:var(--bg3)"></textarea>
+              <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                <button class="btn btn-ghost btn-sm" id="btn-clipboard-paste" onclick="navigator.clipboard.readText().then(t=>{document.getElementById('theme-paste-input').value=t;toast('クリップボードから貼り付けました');}).catch(()=>toast('クリップボードへのアクセスを許可してください'))" style="flex:1;min-height:44px;font-size:13px">📋 貼り付け</button>
+                <button class="btn btn-accent btn-sm" id="btn-paste-themes" style="flex:1;min-height:44px;font-size:13px;font-weight:700">✅ 登録する</button>
+                <button class="btn btn-ghost btn-sm" id="btn-paste-clear" style="width:auto;min-width:56px;min-height:44px">クリア</button>
+              </div>
+              <div id="theme-paste-result" style="margin-top:6px;font-size:12px"></div>
+            </div>
+          </details>
+        </div><!-- /notes-main -->
+
+        <!-- ▼ 右サイドバー（1024px以上で表示） -->
+        <div id="notes-sidebar-r" class="notes-sidebar-r"></div>
+
+      </div><!-- /notes-layout -->
     </div>
   </div>
 
@@ -2233,6 +2279,8 @@ let curId = null;       // 現在開いている記事ID
 let workType = 'A';     // 作業モーダルのXタイプ
 let mxType = 'A';       // X追加モーダルのXタイプ
 let nf = 'all';         // noteフィルター
+let nfMonth = '';       // 月別フィルター（サイドバー）
+let nfCat   = '';       // カテゴリフィルター（サイドバー）
 let xfilt = 'all';      // Xフィルター
 
 // ================================================================
@@ -2349,6 +2397,9 @@ function renderNotes() {
   let list = [...S.notes].filter(n => n.status !== 'done');
   if (nf !== 'all') list = list.filter(n => n.status === nf);
   if (q) list = list.filter(n => (n.title+' '+(n.memo||'')).toLowerCase().includes(q));
+  // サイドバーフィルター
+  if (nfMonth) list = list.filter(n => (n.publishDate||'').includes(nfMonth));
+  if (nfCat)   list = list.filter(n => n.cat === nfCat);
 
   document.getElementById('note-list').innerHTML = list.length === 0
     ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">該当する記事がありません</div>`
@@ -2396,8 +2447,72 @@ function renderNotes() {
   // セクション高さを再計算
   const body = document.getElementById('body-notes');
   if (secState.notes) { body.style.maxHeight = '99999px'; body.style.overflow = 'visible'; }
+  // サイドバーを更新
+  renderNotesSidebars();
 }
 function setNf(v) { nf = v; renderNotes(); }
+
+// ================================================================
+// noteサイドバー（3カラムレイアウト用）
+// ================================================================
+function setNfMonth(v) { nfMonth = (nfMonth === v) ? '' : v; renderNotes(); }
+function setNfCat(v)   { nfCat   = (nfCat   === v) ? '' : v; renderNotes(); }
+function resetSidebarFilters() { nfMonth = ''; nfCat = ''; renderNotes(); }
+
+function renderNotesSidebars() {
+  const lEl = document.getElementById('notes-sidebar-l');
+  const rEl = document.getElementById('notes-sidebar-r');
+
+  // 左サイドバー：月別・カテゴリフィルター
+  if (lEl) {
+    const activeNotes = S.notes.filter(n => n.status !== 'done');
+    const months = [...new Set(activeNotes.map(n => n.publishDate||'').filter(Boolean))].sort();
+    const cats   = [...new Set(activeNotes.map(n => n.cat||'').filter(Boolean))].sort();
+    lEl.innerHTML = `
+      <div class="nsb-head">🔍 絞り込み</div>
+      <div class="nsb-sec">
+        <span class="nsb-label">月別</span>
+        ${months.length
+          ? months.map(m => `<button class="nsb-btn${nfMonth===m?' active':''}" onclick="setNfMonth('${m}')">${m}</button>`).join('')
+          : '<div style="color:var(--text3);font-size:11px;padding:2px 0">データなし</div>'}
+      </div>
+      <div class="nsb-sec">
+        <span class="nsb-label">カテゴリ</span>
+        ${cats.length
+          ? cats.map(c => `<button class="nsb-btn${nfCat===c?' active':''}" onclick="setNfCat('${_escHtml(c)}')">${_escHtml(c)}</button>`).join('')
+          : '<div style="color:var(--text3);font-size:11px;padding:2px 0">データなし</div>'}
+      </div>
+      <button class="nsb-btn" onclick="resetSidebarFilters()"
+        style="border-color:var(--orange);color:var(--orange);margin-top:4px">
+        ↩ リセット
+      </button>`;
+  }
+
+  // 右サイドバー：今月の進捗
+  if (rEl) {
+    const all   = S.notes;
+    const done  = all.filter(n => n.status === 'done').length;
+    const noRes = all.filter(n => !n.researchDone && n.status !== 'done').length;
+    const recent = [...all].sort((a,b) => b.id - a.id).slice(0, 3);
+    rEl.innerHTML = `
+      <div class="nsb-head">📊 今月の進捗</div>
+      <div style="margin-bottom:12px">
+        <div class="nsb-stat-row">
+          <span style="font-size:12px">執筆完了</span>
+          <span class="nsb-stat-val">${done} / ${all.length}</span>
+        </div>
+        <div class="nsb-stat-row">
+          <span style="font-size:12px">リサーチ未完了</span>
+          <span class="nsb-stat-val" style="color:var(--orange)">${noRes}</span>
+        </div>
+      </div>
+      <span class="nsb-label">直近3件</span>
+      ${recent.map(n => `
+        <div class="nsb-recent-item" onclick="openWork(${n.id})" title="${_escHtml(n.title)}">
+          ${_escHtml(n.title)}
+        </div>`).join('') || '<div style="color:var(--text3);font-size:11px">なし</div>'}`;
+  }
+}
 
 // ---- 削除（2タップ確認）----
 let _delPending = null, _delTimer = null;
