@@ -5079,10 +5079,10 @@ function _buildSVG(t1, t2, t3, vars) {
   const dark = '#080808';
 
   const fs1 = t1.length <= 6 ? 38 : t1.length <= 10 ? 32 : 26;
-  const fs2 = t2.length <= 7  ? 88
-            : t2.length <= 10 ? 76
-            : t2.length <= 14 ? 64
-            : t2.length <= 18 ? 54 : 44;
+  const fs2 = t2.length <= 6  ? 96
+            : t2.length <= 8  ? 84
+            : t2.length <= 10 ? 72
+            : t2.length <= 12 ? 62 : 52;
   const fs3 = t3.length <= 10 ? 34
             : t3.length <= 16 ? 28
             : t3.length <= 22 ? 24 : 20;
@@ -5221,7 +5221,7 @@ async function runImgGenFromTemplate(n, apiKey) {
 キーワード：${kwHint}
 
 以下のJSONのみ出力してください（説明・記号・絵文字・マークダウン禁止）：
-{"text_layer1":"（12文字以内・体言止めか疑問形・読者の悩みや状況）","text_layer2":"（18文字以内・体言止め・記事の核心・数字推奨）","text_layer3":"（24文字以内・具体的なベネフィット・数字推奨）"}
+{"text_layer1":"（12文字以内・体言止めか疑問形・読者の悩みや状況）","text_layer2":"（12文字以内・体言止め必須・記事の核心・数字推奨）","text_layer3":"（24文字以内・具体的なベネフィット・数字推奨）"}
 
 禁止ワード：絵文字・振り返って・読んでみる・してみた・について・解説・楽天`;
 
@@ -5235,11 +5235,11 @@ async function runImgGenFromTemplate(n, apiKey) {
     const raw = (data.candidates?.[0]?.content?.parts?.[0]?.text||'').replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(raw);
     t1 = _cleanText(parsed.text_layer1||'', 12);
-    t2 = _cleanText(parsed.text_layer2||'', 18);
+    t2 = _cleanText(parsed.text_layer2||'', 12);
     t3 = _cleanText(parsed.text_layer3||'', 24);
   } catch(e) {}
   // フォールバック：空欄をキーワード・タイトルで補完
-  if (!t2) t2 = _cleanText(n.title||'', 18);
+  if (!t2) t2 = _cleanText(n.title||'', 12);
   if (!t1 && kwHint) t1 = _cleanText(kwHint.split(' ')[0]||'', 12);
   if (!t3 && kwHint) t3 = _cleanText(kwHint.split(' ').slice(-1)[0]||'', 24);
 
