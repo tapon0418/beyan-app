@@ -5256,12 +5256,13 @@ ${patternRule}
 
   let t1='', t2='', t3='';
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,{
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${apiKey}`,{
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:256,temperature:0.9} })
     });
     const data = await res.json();
-    // 修正2: パース堅牢化（```json除去→trim→JSON.parse、失敗時ログ）
+    console.log('[ImgGen] Gemini成功', res.status);
+    // パース堅牢化（```json除去→trim→JSON.parse、失敗時ログ）
     const raw = (data.candidates?.[0]?.content?.parts?.[0]?.text||'').replace(/```json|```/g,'').trim();
     try {
       const parsed = JSON.parse(raw);
