@@ -1,3 +1,13 @@
+<!--
+ * ⚠️ nabebase 開発ルール（必ず守ること）
+ *
+ * 1. Firebase上のデータを変更するときは必ず app_version を更新する
+ * 2. テンプレート系（beyan_img_template / beyan_gemini_tmpl）を変更するときは
+ *    _isLegacyTemplate() のlegacyMarkersに古い識別文字列を追加する
+ * 3. 新しい機能を追加するときはFirebaseのキー名をこのファイルの先頭に定数として定義する
+ * 4. localStorage を新たに使うことは禁止。必ずFirebaseを使う
+ * 5. 関数を削除・置き換えるときは必ずgrepで呼び出し箇所を確認してから削除する
+-->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -1699,6 +1709,11 @@ input:focus, textarea:focus, select:focus {
       </div>
     </div>
 
+    <!-- システム診断 -->
+    <div style="margin-top:18px;padding-top:14px;border-top:1px solid #333;">
+      <button onclick="runSystemDiagnosis()" style="width:100%;min-height:40px;background:#1a1a2e;border:1px solid #444;border-radius:10px;color:#aaa;font-size:.82rem;cursor:pointer;font-family:inherit;">🔍 システム診断</button>
+    </div>
+
   </div>
 </div>
 
@@ -2599,6 +2614,71 @@ function renderAll() {
   renderXPromptList();
 }
 
+// ── テンプレート旧フォーマット判定 ──
+function _isLegacyTemplate(val) {
+  if (!val) return false;
+  const legacyMarkers = [
+    'あなたはnoteの見出し画像デザインの専門家',
+    'SVGコードは含めない',
+    'デザイン変数をJSONのみで返して',
+    '"svg":"SVGコード全文"',
+    '"svg":',
+    'bg_type.*gradient_dark.*layout.*icon_type',
+  ];
+  return legacyMarkers.some(marker => val.includes(marker));
+}
+
+// ── システム診断 ──
+async function runSystemDiagnosis() {
+  const lines = [];
+  lines.push(`APP_VERSION: ${APP_VERSION} / IMG_SYSTEM_VERSION: ${IMG_SYSTEM_VERSION}`);
+  lines.push(_fbRef ? '🟢 Firebase: 接続中' : '🔴 Firebase: 未接続');
+
+  if (_fbRef) {
+    // beyan_img_template
+    try {
+      const s1 = await _fbRef.child('beyan_img_template').once('value');
+      const tv = s1.val() || '';
+      if (_isLegacyTemplate(tv)) {
+        lines.push('⚠️ beyan_img_template: 古い形式を検出');
+        if (confirm('beyan_img_template が古い形式です。リセットしますか？')) {
+          await _fbRef.child('beyan_img_template').set('');
+          _imgTemplate = '';
+          lines.push('✅ beyan_img_template: リセット済み');
+        }
+      } else {
+        lines.push('✅ beyan_img_template: ' + (tv ? '設定あり' : '空/デフォルト（正常）'));
+      }
+    } catch(e) { lines.push('⚠️ beyan_img_template: 読み取り失敗'); }
+
+    // app_version
+    try {
+      const s2 = await _fbRef.child('app_version').once('value');
+      const sv = s2.val() || '未設定';
+      lines.push(sv === APP_VERSION ? `✅ app_version: ${sv}` : `⚠️ app_version: Firebase=${sv} / 現在=${APP_VERSION}`);
+    } catch(e) { lines.push('⚠️ app_version: 読み取り失敗'); }
+
+    // beyan_img_keywords
+    try {
+      const s3 = await _fbRef.child('beyan_img_keywords').once('value');
+      const kw = s3.val();
+      lines.push(kw ? `✅ beyan_img_keywords: ${JSON.stringify(kw).slice(0,60)}` : '⚪ beyan_img_keywords: 未設定');
+    } catch(e) { lines.push('⚠️ beyan_img_keywords: 読み取り失敗'); }
+  }
+
+  // Geminiテンプレート更新日
+  lines.push(_geminiTmplUpdatedAt
+    ? `✅ Geminiテンプレート更新: ${_geminiTmplUpdatedAt.slice(0,10)}`
+    : '⚪ Geminiテンプレート: 未更新');
+
+  // APIキー
+  lines.push(localStorage.getItem('beyan_gemini_key') ? '✅ Gemini APIキー: 設定済み' : '⚠️ Gemini APIキー: 未設定');
+  lines.push(localStorage.getItem('beyan_claude_key') || localStorage.getItem('claude_api_key')
+    ? '✅ Claude APIキー: 設定済み' : '⚠️ Claude APIキー: 未設定');
+
+  alert(lines.join('\n'));
+}
+
 function initFirebase() {
   try {
     if (typeof firebase === 'undefined' || !firebase.initializeApp) return;
@@ -2609,9 +2689,20 @@ function initFirebase() {
     // 起動時一度だけ古い画像テンプレートを強制クリア
     _fbRef.child('beyan_img_template').once('value').then(snap => {
       const val = snap.val() || '';
-      if (val === '' || val.includes('あなたはnoteの見出し画像デザインの専門家') || val.includes('SVGコードは含めない')) {
+      if (!val || _isLegacyTemplate(val) || val.includes('デザイン変数をJSONのみで返して')) {
         _fbRef.child('beyan_img_template').set('');
         _imgTemplate = '';
+      }
+    });
+
+    // バージョンチェック：変わっていたらテンプレートをリセット
+    _fbRef.child('app_version').once('value').then(snap => {
+      const savedVersion = snap.val() || '0';
+      if (savedVersion !== APP_VERSION) {
+        _fbRef.child('beyan_img_template').set('');
+        _fbRef.child('app_version').set(APP_VERSION);
+        _imgTemplate = '';
+        console.log(`[nabebase] バージョン更新 ${savedVersion}→${APP_VERSION} テンプレートリセット済み`);
       }
     });
 
@@ -2712,11 +2803,7 @@ function initFirebase() {
     {
       db.ref('beyan_img_template').on('value', snap => {
         const fbVal = snap.val();
-        const isOld = !fbVal
-          || fbVal.includes('あなたはnoteの見出し画像デザインの専門家')
-          || fbVal.includes('SVGコードは含めない')
-          || fbVal.includes('"svg":"SVGコード全文"')
-          || fbVal.includes('"svg":');
+        const isOld = !fbVal || _isLegacyTemplate(fbVal);
         if (isOld) {
           db.ref('beyan_img_template').set('');
           db.ref('beyan_img_template_ts').set(new Date().toISOString());
@@ -3992,6 +4079,8 @@ function saveManualClaudeResult() {
 }
 
 // ================================================================
+const APP_VERSION       = '4.0.0';
+const IMG_SYSTEM_VERSION = '4';
 const GEMINI_KEY_STORAGE = 'beyan_gemini_key';
 const GEMINI_TMPL_KEY = 'beyan_gemini_tmpl';
 const CLAUDE_TMPL_KEY = 'beyan_claude_tmpl';
@@ -4529,6 +4618,7 @@ function copyAndOpenKuro() {
 }
 
 function saveGeminiTmpl() {
+  if (_fbRef && _geminiTmpl) { _fbRef.child('beyan_gemini_tmpl_bak').set(_geminiTmpl); }
   const val = document.getElementById('settings-gemini-tmpl').value;
   _geminiTmpl = val;
   const ts = new Date().toISOString();
@@ -5126,6 +5216,7 @@ function _fbImgTmplRemove() {
 function saveImgPromptTemplate() {
   const ta = document.getElementById('imgtemplate-textarea');
   if (!ta) return;
+  if (_fbRef && _imgTemplate) { _fbRef.child('beyan_img_template_bak').set(_imgTemplate); }
   _fbImgTmplSet(ta.value);
   _syncImgTemplateTAs(ta.value);
   toast('✅ テンプレートを保存しました');
