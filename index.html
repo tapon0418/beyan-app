@@ -5764,24 +5764,27 @@ async function svgToBase64PNG(svgStr) {
 
 function displayMwImg(mimeType, b64, prompt) {
   const imgEl = document.getElementById('mwimg-img');
-  imgEl.src = `data:${mimeType};base64,${b64}`;
-  imgEl.dataset.mime = mimeType; imgEl.dataset.b64 = b64; imgEl.dataset.url = '';
-  document.getElementById('mwimg-result').style.display = 'block';
+  if (imgEl) { imgEl.src = `data:${mimeType};base64,${b64}`; imgEl.dataset.mime = mimeType; imgEl.dataset.b64 = b64; imgEl.dataset.url = ''; }
+  const resultEl = document.getElementById('mwimg-result');
+  if (resultEl) resultEl.style.display = 'block';
   // promptはtextareaに既に表示中なので上書きしない（編集内容を保持）
   const promptEl = document.getElementById('mwimg-prompt');
   if (promptEl && prompt && !promptEl.value) promptEl.value = prompt;
-  document.getElementById('mwimg-prompt-wrap').style.display = 'block';
+  const promptWrap = document.getElementById('mwimg-prompt-wrap');
+  if (promptWrap) promptWrap.style.display = 'block';
   updateCcheckImg(`data:${mimeType};base64,${b64}`);
   toast('🖼️ 画像生成完了！');
 }
 
 function displayMwImgUrl(url, prompt) {
   const imgEl = document.getElementById('mwimg-img');
-  imgEl.src = url; imgEl.dataset.mime = 'image/jpeg'; imgEl.dataset.b64 = ''; imgEl.dataset.url = url;
-  document.getElementById('mwimg-result').style.display = 'block';
+  if (imgEl) { imgEl.src = url; imgEl.dataset.mime = 'image/jpeg'; imgEl.dataset.b64 = ''; imgEl.dataset.url = url; }
+  const resultEl = document.getElementById('mwimg-result');
+  if (resultEl) resultEl.style.display = 'block';
   const promptEl = document.getElementById('mwimg-prompt');
   if (promptEl && prompt && !promptEl.value) promptEl.value = prompt;
-  document.getElementById('mwimg-prompt-wrap').style.display = 'block';
+  const promptWrap = document.getElementById('mwimg-prompt-wrap');
+  if (promptWrap) promptWrap.style.display = 'block';
   updateCcheckImg(url);
   toast('🖼️ 画像生成完了！(pollinations.ai)');
 }
