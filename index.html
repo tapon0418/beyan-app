@@ -4859,42 +4859,76 @@ function renderNetaList() {
 }
 
 // ================================================================
-// 見出し画像生成 — テンプレート管理
+// 見出し画像生成システム v4（パペリサーチ完全反映版）
 // ================================================================
-const DEFAULT_IMG_TEMPLATE = `あなたはnote人気クリエイターの見出しコピーライターです。
-以下の記事情報から、見出し画像に使う3行のコピーをJSONで返してください。
+const DEFAULT_IMG_TEMPLATE = '';
 
-記事タイトル：{{title}}
-ジャンル：{{genre}}
-執筆メモ：{{memo}}
-キーワードヒント：{{keywords_hint}}
+// 【A】デザインパターン辞典（パペリサーチ15種を10種に統合）
+const IMG_PATTERNS = [
+  // 0: 数字ドーン型（副業・お金・ノウハウ系の王道）
+  { name:'number_impact', bg1:'#0d0d0d', bg2:'#1a0000', acc:'#ff4500', sub:'#ffd700',
+    desc:'大きな数字・実績を前面に', genres:['副業','ライティング','楽天'], emotion:'警告・損失' },
 
-【厳守ルール】
-・text_layer1：読者が「自分のことだ」と感じる状況・悩みを12文字以内で。疑問形か体言止め推奨
-・text_layer2：記事の核心＝得られる結果・学び・驚きを18文字以内で。インパクト重視
-・text_layer3：具体的な数字・手順・ベネフィットを24文字以内で
-・「楽天」「読んでみる」「振り返って」などの曖昧な言葉禁止
-・AIっぽい表現（〜してみた・〜について解説）を可能な限り避ける
-・数字が使えるなら必ず入れる（5つ・3ステップ・月2万円など）
+  // 1: 感情訴求型（エッセイ・共感・自己啓発系）
+  { name:'emotion_appeal', bg1:'#0d0010', bg2:'#1a0020', acc:'#ff2d7d', sub:'#ff9ec8',
+    desc:'読者の悩み・感情に直接訴える', genres:['振り返り','その他'], emotion:'共感・親しみ' },
 
-JSONのみ出力（コードブロック・説明文・改行不要）：
-{"text_layer1":"","text_layer2":"","text_layer3":""}`;
+  // 2: ノウハウ体系型（AI・テック・ハウツー系）
+  { name:'howto_system', bg1:'#020818', bg2:'#0a1628', acc:'#00d4ff', sub:'#7dd3fc',
+    desc:'手順・整理感・構造化', genres:['AI活用'], emotion:'学び・整理' },
 
-// ── デザインパターン定数（nabebase側で強制選択・全ダーク統一） ──
-const BG_PATTERNS = [
-  { bg_type:'gradient_dark', bg_color1:'#0d0d0d', bg_color2:'#1a0000', accent:'#ff4500', text:'#ffffff', sub:'#ffd700', name:'dark_red' },
-  { bg_type:'gradient_dark', bg_color1:'#020818', bg_color2:'#0a1628', accent:'#00d4ff', text:'#ffffff', sub:'#7dd3fc', name:'navy_blue' },
-  { bg_type:'gradient_dark', bg_color1:'#0a1f0a', bg_color2:'#0d2b0d', accent:'#ffd700', text:'#ffffff', sub:'#ffa500', name:'green_gold' },
-  { bg_type:'gradient_dark', bg_color1:'#0d0015', bg_color2:'#1a0030', accent:'#bf5fff', text:'#ffffff', sub:'#e0aaff', name:'black_purple' },
-  { bg_type:'gradient_dark', bg_color1:'#1a0000', bg_color2:'#2d0000', accent:'#ff6b35', text:'#ffffff', sub:'#ffffff', name:'blood_red' },
-  { bg_type:'gradient_dark', bg_color1:'#001a12', bg_color2:'#003322', accent:'#00e5a0', text:'#ffffff', sub:'#b2ffdf', name:'dark_emerald' },
-  { bg_type:'solid_dark',    bg_color1:'#1c1c1c', bg_color2:'#252525', accent:'#ff8c00', text:'#ffffff', sub:'#ffd699', name:'charcoal_orange' },
-  { bg_type:'solid_dark',    bg_color1:'#0a0f1e', bg_color2:'#0a0f1e', accent:'#c0c0c0', text:'#ffffff', sub:'#e8e8e8', name:'navy_silver' },
-  { bg_type:'gradient_dark', bg_color1:'#0d0010', bg_color2:'#1a0020', accent:'#ff2d7d', text:'#ffffff', sub:'#ff9ec8', name:'black_pink' },
-  { bg_type:'split',         bg_color1:'#000000', bg_color2:'#0a0f1e', accent:'#ffd700', text:'#ffffff', sub:'#ffa500', name:'split_gold' },
+  // 3: 警告・失敗談型（損失回避・リアル体験系）
+  { name:'warning_fail', bg1:'#1a0000', bg2:'#2d0000', acc:'#ff6b35', sub:'#ffffff',
+    desc:'危機感・失敗・地雷を視覚化', genres:['副業','ライティング'], emotion:'警告・損失' },
+
+  // 4: 実績・権威型（有料note・信頼構築系）
+  { name:'authority', bg1:'#0a0f1e', bg2:'#0a0f1e', acc:'#ffd700', sub:'#ffa500',
+    desc:'実績・肩書・数字で信頼を作る', genres:['有料note','楽天'], emotion:'達成・実績' },
+
+  // 5: 達成・成功型（ポジティブ・モチベーション系）
+  { name:'achievement', bg1:'#001a12', bg2:'#003322', acc:'#00e5a0', sub:'#b2ffdf',
+    desc:'達成感・成功・変化を表現', genres:['振り返り','副業'], emotion:'達成・実績' },
+
+  // 6: ミニマル洗練型（ビジネス・上質・思考系）
+  { name:'minimal', bg1:'#0a0f1e', bg2:'#0a0f1e', acc:'#c0c0c0', sub:'#e8e8e8',
+    desc:'余白・タイポで勝つ', genres:['AI活用','その他'], emotion:'好奇心・問いかけ' },
+
+  // 7: 問いかけ型（思考・エッセイ・共感系）
+  { name:'question', bg1:'#0d0015', bg2:'#1a0030', acc:'#bf5fff', sub:'#e0aaff',
+    desc:'読者に自問を発生させる', genres:['振り返り','その他'], emotion:'好奇心・問いかけ' },
+
+  // 8: 体験談リアル型（経験・等身大・日常系）
+  { name:'realstory', bg1:'#1c1c1c', bg2:'#252525', acc:'#ff8c00', sub:'#ffd699',
+    desc:'リアルな体験・手触り感', genres:['ライティング','振り返り'], emotion:'共感・親しみ' },
+
+  // 9: 分割・比較型（ビフォーアフター・対比系）
+  { name:'split_compare', bg1:'#000000', bg2:'#0a0f1e', acc:'#ffd700', sub:'#ffa500',
+    desc:'変化・差分・比較を一目で', genres:['副業','楽天'], emotion:'達成・実績' },
 ];
-const LAYOUT_PATTERNS = ['center','top_bottom','diagonal','left_heavy','split'];
-const ICON_PATTERNS   = ['bulb','fire','lightning','arrow','check','star','crown','graph','person','warning','none'];
+
+// 【B】ジャンル別推奨パターン（パペリサーチC反映）
+const GENRE_PATTERN_MAP = {
+  'AI活用':      { primary:[2], secondary:[6], ng:['emotion_appeal'] },
+  '副業':        { primary:[0,3], secondary:[5], ng:['minimal'] },
+  'ライティング':{ primary:[0,3], secondary:[8], ng:['minimal'] },
+  '楽天':        { primary:[4], secondary:[9], ng:['question'] },
+  '振り返り':    { primary:[5,7], secondary:[8], ng:['warning_fail'] },
+  'その他':      { primary:[1,6,7], secondary:[8], ng:[] },
+  '有料note':    { primary:[4], secondary:[9], ng:['emotion_appeal'] },
+};
+
+// 【C】感情トーン対応表（パペリサーチD反映）
+const EMOTION_DESIGN = {
+  '警告・損失':     { icon:'warning', layout:'left_heavy', fontWeight:'900' },
+  '共感・親しみ':   { icon:'person',  layout:'center',     fontWeight:'700' },
+  '学び・整理':     { icon:'check',   layout:'top_bottom', fontWeight:'700' },
+  '達成・実績':     { icon:'crown',   layout:'left_heavy', fontWeight:'900' },
+  '好奇心・問いかけ':{ icon:'bulb',   layout:'diagonal',   fontWeight:'700' },
+  '悩み解決':       { icon:'arrow',   layout:'top_bottom', fontWeight:'700' },
+};
+
+const LAYOUTS = ['center','left_heavy','top_bottom','diagonal','split'];
+const ICONS   = ['none','bulb','fire','lightning','star','crown','warning','check','graph','arrow','person'];
 
 function getImgPromptTemplate() {
   return (_imgTemplate !== null && _imgTemplate !== undefined) ? _imgTemplate : DEFAULT_IMG_TEMPLATE;
@@ -4924,294 +4958,181 @@ function _applyImgTmplPlaceholders(n) {
     .replace(/\{\{memo\}\}/g,          n.memo || '');
 }
 
-// ── バリエーション強制: 生成履歴管理 ──
-const _IMG_HIST_FB_KEY = 'beyan_img_history';
-const _IMG_HIST_LS_KEY = 'beyan_img_history';
+// ── 画像生成履歴管理（v4）──
 const _imgHistoryCache = {};
 
-async function _getImgHistory(noteId) {
-  if (_imgHistoryCache[noteId] !== undefined) return _imgHistoryCache[noteId];
-  if (_fbRef) {
-    try {
-      const snap = await firebase.database().ref(`${_IMG_HIST_FB_KEY}/${noteId}`).once('value');
-      _imgHistoryCache[noteId] = snap.val() || [];
-    } catch(e) { _imgHistoryCache[noteId] = []; }
-  } else {
-    try {
-      const all = JSON.parse(localStorage.getItem(_IMG_HIST_LS_KEY) || '{}');
-      _imgHistoryCache[noteId] = all[noteId] || [];
-    } catch(e) { _imgHistoryCache[noteId] = []; }
-  }
+function _cleanText(s, max) {
+  if (!s) return '';
+  s = s.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}【】〔〕（）()「」『』]/gu, '').trim();
+  return s.length > max ? s.slice(0, max) : s;
+}
+
+async function _loadImgHist(noteId) {
+  if (_imgHistoryCache[noteId]) return _imgHistoryCache[noteId];
+  if (!_fbRef) return [];
+  try {
+    const snap = await _fbRef.child('img_hist_' + noteId).once('value');
+    _imgHistoryCache[noteId] = snap.val() || [];
+  } catch(e) { _imgHistoryCache[noteId] = []; }
   return _imgHistoryCache[noteId];
 }
 
-async function _saveImgHistory(noteId, entry) {
-  const hist = await _getImgHistory(noteId);
-  hist.unshift({ bg_idx: entry.bg_idx ?? null, layout: entry.layout || '', icon: entry.icon || '', timestamp: entry.timestamp || new Date().toISOString() });
-  if (hist.length > 3) hist.length = 3;
-  _imgHistoryCache[noteId] = hist;
-  if (_fbRef) {
-    firebase.database().ref(`${_IMG_HIST_FB_KEY}/${noteId}`).set(hist);
-  } else {
-    try {
-      const all = JSON.parse(localStorage.getItem(_IMG_HIST_LS_KEY) || '{}');
-      all[noteId] = hist;
-      localStorage.setItem(_IMG_HIST_LS_KEY, JSON.stringify(all));
-    } catch(e) {}
-  }
+async function _saveImgHist(noteId, entry) {
+  if (!_fbRef) return;
+  try {
+    const hist = await _loadImgHist(noteId);
+    hist.unshift(entry);
+    _imgHistoryCache[noteId] = hist.slice(0, 5);
+    await _fbRef.child('img_hist_' + noteId).set(_imgHistoryCache[noteId]);
+  } catch(e) {}
 }
 
-function _pickDesignVars(historyList) {
-  const usedBG     = historyList.map(h => h.bg_idx).filter(v => v !== undefined && v !== null);
-  const usedLayout = historyList.map(h => h.layout).filter(Boolean);
-  const usedIcon   = historyList.map(h => h.icon).filter(Boolean);
+// 【D】パターン選択（パペリサーチB・F反映：バリエーション強制）
+function _pickPattern(cat, memo, hist) {
+  const m = (memo||'').toLowerCase();
+  const usedPi = hist.map(h => h.pi).filter(v => v !== undefined);
+  const usedLy = hist.map(h => h.ly).filter(Boolean);
+  const usedIc = hist.map(h => h.ic).filter(Boolean);
 
-  const availBG = BG_PATTERNS.map((_,i) => i).filter(i => !usedBG.includes(i));
-  const bgIdx = availBG.length > 0
-    ? availBG[Math.floor(Math.random() * availBG.length)]
-    : Math.floor(Math.random() * BG_PATTERNS.length);
+  const gmap = GENRE_PATTERN_MAP[cat] || GENRE_PATTERN_MAP['その他'];
+  const candidates = [...gmap.primary, ...gmap.secondary]
+    .filter(i => !gmap.ng.includes(IMG_PATTERNS[i].name));
 
-  const availLayout = LAYOUT_PATTERNS.filter(l => !usedLayout.includes(l));
-  const layout = availLayout.length > 0
-    ? availLayout[Math.floor(Math.random() * availLayout.length)]
-    : LAYOUT_PATTERNS[Math.floor(Math.random() * LAYOUT_PATTERNS.length)];
+  const unused = candidates.filter(i => !usedPi.includes(i));
+  const pi = unused.length > 0
+    ? unused[Math.floor(Math.random() * unused.length)]
+    : candidates[Math.floor(Math.random() * candidates.length)];
 
-  const availIcon = ICON_PATTERNS.filter(i => !usedIcon.includes(i));
-  const icon = availIcon.length > 0
-    ? availIcon[Math.floor(Math.random() * availIcon.length)]
-    : ICON_PATTERNS[Math.floor(Math.random() * ICON_PATTERNS.length)];
+  const pat = IMG_PATTERNS[pi];
+  const emotionDef = EMOTION_DESIGN[pat.emotion] || {};
 
-  const bg = BG_PATTERNS[bgIdx];
-  return {
-    bg_type: bg.bg_type, bg_color1: bg.bg_color1, bg_color2: bg.bg_color2,
-    accent_color: bg.accent, text_color: bg.text, sub_color: bg.sub,
-    layout, icon_type: icon, bg_idx: bgIdx, name: bg.name
+  const availLy = LAYOUTS.filter(l => !usedLy.includes(l));
+  const ly = emotionDef.layout && !usedLy.includes(emotionDef.layout)
+    ? emotionDef.layout
+    : (availLy.length > 0 ? availLy[Math.floor(Math.random()*availLy.length)] : LAYOUTS[Math.floor(Math.random()*LAYOUTS.length)]);
+
+  const availIc = ICONS.filter(i => !usedIc.includes(i));
+  const ic = emotionDef.icon && !usedIc.includes(emotionDef.icon)
+    ? emotionDef.icon
+    : (availIc.length > 0 ? availIc[Math.floor(Math.random()*availIc.length)] : 'none');
+
+  const bg = {...pat};
+  if (m.includes('失敗')||m.includes('地雷')) { bg.acc='#ff4500'; bg.sub='#ffd700'; }
+  if (m.includes('万円')||m.includes('収益')||m.includes('稼')) { bg.acc='#ffd700'; bg.sub='#ffa500'; }
+
+  return { pi, ly, ic, bg, fw: emotionDef.fontWeight || '700' };
+}
+
+function _buildSVG(t1, t2, t3, vars) {
+  const {bg, ly, ic, fw} = vars;
+  const W=1280, H=670;
+  const acc=bg.acc, sub=bg.sub, txtC='#ffffff';
+
+  const fs1 = t1.length <= 8 ? 36 : 30;
+  const fs2 = t2.length <= 10 ? 80 : t2.length <= 15 ? 68 : 56;
+  const fs3 = t3.length <= 12 ? 32 : t3.length <= 20 ? 28 : 24;
+
+  const POS = ({
+    center:     { x1:640,a1:'middle',y1:190, x2:640,a2:'middle',y2:370, x3:640,a3:'middle',y3:510 },
+    left_heavy: { x1:80, a1:'start', y1:160, x2:80, a2:'start', y2:345, x3:80, a3:'start', y3:495 },
+    top_bottom: { x1:640,a1:'middle',y1:120, x2:80, a2:'start', y2:320, x3:640,a3:'middle',y3:565 },
+    diagonal:   { x1:80, a1:'start', y1:160, x2:80, a2:'start', y2:355, x3:900,a3:'start', y3:545 },
+    split:      { x1:80, a1:'start', y1:160, x2:80, a2:'start', y2:335, x3:780,a3:'start', y3:485 },
+  })[ly] || { x1:640,a1:'middle',y1:190, x2:640,a2:'middle',y2:370, x3:640,a3:'middle',y3:510 };
+
+  const isSplit = bg.name === 'split_compare';
+  const bgEl = isSplit
+    ? `<rect width="${W*0.42}" height="${H}" fill="${bg.bg1}"/>
+       <rect x="${W*0.42}" width="${W*0.58}" height="${H}" fill="${bg.bg2}"/>
+       <line x1="${W*0.42}" y1="0" x2="${W*0.44}" y2="${H}" stroke="${acc}" stroke-width="4"/>`
+    : `<defs><linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
+         <stop offset="0%" stop-color="${bg.bg1}"/>
+         <stop offset="100%" stop-color="${bg.bg2}"/>
+       </linearGradient></defs>
+       <rect width="${W}" height="${H}" fill="url(#bgG)"/>`;
+
+  const iconPaths = {
+    bulb:'M50,10C28,10 10,28 10,50C10,65 18,78 30,85L30,95L70,95L70,85C82,78 90,65 90,50C90,28 72,10 50,10Z M35,100L65,100 M40,108L60,108',
+    fire:'M50,5C50,5 65,25 65,40C65,40 55,30 50,35C50,35 60,50 55,65C55,65 45,50 40,55C35,60 35,75 50,90C30,80 15,65 20,45C20,45 30,55 35,50C35,50 25,30 50,5Z',
+    lightning:'M55,5L20,55L45,55L40,95L75,40L52,40Z',
+    star:'M50,5L61,35L95,35L68,57L79,91L50,70L21,91L32,57L5,35L39,35Z',
+    crown:'M10,70L10,30L30,50L50,10L70,50L90,30L90,70Z M5,75L95,75L95,85L5,85Z',
+    warning:'M50,5L95,90L5,90Z M47,40L53,40L51,68L49,68Z M50,76A4,4 0 1,1 50,84A4,4 0 1,1 50,76',
+    check:'M10,50L35,75L90,20',
+    graph:'M10,90L10,10 M10,90L90,90 M20,70L20,50L38,50L38,70Z M48,70L48,30L66,30L66,70Z M74,70L74,45L88,45',
+    arrow:'M20,50L75,50 M55,25L80,50L55,75',
+    person:'M50,30A18,18 0 1,1 50,12A18,18 0 1,1 50,30Z M15,90C15,68 30,55 50,55C70,55 85,68 85,90Z',
   };
-}
+  const iconEl = (ic && ic !== 'none' && iconPaths[ic])
+    ? `<g transform="translate(1120,510) scale(0.65)" opacity="0.1">
+         <path d="${iconPaths[ic]}" fill="${acc}" stroke="${acc}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+       </g>` : '';
 
-// ── hex ユーティリティ（モジュールレベル） ──
-function _hexToRGB(h) {
-  const c = String(h||'#000000').replace('#','');
-  if (c.length < 6) return [0,0,0];
-  return [parseInt(c.slice(0,2),16)||0, parseInt(c.slice(2,4),16)||0, parseInt(c.slice(4,6),16)||0];
-}
-function _darkenHex(h, amt) {
-  const [r,g,b] = _hexToRGB(h);
-  return '#'+[r,g,b].map(v=>Math.max(0,v-amt).toString(16).padStart(2,'0')).join('');
-}
+  const deco = `
+    <rect width="8" height="${H}" fill="${acc}" opacity="0.85"/>
+    <rect y="${H-6}" width="${W}" height="6" fill="${acc}" opacity="0.75"/>
+    <circle cx="${Math.round(W*0.76)}" cy="${Math.round(H*0.44)}" r="290" fill="${acc}" opacity="0.05"/>
+    <rect x="18" y="18" width="14" height="14" fill="${acc}" opacity="0.55"/>`;
 
-// ── ジャンル別カラーオーバーライド（ハードルール） ──
-function _applyGenreOverrides(vars, genre, memo) {
-  const m = (memo || '').toLowerCase();
-  const applyBg = (idx) => {
-    const bg = BG_PATTERNS[idx];
-    Object.assign(vars, {
-      bg_type: bg.bg_type, bg_color1: bg.bg_color1, bg_color2: bg.bg_color2,
-      accent_color: bg.accent, text_color: bg.text, sub_color: bg.sub,
-      name: bg.name, bg_idx: idx
-    });
-  };
-  if (genre === '副業' || genre === 'ライティング') {
-    if (!vars.name || !['dark_red','blood_red','charcoal_orange'].includes(vars.name)) {
-      applyBg(m.includes('失敗') ? 4 : 0);
-    }
-  }
-  if (genre === '楽天' || genre === 'AI活用') {
-    if (!vars.name || !['green_gold','navy_blue'].includes(vars.name)) {
-      applyBg(genre === '楽天' ? 2 : 1);
-    }
-  }
-  if (m.includes('失敗') || m.includes('地雷') || m.includes('ダメ')) {
-    vars.accent_color = '#ff4500'; vars.sub_color = '#ffd700';
-  }
-  if (m.includes('万円') || m.includes('収益') || m.includes('稼')) {
-    vars.accent_color = '#ffd700'; vars.sub_color = '#ffa500';
-  }
-  return vars;
-}
-
-// ── デザイン変数からSVGを構築 ──
-function buildSVGFromDesignVars(vars) {
-  const W = 1280, H = 670;
-  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-  const bg1    = vars.bg_color1    || '#1a1a2e';
-  const bg2    = vars.bg_color2    || '#16213e';
-  const accent = vars.accent_color || '#f5a623';
-  const textC  = vars.text_color   || '#ffffff';
-  const subC   = vars.sub_color    || accent;
-  const bgType = vars.bg_type      || 'gradient_dark';
-  const layout = vars.layout       || 'center';
-  const iconTp = vars.icon_type    || 'none';
-  const t1raw  = String(vars.text_layer1 || '');
-  const t2raw  = String(vars.text_layer2 || '');
-  const t3raw  = String(vars.text_layer3 || '');
-  const t1 = esc(t1raw), t2 = esc(t2raw), t3 = esc(t3raw);
-  const ff = "'Noto Sans JP',sans-serif";
-  const bg3 = _darkenHex(bg2, 28);
-  const [ar,ag,ab] = _hexToRGB(accent);
-
-  // 文字数ベースのフォントサイズ
-  const fs1 = [...t1raw].length <= 8 ? 36 : [...t1raw].length <= 12 ? 30 : 24;
-  const fs2 = [...t2raw].length <= 10 ? 80 : [...t2raw].length <= 15 ? 68 : 56;
-  const fs3 = [...t3raw].length <= 12 ? 32 : [...t3raw].length <= 20 ? 28 : 24;
-
-  // ── SVGアイコンパス (100×100 viewBox) ──
-  const ICONS = {
-    bulb:      'M50,8 C30,8 15,23 15,42 C15,58 24,68 34,74 L34,84 L66,84 L66,74 C76,68 85,58 85,42 C85,23 70,8 50,8Z M38,84 L38,91 L62,91 L62,84Z M44,91 L46,96 L54,96 L56,91Z',
-    fire:      'M50,2 C38,14 20,30 20,50 C20,70 33,82 50,82 C67,82 80,70 80,50 C80,30 62,14 50,2Z M50,32 C44,40 42,52 46,62 C48,67 52,67 54,62 C58,52 56,40 50,32Z',
-    lightning: 'M57,3 L18,55 L44,55 L37,97 L82,42 L56,42Z',
-    arrow:     'M50,5 L90,46 L68,46 L68,93 L32,93 L32,46 L10,46Z',
-    check:     'M14,50 L39,76 L86,21 L76,11 L39,56 L24,40Z',
-    star:      'M50,5 L62,37 L97,37 L70,57 L80,90 L50,69 L20,90 L30,57 L3,37 L38,37Z',
-    crown:     'M5,78 L5,40 L27,60 L50,8 L73,60 L95,40 L95,78Z',
-    graph:     'M8,88 L8,45 L28,45 L28,88Z M40,88 L40,20 L60,20 L60,88Z M72,88 L72,36 L92,36 L92,88Z M4,88 L96,88 L96,94 L4,94Z',
-    person:    'M50,5 C39,5 30,14 30,25 C30,36 39,45 50,45 C61,45 70,36 70,25 C70,14 61,5 50,5Z M12,93 C12,65 28,54 50,54 C72,54 88,65 88,93Z',
-    warning:   'M50,5 L95,88 L5,88Z M46,37 L47,65 L53,65 L54,37Z M50,73 A4,4 0,1,0,50,81 A4,4 0,1,0,50,73Z',
-    none: ''
-  };
-  const iconPath = ICONS[iconTp] || '';
-
-  // ── 背景 ──
-  let bgContent = '';
-  if (bgType === 'solid_dark') {
-    bgContent = `<rect width="${W}" height="${H}" fill="${bg1}"/>
-    <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-      <circle cx="10" cy="10" r="1" fill="${textC}" opacity="0.03"/>
-    </pattern>
-    <rect width="${W}" height="${H}" fill="url(#dots)"/>`;
-  } else if (bgType === 'split') {
-    const splitX = Math.round(W * 0.4);
-    bgContent = `<rect width="${W}" height="${H}" fill="${bg1}"/>
-    <rect x="${splitX}" y="0" width="${W - splitX}" height="${H}" fill="${bg2}"/>
-    <polygon points="${splitX},0 ${splitX+48},0 ${splitX+96},${H} ${splitX+48},${H}" fill="${accent}" opacity="0.2"/>`;
-  } else {
-    bgContent = `<rect width="${W}" height="${H}" fill="url(#mainGrad)"/>
-    <rect width="${W}" height="${H}" fill="url(#vignette)" opacity="0.32"/>`;
-  }
-
-  // ── 固定デコレーション ──
-  const decorations = `
-  <rect x="0" y="0" width="8" height="${H}" fill="${accent}"/>
-  <rect x="0" y="${H - 6}" width="${W}" height="6" fill="url(#bottomBarG)"/>
-  <circle cx="960" cy="335" r="300" fill="${accent}" opacity="0.08"/>
-  <rect x="20" y="20" width="20" height="20" fill="${accent}" opacity="0.6"/>
-  <circle cx="1200" cy="570" r="200" fill="${accent}" opacity="0.05"/>`;
-
-  // ── アイコン（装飾背景要素・opacity:0.15）──
-  let iconEl = '';
-  if (iconPath && iconTp !== 'none') {
-    const ix = layout === 'split' ? 850 : 1150;
-    const iy = layout === 'split' ? 360 : 520;
-    const sz = 100;
-    iconEl = `<g transform="translate(${ix - sz / 2},${iy - sz / 2})" opacity="0.15">
-      <path d="${iconPath}" fill="${accent}" fill-rule="evenodd"/>
-    </g>`;
-  }
-
-  // ── テキスト描画（drop-shadow + stroke で視認性確保）──
-  const txt = (x, y, text, fs, weight, col, anchor = 'start') =>
-    text ? `<text x="${x}" y="${y}" font-family="${ff}" font-size="${fs}" font-weight="${weight}" fill="${col}" text-anchor="${anchor}" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" paint-order="stroke" filter="url(#tsh)">${text}</text>` : '';
-
-  let textEls = '';
-  if (layout === 'center') {
-    textEls = txt(640, 200, t1, fs1, '700', subC, 'middle')
-            + txt(640, 350, t2, fs2, '900', textC, 'middle')
-            + txt(640, 480, t3, fs3, '700', subC, 'middle');
-  } else if (layout === 'top_bottom') {
-    textEls = txt(640, 130, t1, fs1, '700', subC, 'middle')
-            + txt(80,  300, t2, fs2, '900', textC, 'start')
-            + txt(640, 540, t3, fs3, '700', subC, 'middle');
-  } else if (layout === 'diagonal') {
-    textEls = txt(80, 160, t1, fs1, '700', subC, 'start')
-            + txt(80, 330, t2, fs2, '900', textC, 'start')
-            + txt(640, 540, t3, fs3, '700', subC, 'start');
-  } else if (layout === 'left_heavy') {
-    textEls = txt(80, 180, t1, fs1, '700', subC, 'start')
-            + txt(80, 340, t2, fs2, '900', textC, 'start')
-            + txt(80, 490, t3, fs3, '700', subC, 'start');
-  } else { // split
-    textEls = txt(80,  200, t1, fs1, '700', subC, 'start')
-            + txt(80,  370, t2, fs2, '900', textC, 'start')
-            + txt(960, 540, t3, fs3, '700', subC, 'middle');
-  }
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-  <defs>
-    <linearGradient id="mainGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="${bg1}"/>
-      <stop offset="50%" stop-color="${bg2}"/>
-      <stop offset="100%" stop-color="${bg3}"/>
-    </linearGradient>
-    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
-      <stop offset="0%" stop-color="transparent"/>
-      <stop offset="100%" stop-color="rgba(0,0,0,0.52)"/>
-    </radialGradient>
-    <linearGradient id="bottomBarG" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="${accent}"/>
-      <stop offset="100%" stop-color="${accent}" stop-opacity="0.2"/>
-    </linearGradient>
-    <filter id="tsh" x="-5%" y="-20%" width="115%" height="150%">
-      <feDropShadow dx="2" dy="3" stdDeviation="4" flood-color="rgba(0,0,0,0.92)" flood-opacity="1"/>
+  const filter = `<defs>
+    <filter id="ts" x="-5%" y="-5%" width="115%" height="115%">
+      <feDropShadow dx="2" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.85"/>
     </filter>
-  </defs>
-  ${bgContent}
-  ${decorations}
-  ${iconEl}
-  ${textEls}
-</svg>`;
+  </defs>`;
+
+  const textEl = `
+    <text x="${POS.x1}" y="${POS.y1}" font-size="${fs1}" font-weight="700"
+      font-family="'Noto Sans JP',sans-serif" fill="${sub}"
+      text-anchor="${POS.a1}" filter="url(#ts)">${t1}</text>
+    <text x="${POS.x2}" y="${POS.y2}" font-size="${fs2}" font-weight="${fw}"
+      font-family="'Noto Sans JP',sans-serif" fill="${txtC}"
+      text-anchor="${POS.a2}" filter="url(#ts)">${t2}</text>
+    <text x="${POS.x3}" y="${POS.y3}" font-size="${fs3}" font-weight="700"
+      font-family="'Noto Sans JP',sans-serif" fill="${acc}"
+      text-anchor="${POS.a3}" filter="url(#ts)">${t3}</text>`;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+    ${filter}${bgEl}${deco}${iconEl}${textEl}
+  </svg>`;
 }
 
 async function runImgGenFromTemplate(n, apiKey) {
-  const TEXT_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  const kw = (() => { try { return JSON.parse(localStorage.getItem('beyan_img_keywords')||'null'); } catch(e){return null;} })();
+  const kwHint = kw ? `${kw.catch||''} ${kw.main||''} ${kw.sub||''}`.trim() : '';
 
-  // ① nabebase側でデザイン変数を強制選択
-  const hist = await _getImgHistory(n.id);
-  const designVars = _pickDesignVars(hist);
+  const hist = await _loadImgHist(n.id);
+  const vars = _pickPattern(n.cat||'', n.memo||'', hist);
 
-  // ② Geminiにはテキスト3行のみ生成させる
-  const textPrompt = _applyImgTmplPlaceholders(n);
-  let textJSON = null;
-  for (const model of TEXT_MODELS) {
-    try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: textPrompt }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 256 }
-        })
-      });
-      const d = await r.json();
-      if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
-      const raw = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      const m = raw.match(/\{[\s\S]*?\}/);
-      if (m) { try { textJSON = JSON.parse(m[0]); } catch(e2) { continue; } }
-      if (textJSON && (textJSON.text_layer1 || textJSON.text_layer2)) break;
-      textJSON = null;
-    } catch(e) { console.warn('[imggen] text gen', model, e.message); }
-  }
-  // テキスト生成失敗時はタイトルからフォールバック
-  if (!textJSON) {
-    const title = n.title || '';
-    textJSON = {
-      text_layer1: [...title].slice(0, 12).join(''),
-      text_layer2: [...title].slice(0, 20).join(''),
-      text_layer3: n.cat ? `${n.cat}を読んでみる` : 'あなたへのヒント'
-    };
+  const prompt = `あなたはnote人気クリエイターの見出しコピーライターです。
+記事タイトル：${n.title||''}
+ジャンル：${n.cat||''}
+メモ：${n.memo||''}
+キーワード：${kwHint}
+
+以下のJSONのみ出力してください（説明・記号・絵文字・マークダウン禁止）：
+{"text_layer1":"（12文字以内・体言止めか疑問形・読者の悩みや状況）","text_layer2":"（18文字以内・体言止め・記事の核心・数字推奨）","text_layer3":"（24文字以内・具体的なベネフィット・数字推奨）"}
+
+禁止ワード：絵文字・振り返って・読んでみる・してみた・について・解説・楽天`;
+
+  let t1='', t2=n.title||'', t3='';
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:256,temperature:0.9} })
+    });
+    const data = await res.json();
+    const raw = (data.candidates?.[0]?.content?.parts?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(raw);
+    t1 = _cleanText(parsed.text_layer1||'', 12);
+    t2 = _cleanText(parsed.text_layer2||'', 18) || n.title;
+    t3 = _cleanText(parsed.text_layer3||'', 24);
+  } catch(e) {
+    t2 = n.title||'';
   }
 
-  // ③ マージ + ジャンル補正
-  const finalVars = { ...designVars, ...textJSON };
-  _applyGenreOverrides(finalVars, n.cat, n.memo);
-
-  // ④ SVG生成 → PNG変換
-  const svg = buildSVGFromDesignVars(finalVars);
-  const b64 = await svgToBase64PNG(svg);
-
-  // ⑤ 履歴保存（非ブロッキング）
-  _saveImgHistory(n.id, { bg_idx: designVars.bg_idx, layout: designVars.layout, icon: designVars.icon_type, timestamp: new Date().toISOString() });
-
-  return b64;
+  const svg = _buildSVG(t1, t2, t3, vars);
+  await _saveImgHist(n.id, { pi:vars.pi, ly:vars.ly, ic:vars.ic });
+  return svgToBase64PNG(svg);
 }
 function _syncImgTemplateTAs(value) {
   // 作業モーダル内のtextareaと設定モーダル内のtextareaを両方同期
