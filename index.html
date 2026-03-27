@@ -1337,15 +1337,13 @@ input:focus, textarea:focus, select:focus {
 /* ===== NOTE CARD COLLAPSE ===== */
 .ni-header{display:flex;align-items:center;gap:7px;padding:10px 12px;cursor:pointer;position:relative;user-select:none;min-height:52px}
 .ni-title-wrap{flex:1;min-width:0;overflow:hidden}
-.ni-title{font-size:14px;font-weight:600;color:var(--text);word-break:break-word;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;margin-bottom:5px}
-.ni-progress{display:flex;align-items:center}
-.ni-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .2s}
-.ni-dot.done{background:var(--green)}
-.ni-dot.active{width:9px;height:9px;background:var(--accent);box-shadow:0 0 0 2px rgba(58,102,80,.2)}
-.ni-dot.future{background:var(--bg4);border:1.5px solid var(--border2)}
-.ni-line{flex:1;height:2px;min-width:8px;max-width:22px}
-.ni-line.done{background:var(--green)}
-.ni-line.future{background:var(--bg4)}
+.ni-title{font-size:15px;font-weight:700;color:var(--text);word-break:break-word;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.4;margin-bottom:6px}
+.ni-progress{display:flex;align-items:center;gap:2px;flex-wrap:nowrap;overflow:hidden}
+.ni-stp{font-size:9px;font-weight:700;white-space:nowrap;flex-shrink:0;line-height:1}
+.ni-stp.done{color:var(--accent);opacity:.75}
+.ni-stp.active{color:var(--accent);font-weight:800;background:rgba(58,102,80,.12);padding:1px 5px;border-radius:6px}
+.ni-stp.future{color:var(--text3)}
+.ni-arr{font-size:7px;color:var(--text3);flex-shrink:0;opacity:.5;padding:0 1px}
 .ni-chevron{flex-shrink:0;color:var(--text3);transition:transform .2s}
 .note-item.expanded .ni-chevron{transform:rotate(180deg)}
 .ni-detail{max-height:0;overflow:hidden;transition:max-height .3s ease}
@@ -2619,7 +2617,6 @@ function renderNotes() {
           <div class="ni-detail-inner">
             ${n.memo?`<div class="note-memo" style="margin-bottom:8px">📌 ${n.memo}</div>`:''}
             <div class="note-meta" style="margin-bottom:8px">
-              ${n.cat?`<span class="badge badge-cat">${n.cat}</span>`:''}
               <span class="badge" style="background:${SC[n.status]||'var(--text3)'};color:#fff;opacity:.9">${SL[n.status]||'アイデア'}</span>
               ${n.type?`<span class="badge badge-type">${n.type}</span>`:''}
               <span class="badge badge-date" onclick="toggleMonthEdit(${n.id},event)">📅 ${n.publishDate||'月未設定'}</span>
@@ -2649,19 +2646,14 @@ function renderNotes() {
   renderNotesSidebars();
 }
 function buildNoteSteps(n) {
-  // ドット5個+ライン4本: リサーチ→執筆→レビュー→画像→完成
   const statusIdx = {idea:0,writing:1,review:2,xprep:3,done:4};
   const cur = statusIdx[n.status] ?? 0;
-  const total = 5;
-  let html = '';
-  for (let i = 0; i < total; i++) {
+  const labels = ['リサーチ','執筆','レビュー','画像','完成'];
+  return labels.map((lbl,i) => {
     const cls = i < cur ? 'done' : i === cur ? 'active' : 'future';
-    html += `<span class="ni-dot ${cls}"></span>`;
-    if (i < total - 1) {
-      html += `<span class="ni-line ${i < cur ? 'done' : 'future'}"></span>`;
-    }
-  }
-  return html;
+    const sep = i < labels.length-1 ? '<span class="ni-arr">▶</span>' : '';
+    return `<span class="ni-stp ${cls}">${lbl}</span>${sep}`;
+  }).join('');
 }
 function toggleNoteCard(id, e) {
   if (e) e.stopPropagation();
