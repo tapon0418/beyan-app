@@ -4978,9 +4978,69 @@ function _applyImgTmplPlaceholders(n) {
     .replace(/\{\{memo\}\}/g,   n.memo || '');
 }
 
+// ── バリエーション強制: 生成履歴管理 ──
+const _IMG_HIST_FB_KEY = 'beyan_img_history';
+const _IMG_HIST_LS_KEY = 'beyan_img_history';
+const _imgHistoryCache = {};
+
+async function _getImgHistory(noteId) {
+  if (_imgHistoryCache[noteId] !== undefined) return _imgHistoryCache[noteId];
+  if (_fbRef) {
+    try {
+      const snap = await firebase.database().ref(`${_IMG_HIST_FB_KEY}/${noteId}`).once('value');
+      _imgHistoryCache[noteId] = snap.val() || [];
+    } catch(e) { _imgHistoryCache[noteId] = []; }
+  } else {
+    try {
+      const all = JSON.parse(localStorage.getItem(_IMG_HIST_LS_KEY) || '{}');
+      _imgHistoryCache[noteId] = all[noteId] || [];
+    } catch(e) { _imgHistoryCache[noteId] = []; }
+  }
+  return _imgHistoryCache[noteId];
+}
+
+async function _saveImgHistory(noteId, design) {
+  const hist = await _getImgHistory(noteId);
+  const entry = {
+    bg_style:    design.bg_style    || '',
+    main_color:  design.main_color  || '',
+    layout:      design.layout      || '',
+    icon:        design.icon        || '',
+    emotion_tone:design.emotion_tone|| ''
+  };
+  hist.unshift(entry);
+  if (hist.length > 3) hist.length = 3;
+  _imgHistoryCache[noteId] = hist;
+  if (_fbRef) {
+    firebase.database().ref(`${_IMG_HIST_FB_KEY}/${noteId}`).set(hist);
+  } else {
+    try {
+      const all = JSON.parse(localStorage.getItem(_IMG_HIST_LS_KEY) || '{}');
+      all[noteId] = hist;
+      localStorage.setItem(_IMG_HIST_LS_KEY, JSON.stringify(all));
+    } catch(e) {}
+  }
+}
+
+function _buildHistoryBanStr(hist) {
+  if (!hist || hist.length === 0) return '';
+  const labels = ['直前回', '2回前', '3回前'];
+  const lines = hist.map((h, i) =>
+    `${labels[i] || (i+1)+'回前'}：${h.bg_style}・${h.main_color}・${h.layout}・${h.icon}・${h.emotion_tone}`
+  );
+  return `\n\n【過去の生成履歴（これらは今回使用禁止）】\n${lines.join('\n')}\n上記5変数（背景スタイル・メインカラー・構図・アイコン・感情トーン）は今回絶対に使用しないこと。3回連続で同じ組み合わせを繰り返すことは禁止。`;
+}
+
 async function runImgGenFromTemplate(n, apiKey) {
   const TEXT_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-  const prompt = _applyImgTmplPlaceholders(n);
+  const hist = await _getImgHistory(n.id);
+  const banStr = _buildHistoryBanStr(hist);
+  const basePrompt = _applyImgTmplPlaceholders(n);
+  // 出力形式の直前にbansを挿入
+  const prompt = banStr
+    ? basePrompt.replace('【出力形式】', banStr.trimStart() + '\n\n---\n\n【出力形式】')
+    : basePrompt;
+
   let design = null;
   for (const model of TEXT_MODELS) {
     try {
@@ -5001,7 +5061,10 @@ async function runImgGenFromTemplate(n, apiKey) {
     } catch(e) { console.warn('[imggen] template', model, e.message); }
   }
   if (!design || !design.svg) throw new Error('SVG not returned from template');
-  return svgToBase64PNG(design.svg);
+  const b64 = await svgToBase64PNG(design.svg);
+  // 生成成功後に履歴保存（awaitしない：UI をブロックしない）
+  _saveImgHistory(n.id, design);
+  return b64;
 }
 function _syncImgTemplateTAs(value) {
   // 作業モーダル内のtextareaと設定モーダル内のtextareaを両方同期
