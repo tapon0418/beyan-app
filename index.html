@@ -4861,58 +4861,38 @@ function renderNetaList() {
 // ================================================================
 // 見出し画像生成 — テンプレート管理
 // ================================================================
-const DEFAULT_IMG_TEMPLATE = `あなたはnoteの見出し画像デザインの専門家です。
-以下の記事情報を分析し、最適なデザイン変数をJSONのみで返してください。SVGコードは含めない。
+const DEFAULT_IMG_TEMPLATE = `以下の記事情報から、note見出し画像に使うテキスト3行をJSONで返してください。
 
-【記事情報】
-タイトル：{{title}}
+記事タイトル：{{title}}
+キャッチコピーヒント：{{catch}}
+メインキーワード：{{main}}
 ジャンル：{{genre}}
-キーワードヒント：{{keywords_hint}}
-記事メモ：{{memo}}
+メモ：{{memo}}
 
----
+ルール：
+・text_layer1：読者の悩みや状況を突く12文字以内のキャッチ
+・text_layer2：記事の核心を伝える20文字以内のメインコピー
+・text_layer3：読者へのベネフィット25文字以内のサブコピー
+・AIっぽい表現禁止。人間が書いたような自然な言葉で
+・JSONのみ出力（説明文不要）
 
-【text_layerの決め方】
-・text_layer1（キャッチ12文字以内）：読者が「自分のことだ」と思うフック
-・text_layer2（メイン20文字以内）：記事の核心メッセージ・最大の成果・解決策
-・text_layer3（サブ25文字以内）：読者への問いかけまたは行動促進
+{"text_layer1":"","text_layer2":"","text_layer3":""}`;
 
----
-
-【ジャンル別カラーハードルール】
-■ 副業・ライター・フリーランス → accent_color: #f5a623〜#e07b20（オレンジ系必須）
-■ AI活用・テック → bg_color1: #0a1628〜#1a2540（青・紺系）、accent: #00c896〜#4ade80（緑系）
-■ 楽天・節約・お金 → accent_color: #d4a017〜#f0c040（金・黄系必須）
-■ エッセイ・自己啓発 → bg_type: gradient_light、暖色系
-■ 有料note → accent_color: #c9a227〜#d4b060（金系）、icon_type: crown または star
-
----
-
-【感情トーン別デザイン指針】
-・達成感 → bg_type:gradient_dark、金・紺、icon:crown/star
-・驚き → bg_type:solid_dark、赤・黄、icon:lightning
-・共感 → bg_type:gradient_light、暖色、icon:person
-・学び → bg_type:gradient_dark、青系、icon:arrow/check
-・警告 → bg_type:solid_dark、赤・黒、icon:warning
-・好奇心 → bg_type:split、紫・青緑、icon:bulb
-・悩み解決 → bg_type:gradient_light、白・青、icon:check
-・緊急性 → bg_type:solid_dark、赤・黄、icon:fire
-
----
-
-【バリエーション強制ルール】
-以下から前回と異なる組み合わせを必ず3つ以上選択：
-
-bg_type：[gradient_dark/gradient_light/solid_dark/solid_light/split]
-layout：[center/top_bottom/diagonal/left_heavy/split]
-icon_type：[bulb/fire/lightning/arrow/check/star/crown/graph/person/warning/none]
-emotion_tone：[緊急・驚き/共感・親しみ/学び・整理/警告・損失/達成・実績/好奇心・問いかけ/悩み解決/権威・信頼]
-
----
-
-【出力形式】JSONのみ（コードブロック不要）
-
-{"pattern":"パターン名","bg_type":"gradient_dark","bg_color1":"#hex","bg_color2":"#hex","accent_color":"#hex","text_color":"#ffffff","sub_color":"#hex","layout":"center","icon_type":"bulb","text_layer1":"12文字以内","text_layer2":"20文字以内","text_layer3":"25文字以内","font_weight":"black","emotion_tone":"感情トーン名","variation_reason":"前回と変えた3変数の説明"}`;
+// ── デザインパターン定数（nabebase側で強制選択） ──
+const BG_PATTERNS = [
+  { bg_type:'gradient_dark',  bg_color1:'#0a0a0a', bg_color2:'#1a1a2e', accent:'#e94560', text:'#ffffff', sub:'#ffd700' },
+  { bg_type:'gradient_dark',  bg_color1:'#1a1a2e', bg_color2:'#16213e', accent:'#00b4d8', text:'#ffffff', sub:'#90e0ef' },
+  { bg_type:'gradient_dark',  bg_color1:'#2d0000', bg_color2:'#5c0000', accent:'#ff6b35', text:'#ffffff', sub:'#ffd166' },
+  { bg_type:'solid_dark',     bg_color1:'#0d1117', bg_color2:'#0d1117', accent:'#39d353', text:'#ffffff', sub:'#7ee787' },
+  { bg_type:'gradient_dark',  bg_color1:'#0f0c29', bg_color2:'#302b63', accent:'#c77dff', text:'#ffffff', sub:'#e0aaff' },
+  { bg_type:'split',          bg_color1:'#000000', bg_color2:'#1a1a1a', accent:'#ffd700', text:'#ffffff', sub:'#ffa500' },
+  { bg_type:'gradient_light', bg_color1:'#fff8e7', bg_color2:'#ffe0b2', accent:'#e65100', text:'#1a1a1a', sub:'#bf360c' },
+  { bg_type:'solid_dark',     bg_color1:'#1b2838', bg_color2:'#1b2838', accent:'#66c0f4', text:'#ffffff', sub:'#c6d4df' },
+  { bg_type:'gradient_dark',  bg_color1:'#004d40', bg_color2:'#00251a', accent:'#69f0ae', text:'#ffffff', sub:'#b9f6ca' },
+  { bg_type:'split',          bg_color1:'#1c1c1c', bg_color2:'#2d2d2d', accent:'#ff4081', text:'#ffffff', sub:'#ff80ab' },
+];
+const LAYOUT_PATTERNS = ['center','top_bottom','diagonal','left_heavy','split'];
+const ICON_PATTERNS   = ['bulb','fire','lightning','arrow','check','star','crown','graph','person','warning','none'];
 
 function getImgPromptTemplate() {
   return (_imgTemplate !== null && _imgTemplate !== undefined) ? _imgTemplate : DEFAULT_IMG_TEMPLATE;
@@ -4963,16 +4943,9 @@ async function _getImgHistory(noteId) {
   return _imgHistoryCache[noteId];
 }
 
-async function _saveImgHistory(noteId, design) {
+async function _saveImgHistory(noteId, entry) {
   const hist = await _getImgHistory(noteId);
-  const entry = {
-    bg_type:     design.bg_type      || '',
-    bg_color1:   design.bg_color1    || '',
-    layout:      design.layout       || '',
-    icon_type:   design.icon_type    || '',
-    emotion_tone:design.emotion_tone || ''
-  };
-  hist.unshift(entry);
+  hist.unshift({ bg_idx: entry.bg_idx ?? null, layout: entry.layout || '', icon: entry.icon || '', timestamp: entry.timestamp || new Date().toISOString() });
   if (hist.length > 3) hist.length = 3;
   _imgHistoryCache[noteId] = hist;
   if (_fbRef) {
@@ -4986,13 +4959,32 @@ async function _saveImgHistory(noteId, design) {
   }
 }
 
-function _buildHistoryBanStr(hist) {
-  if (!hist || hist.length === 0) return '';
-  const labels = ['直前回', '2回前', '3回前'];
-  const lines = hist.map((h, i) =>
-    `${labels[i]}：bg_type=${h.bg_type||'-'}、bg_color1=${h.bg_color1||'-'}、layout=${h.layout||'-'}、icon_type=${h.icon_type||'-'}、emotion_tone=${h.emotion_tone||'-'}`
-  );
-  return `\n\n【過去の生成履歴（これらは今回使用禁止）】\n${lines.join('\n')}\n上記のbg_type・bg_color1・layout・icon_type・emotion_toneは今回絶対に使用しないこと。`;
+function _pickDesignVars(historyList) {
+  const usedBG     = historyList.map(h => h.bg_idx).filter(v => v !== undefined && v !== null);
+  const usedLayout = historyList.map(h => h.layout).filter(Boolean);
+  const usedIcon   = historyList.map(h => h.icon).filter(Boolean);
+
+  const availBG = BG_PATTERNS.map((_,i) => i).filter(i => !usedBG.includes(i));
+  const bgIdx = availBG.length > 0
+    ? availBG[Math.floor(Math.random() * availBG.length)]
+    : Math.floor(Math.random() * BG_PATTERNS.length);
+
+  const availLayout = LAYOUT_PATTERNS.filter(l => !usedLayout.includes(l));
+  const layout = availLayout.length > 0
+    ? availLayout[Math.floor(Math.random() * availLayout.length)]
+    : LAYOUT_PATTERNS[Math.floor(Math.random() * LAYOUT_PATTERNS.length)];
+
+  const availIcon = ICON_PATTERNS.filter(i => !usedIcon.includes(i));
+  const icon = availIcon.length > 0
+    ? availIcon[Math.floor(Math.random() * availIcon.length)]
+    : ICON_PATTERNS[Math.floor(Math.random() * ICON_PATTERNS.length)];
+
+  const bg = BG_PATTERNS[bgIdx];
+  return {
+    bg_type: bg.bg_type, bg_color1: bg.bg_color1, bg_color2: bg.bg_color2,
+    accent_color: bg.accent, text_color: bg.text, sub_color: bg.sub,
+    layout, icon_type: icon, bg_idx: bgIdx
+  };
 }
 
 // ── hex ユーティリティ（モジュールレベル） ──
@@ -5197,40 +5189,53 @@ function buildSVGFromDesignVars(vars) {
 
 async function runImgGenFromTemplate(n, apiKey) {
   const TEXT_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-  const hist = await _getImgHistory(n.id);
-  const banStr = _buildHistoryBanStr(hist);
-  const basePrompt = _applyImgTmplPlaceholders(n);
-  const prompt = banStr
-    ? basePrompt.replace('【出力形式】', banStr.trimStart() + '\n\n---\n\n【出力形式】')
-    : basePrompt;
 
-  let design = null;
+  // ① nabebase側でデザイン変数を強制選択
+  const hist = await _getImgHistory(n.id);
+  const designVars = _pickDesignVars(hist);
+
+  // ② Geminiにはテキスト3行のみ生成させる
+  const textPrompt = _applyImgTmplPlaceholders(n);
+  let textJSON = null;
   for (const model of TEXT_MODELS) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 1024 }
+          contents: [{ role: 'user', parts: [{ text: textPrompt }] }],
+          generationConfig: { temperature: 0.9, maxOutputTokens: 256 }
         })
       });
       const d = await r.json();
       if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
-      const txt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      const m = txt.match(/\{[\s\S]*?\}/);
-      if (m) { try { design = JSON.parse(m[0]); } catch(e2) { continue; } }
-      if (design && (design.bg_type || design.bg_color1)) break;
-      design = null;
-    } catch(e) { console.warn('[imggen] template', model, e.message); }
+      const raw = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      const m = raw.match(/\{[\s\S]*?\}/);
+      if (m) { try { textJSON = JSON.parse(m[0]); } catch(e2) { continue; } }
+      if (textJSON && (textJSON.text_layer1 || textJSON.text_layer2)) break;
+      textJSON = null;
+    } catch(e) { console.warn('[imggen] text gen', model, e.message); }
   }
-  if (!design) throw new Error('Design vars not returned from Gemini');
+  // テキスト生成失敗時はタイトルからフォールバック
+  if (!textJSON) {
+    const title = n.title || '';
+    textJSON = {
+      text_layer1: [...title].slice(0, 12).join(''),
+      text_layer2: [...title].slice(0, 20).join(''),
+      text_layer3: n.cat ? `${n.cat}を読んでみる` : 'あなたへのヒント'
+    };
+  }
 
-  // ジャンル別カラーオーバーライド
-  _applyGenreOverrides(design, n.cat);
+  // ③ マージ + ジャンル補正
+  const finalVars = { ...designVars, ...textJSON };
+  _applyGenreOverrides(finalVars, n.cat);
 
-  const svg = buildSVGFromDesignVars(design);
+  // ④ SVG生成 → PNG変換
+  const svg = buildSVGFromDesignVars(finalVars);
   const b64 = await svgToBase64PNG(svg);
-  _saveImgHistory(n.id, design); // 非同期・非ブロッキング
+
+  // ⑤ 履歴保存（非ブロッキング）
+  _saveImgHistory(n.id, { bg_idx: designVars.bg_idx, layout: designVars.layout, icon: designVars.icon_type, timestamp: new Date().toISOString() });
+
   return b64;
 }
 function _syncImgTemplateTAs(value) {
