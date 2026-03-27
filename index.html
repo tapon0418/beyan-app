@@ -1382,8 +1382,23 @@ input:focus, textarea:focus, select:focus {
 .xwrite-step-label { font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
 .xwrite-result-area { width:100%; min-height:160px; font-size:13px; line-height:1.7; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px; color:var(--text); font-family:'Noto Sans JP',sans-serif; resize:vertical; box-sizing:border-box; }
 </style>
+<!-- Firebase SDK (compat) -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
 </head>
 <body>
+
+<!-- Firebase ローディングオーバーレイ -->
+<div id="fb-loading" style="display:none;position:fixed;inset:0;background:rgba(18,26,18,.92);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:14px">
+  <div style="font-size:32px">🍃</div>
+  <div style="color:#fff;font-size:15px;font-weight:700;letter-spacing:.05em">データを読み込み中...</div>
+  <div style="width:180px;height:3px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden">
+    <div style="height:100%;background:#4a8838;border-radius:2px;animation:pbar 2s linear infinite"></div>
+  </div>
+</div>
+
+<!-- Firebase 同期ステータス（右下固定） -->
+<div id="fb-sync-status" title="Firebase接続中" style="position:fixed;bottom:72px;right:12px;z-index:900;font-size:10px;opacity:.65;pointer-events:none;font-weight:700;color:var(--text3)"></div>
 
 <!-- ===== サイドリンクボタン ===== -->
 <div class="side-links" style="position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:200;display:flex;flex-direction:column;gap:10px;">
@@ -2393,12 +2408,13 @@ input:focus, textarea:focus, select:focus {
 // STATE
 // ================================================================
 const KEY = 'beyan_v6';
+let _fromLocalStorage = false; // Firebase移行済みフラグ
 let S = (() => {
   const s6 = JSON.parse(localStorage.getItem('beyan_v6') || 'null');
-  if (s6) { if(!s6.weeklyReviews) s6.weeklyReviews=[]; if(!s6.neta) s6.neta=[]; return s6; }
+  if (s6) { _fromLocalStorage = true; if(!s6.weeklyReviews) s6.weeklyReviews=[]; if(!s6.neta) s6.neta=[]; return s6; }
   // v5からの移行
   const s5 = JSON.parse(localStorage.getItem('beyan_v5') || 'null');
-  if (s5) return { ...s5, weeklyReviews: [], neta: [] };
+  if (s5) { _fromLocalStorage = true; return { ...s5, weeklyReviews: [], neta: [] }; }
   // v4 / v2 からの移行
   const old = JSON.parse(localStorage.getItem('beyan_v4') || localStorage.getItem('beyan_v2') || 'null');
   return {
@@ -2441,7 +2457,119 @@ let S = (() => {
     ],
   };
 })();
-const save = () => localStorage.setItem(KEY, JSON.stringify(S));
+// ================================================================
+// FIREBASE
+// ================================================================
+const _fbConfig = {
+  apiKey: "AIzaSyD1FiWdKMiXzi1f8eQRzVDBSBU8tYCu5aQ",
+  authDomain: "nabebase-896b6.firebaseapp.com",
+  databaseURL: "https://nabebase-896b6-default-rtdb.firebaseio.com",
+  projectId: "nabebase-896b6",
+  storageBucket: "nabebase-896b6.firebasestorage.app",
+  messagingSenderId: "480593835008",
+  appId: "1:480593835008:web:29e0e7c57a9976a32e14e5"
+};
+let _fbRef = null;
+let _fbWritePending = false;
+
+const save = () => {
+  if (_fbRef) {
+    // Firebase メイン保存
+    _fbWritePending = true;
+    _fbRef.set(JSON.parse(JSON.stringify(S)));
+    setTimeout(() => { _fbWritePending = false; }, 700);
+  } else {
+    // Firebase未接続時はlocalStorageにフォールバック
+    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {}
+  }
+};
+
+function _fbEnsureFields(data) {
+  if (!data.weeklyReviews) data.weeklyReviews = [];
+  if (!data.neta) data.neta = [];
+  return data;
+}
+
+function renderAll() {
+  renderNotes();
+  renderXPosts();
+  renderArchive();
+  renderToday();
+  renderNetaList();
+  renderXPromptList();
+}
+
+function initFirebase() {
+  try {
+    if (typeof firebase === 'undefined' || !firebase.initializeApp) return;
+    firebase.initializeApp(_fbConfig);
+    const db = firebase.database();
+    _fbRef = db.ref('beyan_v6');
+
+    // ローカルデータがない場合のみローディング表示
+    const loadEl = document.getElementById('fb-loading');
+    if (loadEl && !_fromLocalStorage) loadEl.style.display = 'flex';
+
+    let firstLoad = true;
+    _fbRef.on('value', snap => {
+      const data = snap.val();
+
+      if (firstLoad) {
+        firstLoad = false;
+
+        if (!data) {
+          // Firebase空 → 現在のSをFirebaseに書き込む（移行 or デフォルト）
+          _fbRef.set(JSON.parse(JSON.stringify(S)));
+          if (_fromLocalStorage) {
+            ['beyan_v6','beyan_v5','beyan_v4','beyan_v2'].forEach(k => localStorage.removeItem(k));
+            _fromLocalStorage = false;
+            setTimeout(() => toast('✅ データをFirebaseに移行しました'), 1000);
+          }
+          if (loadEl) loadEl.style.display = 'none';
+          return;
+        }
+
+        // Firebaseにデータあり
+        _fbEnsureFields(data);
+        if (_fromLocalStorage) {
+          ['beyan_v6','beyan_v5','beyan_v4','beyan_v2'].forEach(k => localStorage.removeItem(k));
+          _fromLocalStorage = false;
+        }
+        if (JSON.stringify(data) !== JSON.stringify(S)) {
+          S = data;
+          renderAll();
+        }
+        if (loadEl) loadEl.style.display = 'none';
+        return;
+      }
+
+      // 2回目以降：他端末からのリアルタイム更新
+      if (_fbWritePending) return;
+      if (!data) return;
+      if (JSON.stringify(data) === JSON.stringify(S)) return;
+      _fbEnsureFields(data);
+      S = data;
+      renderAll();
+      toast('📱 他の端末からデータが同期されました');
+
+    }, err => {
+      console.warn('[Firebase] onValue error:', err.message);
+      if (loadEl) loadEl.style.display = 'none';
+    });
+
+    // 接続状態インジケーター
+    db.ref('.info/connected').on('value', snap => {
+      const el = document.getElementById('fb-sync-status');
+      if (!el) return;
+      el.textContent = snap.val() ? '🟢 同期中' : '🔴 オフライン';
+    });
+
+  } catch(e) {
+    console.warn('[Firebase] init error:', e.message);
+    const loadEl = document.getElementById('fb-loading');
+    if (loadEl) loadEl.style.display = 'none';
+  }
+}
 
 const XPROMPT_KEY = 'beyan_xprompt_vault';
 const CLAUDE_PROJECT_URL = 'https://claude.ai/project/019d15e5-152e-7206-b84e-01aa427212aa';
@@ -3849,6 +3977,8 @@ loadApiKey();
   var b = document.getElementById('body-'+name);
   if(b && secState[name]) b.style.overflow = 'visible';
 });
+// Firebase初期化（localStorage→Firebase移行 + リアルタイム同期）
+initFirebase();
 
 // ================================================================
 // 設定モーダル
