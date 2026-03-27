@@ -1561,6 +1561,12 @@ input:focus, textarea:focus, select:focus {
       <button onclick="closeSettings()" style="background:none;border:none;color:#fff;font-size:1.4rem;cursor:pointer;line-height:1;">×</button>
     </div>
 
+    <!-- バックアップ -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;padding:10px 12px;background:#111;border-radius:10px;border:1px solid #333;align-items:center;flex-wrap:wrap">
+      <span style="font-size:.78rem;color:#aaa;flex:1;min-width:120px">⚠️ 変更前に全データをバックアップ</span>
+      <button onclick="downloadBackup()" style="background:#e07b20;border:none;color:#fff;padding:8px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.82rem;white-space:nowrap;min-height:38px">⬇️ バックアップDL</button>
+    </div>
+
     <!-- タブ -->
     <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px;">
       <button id="stab-gemini" class="stab active" onclick="switchStab('gemini')">🔍 ジミー指示文</button>
@@ -1597,6 +1603,14 @@ input:focus, textarea:focus, select:focus {
         <button onclick="openTmplInGemini()" style="background:#1a73e8;border:none;color:#fff;padding:10px 14px;border-radius:8px;font-weight:700;cursor:pointer;font-size:.82rem;white-space:nowrap">🔗 ジミーで開く</button>
       </div>
       <div id="settings-gemini-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
+      <div id="settings-gemini-ts" style="margin-top:4px;font-size:.72rem;color:#666;"></div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button onclick="exportGeminiTmpl()" style="flex:1;background:#1a1a2e;border:1px solid #444;color:#aaa;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:.78rem;font-family:inherit">⬇️ エクスポート(.txt)</button>
+        <label style="flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;background:#1a1a2e;border:1px solid #444;color:#aaa;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:.78rem;text-align:center">
+          ⬆️ インポート(.txt)
+          <input type="file" accept=".txt" onchange="importGeminiTmpl(event)" style="display:none">
+        </label>
+      </div>
     </div>
 
     <!-- クロ執筆指示文 -->
@@ -1641,6 +1655,14 @@ input:focus, textarea:focus, select:focus {
         <button onclick="resetSettingsImgTemplate()" style="background:var(--bg4);border:none;color:var(--text2);padding:10px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;">リセット</button>
       </div>
       <div id="settings-imgprompt-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
+      <div id="settings-img-ts" style="margin-top:4px;font-size:.72rem;color:#666;"></div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button onclick="exportImgTmpl()" style="flex:1;background:#1a1a2e;border:1px solid #444;color:#aaa;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:.78rem;font-family:inherit">⬇️ エクスポート(.txt)</button>
+        <label style="flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;background:#1a1a2e;border:1px solid #444;color:#aaa;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:.78rem;text-align:center">
+          ⬆️ インポート(.txt)
+          <input type="file" accept=".txt" onchange="importImgTmpl(event)" style="display:none">
+        </label>
+      </div>
     </div>
 
     <!-- 📚 保管庫タブ -->
@@ -2492,6 +2514,82 @@ function _fbEnsureFields(data) {
   return data;
 }
 
+// ================================================================
+// バックアップ・エクスポート・インポート
+// ================================================================
+function downloadBackup() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    try { data[key] = JSON.parse(localStorage.getItem(key)); }
+    catch(e) { data[key] = localStorage.getItem(key); }
+  }
+  // Firebaseキャッシュも含める
+  if (_geminiTmpl !== null) data['_cache_gemini_tmpl'] = _geminiTmpl;
+  if (_imgTemplate !== null) data['_cache_img_template'] = _imgTemplate;
+  const json = JSON.stringify(data, null, 2);
+  _downloadFile(json, `nabebase_backup_${new Date().toISOString().slice(0,10)}.json`, 'application/json');
+  toast('✅ バックアップをダウンロードしました');
+}
+function _downloadFile(content, filename, mime) {
+  const blob = new Blob([content], {type: mime || 'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function exportGeminiTmpl() {
+  const content = (_geminiTmpl !== null && _geminiTmpl !== undefined) ? _geminiTmpl : getDefaultGeminiTmpl();
+  _downloadFile(content, `gemini_tmpl_${new Date().toISOString().slice(0,10)}.txt`, 'text/plain');
+  toast('⬇️ Geminiテンプレートをエクスポートしました');
+}
+function importGeminiTmpl(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const val = e.target.result;
+    document.getElementById('settings-gemini-tmpl').value = val;
+    saveGeminiTmpl();
+    toast('✅ Geminiテンプレートをインポートしました');
+  };
+  reader.readAsText(file, 'utf-8');
+  event.target.value = '';
+}
+function exportImgTmpl() {
+  const content = (_imgTemplate !== null && _imgTemplate !== undefined) ? _imgTemplate : DEFAULT_IMG_TEMPLATE;
+  _downloadFile(content, `img_tmpl_${new Date().toISOString().slice(0,10)}.txt`, 'text/plain');
+  toast('⬇️ 画像テンプレートをエクスポートしました');
+}
+function importImgTmpl(event) {
+  const file = event.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const val = e.target.result;
+    document.getElementById('settings-imgprompt-tmpl').value = val;
+    saveSettingsImgTemplate();
+    toast('✅ 画像テンプレートをインポートしました');
+  };
+  reader.readAsText(file, 'utf-8');
+  event.target.value = '';
+}
+function _updateGeminiTsDisplay() {
+  const el = document.getElementById('settings-gemini-ts');
+  if (!el) return;
+  el.textContent = _geminiTmplUpdatedAt
+    ? '最終更新: ' + new Date(_geminiTmplUpdatedAt).toLocaleString('ja-JP')
+    : '';
+}
+function _updateImgTsDisplay() {
+  const el = document.getElementById('settings-img-ts');
+  if (!el) return;
+  el.textContent = _imgTemplateUpdatedAt
+    ? '最終更新: ' + new Date(_imgTemplateUpdatedAt).toLocaleString('ja-JP')
+    : '';
+}
+
 function renderAll() {
   renderNotes();
   renderXPosts();
@@ -2559,22 +2657,84 @@ function initFirebase() {
       if (loadEl) loadEl.style.display = 'none';
     });
 
-    // Geminiテンプレートの同期
-    db.ref(GEMINI_TMPL_KEY).on('value', snap => {
-      _geminiTmpl = snap.val(); // null = デフォルト
-      // 設定モーダルが開いていたらUIも更新
-      const ta = document.getElementById('settings-gemini-tmpl');
-      if (ta && ta.closest && ta.closest('.overlay')?.classList.contains('open')) {
-        ta.value = _geminiTmpl !== null ? _geminiTmpl : getDefaultGeminiTmpl();
-      }
-    });
+    // ─── Geminiテンプレート: 移行対応 + 同期 ───
+    {
+      let _gmFirst = true;
+      const _gmLocalBak = _geminiTmpl; // script初期化時のlocalStorage値
+      db.ref(GEMINI_TMPL_KEY).on('value', snap => {
+        const fbVal = snap.val();
+        if (_gmFirst) {
+          _gmFirst = false;
+          if (fbVal === null && _gmLocalBak !== null) {
+            // Firebase空・localStorage有 → 移行
+            db.ref(GEMINI_TMPL_KEY).set(_gmLocalBak);
+            db.ref(GEMINI_TMPL_KEY + '_ts').set(new Date().toISOString());
+            localStorage.removeItem(GEMINI_TMPL_KEY);
+            toast('📤 Geminiテンプレートをクラウドに移行しました');
+            return; // 次のonValueで値が入ってくる
+          }
+          if (fbVal !== null && _gmLocalBak !== null) {
+            // 両方あり → 長い方（カスタムが多い）を採用
+            const winner = _gmLocalBak.length >= fbVal.length ? _gmLocalBak : fbVal;
+            if (_gmLocalBak.length > fbVal.length) {
+              db.ref(GEMINI_TMPL_KEY).set(_gmLocalBak);
+              db.ref(GEMINI_TMPL_KEY + '_ts').set(new Date().toISOString());
+            }
+            _geminiTmpl = winner;
+            localStorage.removeItem(GEMINI_TMPL_KEY);
+          } else {
+            _geminiTmpl = fbVal; // Firebaseのみ or 両方null
+          }
+        } else {
+          _geminiTmpl = fbVal;
+        }
+        const ta = document.getElementById('settings-gemini-tmpl');
+        if (ta && document.getElementById('settings-modal')?.style.display !== 'none') {
+          ta.value = _geminiTmpl !== null ? _geminiTmpl : getDefaultGeminiTmpl();
+        }
+      });
+      db.ref(GEMINI_TMPL_KEY + '_ts').on('value', snap => {
+        _geminiTmplUpdatedAt = snap.val();
+        _updateGeminiTsDisplay();
+      });
+    }
 
-    // 画像テンプレートの同期
-    db.ref('beyan_img_template').on('value', snap => {
-      _imgTemplate = snap.val(); // null = デフォルト
-      const tmpl = _imgTemplate !== null ? _imgTemplate : DEFAULT_IMG_TEMPLATE;
-      _syncImgTemplateTAs(tmpl);
-    });
+    // ─── 画像テンプレート: 移行対応 + 同期 ───
+    {
+      let _imFirst = true;
+      const _imLocalBak = _imgTemplate;
+      db.ref('beyan_img_template').on('value', snap => {
+        const fbVal = snap.val();
+        if (_imFirst) {
+          _imFirst = false;
+          if (fbVal === null && _imLocalBak !== null) {
+            db.ref('beyan_img_template').set(_imLocalBak);
+            db.ref('beyan_img_template_ts').set(new Date().toISOString());
+            localStorage.removeItem('beyan_img_template');
+            toast('📤 画像テンプレートをクラウドに移行しました');
+            return;
+          }
+          if (fbVal !== null && _imLocalBak !== null) {
+            const winner = _imLocalBak.length >= fbVal.length ? _imLocalBak : fbVal;
+            if (_imLocalBak.length > fbVal.length) {
+              db.ref('beyan_img_template').set(_imLocalBak);
+              db.ref('beyan_img_template_ts').set(new Date().toISOString());
+            }
+            _imgTemplate = winner;
+            localStorage.removeItem('beyan_img_template');
+          } else {
+            _imgTemplate = fbVal;
+          }
+        } else {
+          _imgTemplate = fbVal;
+        }
+        _syncImgTemplateTAs(_imgTemplate !== null ? _imgTemplate : DEFAULT_IMG_TEMPLATE);
+      });
+      db.ref('beyan_img_template_ts').on('value', snap => {
+        _imgTemplateUpdatedAt = snap.val();
+        _updateImgTsDisplay();
+      });
+    }
 
     // 接続状態インジケーター
     db.ref('.info/connected').on('value', snap => {
@@ -3841,6 +4001,8 @@ const CLAUDE_TMPL_KEY = 'beyan_claude_tmpl';
 // Firebase同期テンプレートキャッシュ（null = デフォルト使用）
 let _geminiTmpl = localStorage.getItem(GEMINI_TMPL_KEY); // Firebase接続前のフォールバック
 let _imgTemplate = localStorage.getItem('beyan_img_template'); // 同上
+let _geminiTmplUpdatedAt = null;
+let _imgTemplateUpdatedAt = null;
 
 function getDefaultClaudeTmpl() {
   return 'あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。\n\n■ タイトル\n「${n.title}」\n\n■ 読者設定\n・副業ライターとして活動中、または始めたい人\n・${n.memo}\n\n■ 記事の方向性\n・文字数：2,000〜4,000文字\n・体験談ベース。具体的な数字・固有名詞を必ず入れる\n\n■ リサーチ結果（ジミー調べ）\n${result}\n\n■ 構成\n1. 共感リード（「これ自分だ」と思わせる状況描写）\n2. 失敗・壁（具体的なエピソード）\n3. 転機・気づき（何がどう変わったか）\n4. 再現可能な学び（明日から使えること）\n5. まとめ＋次の記事への導線\n\n■ 文体の絶対ルール\n・ですます調。親しみやすいが馴れ馴れしすぎない\n・「しみじみ思う。」「笑」など口語表現OK\n・AI的な説教口調は禁止\n・# ※ ** などの記号は一切使わない\n・抽象論・精神論で終わらない。必ず具体で締める';
@@ -4372,8 +4534,13 @@ function copyAndOpenKuro() {
 function saveGeminiTmpl() {
   const val = document.getElementById('settings-gemini-tmpl').value;
   _geminiTmpl = val;
-  if (_fbRef) { firebase.database().ref(GEMINI_TMPL_KEY).set(val); }
-  else { localStorage.setItem(GEMINI_TMPL_KEY, val); }
+  const ts = new Date().toISOString();
+  _geminiTmplUpdatedAt = ts;
+  if (_fbRef) {
+    firebase.database().ref(GEMINI_TMPL_KEY).set(val);
+    firebase.database().ref(GEMINI_TMPL_KEY + '_ts').set(ts);
+  } else { localStorage.setItem(GEMINI_TMPL_KEY, val); }
+  _updateGeminiTsDisplay();
   const msg = document.getElementById('settings-gemini-msg');
   msg.style.display = 'block';
   setTimeout(() => { msg.style.display = 'none'; }, 2500);
@@ -4731,6 +4898,10 @@ function saveSettingsImgTemplate() {
   if (!ta) return;
   _fbImgTmplSet(ta.value);
   _syncImgTemplateTAs(ta.value);
+  const ts = new Date().toISOString();
+  _imgTemplateUpdatedAt = ts;
+  if (_fbRef) firebase.database().ref('beyan_img_template_ts').set(ts);
+  _updateImgTsDisplay();
   const msg = document.getElementById('settings-imgprompt-msg');
   if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 2000); }
   toast('✅ 見出し画像テンプレートを保存しました');
