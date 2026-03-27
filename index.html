@@ -5087,73 +5087,132 @@ function _pickPattern(cat, memo, hist) {
 
 function _buildSVG(t1, t2, t3, vars) {
   const {bg, ly, ic, fw} = vars;
-  const W=1280, H=670;
-  const acc=bg.acc, sub=bg.sub, txtC='#ffffff';
+  const W = 1280, H = 670;
 
-  const fs1 = t1.length <= 8 ? 36 : 30;
-  const fs2 = t2.length <= 10 ? 80 : t2.length <= 15 ? 68 : 56;
-  const fs3 = t3.length <= 12 ? 32 : t3.length <= 20 ? 28 : 24;
+  const acc  = bg.acc;
+  const sub  = bg.sub;
+  const txt  = '#ffffff';
+  const dark = '#080808';
 
-  const POS = ({
-    center:     { x1:640,a1:'middle',y1:190, x2:640,a2:'middle',y2:370, x3:640,a3:'middle',y3:510 },
-    left_heavy: { x1:80, a1:'start', y1:160, x2:80, a2:'start', y2:345, x3:80, a3:'start', y3:495 },
-    top_bottom: { x1:640,a1:'middle',y1:120, x2:80, a2:'start', y2:320, x3:640,a3:'middle',y3:565 },
-    diagonal:   { x1:80, a1:'start', y1:160, x2:80, a2:'start', y2:355, x3:900,a3:'start', y3:545 },
-    split:      { x1:80, a1:'start', y1:160, x2:80, a2:'start', y2:335, x3:780,a3:'start', y3:485 },
-  })[ly] || { x1:640,a1:'middle',y1:190, x2:640,a2:'middle',y2:370, x3:640,a3:'middle',y3:510 };
+  const fs1 = t1.length <= 8  ? 40 : 34;
+  const fs2 = t2.length <= 8  ? 100
+            : t2.length <= 12 ? 88
+            : t2.length <= 16 ? 76 : 64;
+  const fs3 = t3.length <= 12 ? 36
+            : t3.length <= 20 ? 30 : 26;
+
+  const POS = {
+    center: {
+      x1:640, a1:'middle', y1:160,
+      x2:640, a2:'middle', y2:370,
+      x3:640, a3:'middle', y3:540,
+    },
+    left_heavy: {
+      x1:80,  a1:'start',  y1:150,
+      x2:80,  a2:'start',  y2:360,
+      x3:80,  a3:'start',  y3:540,
+    },
+    top_bottom: {
+      x1:640, a1:'middle', y1:120,
+      x2:80,  a2:'start',  y2:360,
+      x3:640, a3:'middle', y3:580,
+    },
+    diagonal: {
+      x1:80,  a1:'start',  y1:150,
+      x2:80,  a2:'start',  y2:380,
+      x3:960, a3:'end',    y3:570,
+    },
+    split: {
+      x1:80,  a1:'start',  y1:150,
+      x2:80,  a2:'start',  y2:360,
+      x3:820, a3:'start',  y3:480,
+    },
+  }[ly] || {x1:640,a1:'middle',y1:160,x2:640,a2:'middle',y2:370,x3:640,a3:'middle',y3:540};
 
   const isSplit = bg.name === 'split_compare';
-  const bgEl = isSplit
-    ? `<rect width="${W*0.42}" height="${H}" fill="${bg.bg1}"/>
-       <rect x="${W*0.42}" width="${W*0.58}" height="${H}" fill="${bg.bg2}"/>
-       <line x1="${W*0.42}" y1="0" x2="${W*0.44}" y2="${H}" stroke="${acc}" stroke-width="4"/>`
-    : `<defs><linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
-         <stop offset="0%" stop-color="${bg.bg1}"/>
-         <stop offset="100%" stop-color="${bg.bg2}"/>
-       </linearGradient></defs>
-       <rect width="${W}" height="${H}" fill="url(#bgG)"/>`;
+  let bgEl = '';
+  if (isSplit) {
+    bgEl = `
+      <rect width="${W}" height="${H}" fill="${dark}"/>
+      <rect x="${W*0.55}" width="${W*0.45}" height="${H}" fill="${bg.bg2}" opacity="0.9"/>
+      <polygon points="${W*0.52},0 ${W*0.58},0 ${W*0.62},${H} ${W*0.56},${H}"
+        fill="${acc}" opacity="0.25"/>`;
+  } else {
+    bgEl = `
+      <defs>
+        <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%"   stop-color="${dark}"/>
+          <stop offset="55%"  stop-color="${bg.bg2}" stop-opacity="0.85"/>
+          <stop offset="100%" stop-color="${bg.bg2}"/>
+        </linearGradient>
+      </defs>
+      <rect width="${W}" height="${H}" fill="url(#bgG)"/>`;
+  }
 
   const iconPaths = {
-    bulb:'M50,10C28,10 10,28 10,50C10,65 18,78 30,85L30,95L70,95L70,85C82,78 90,65 90,50C90,28 72,10 50,10Z M35,100L65,100 M40,108L60,108',
-    fire:'M50,5C50,5 65,25 65,40C65,40 55,30 50,35C50,35 60,50 55,65C55,65 45,50 40,55C35,60 35,75 50,90C30,80 15,65 20,45C20,45 30,55 35,50C35,50 25,30 50,5Z',
-    lightning:'M55,5L20,55L45,55L40,95L75,40L52,40Z',
-    star:'M50,5L61,35L95,35L68,57L79,91L50,70L21,91L32,57L5,35L39,35Z',
-    crown:'M10,70L10,30L30,50L50,10L70,50L90,30L90,70Z M5,75L95,75L95,85L5,85Z',
-    warning:'M50,5L95,90L5,90Z M47,40L53,40L51,68L49,68Z M50,76A4,4 0 1,1 50,84A4,4 0 1,1 50,76',
-    check:'M10,50L35,75L90,20',
-    graph:'M10,90L10,10 M10,90L90,90 M20,70L20,50L38,50L38,70Z M48,70L48,30L66,30L66,70Z M74,70L74,45L88,45',
-    arrow:'M20,50L75,50 M55,25L80,50L55,75',
-    person:'M50,30A18,18 0 1,1 50,12A18,18 0 1,1 50,30Z M15,90C15,68 30,55 50,55C70,55 85,68 85,90Z',
+    bulb:      'M50,10C28,10 10,28 10,50C10,65 18,78 30,85L30,95L70,95L70,85C82,78 90,65 90,50C90,28 72,10 50,10Z M35,100L65,100 M40,108L60,108',
+    fire:      'M50,5C50,5 65,25 65,40C55,30 50,35 60,50C55,65 45,50 40,55C35,60 35,75 50,90C30,80 15,65 20,45C30,55 35,50 25,30Z',
+    lightning: 'M58,5L18,58L46,58L38,98L78,42L52,42Z',
+    star:      'M50,5L61,35L95,35L68,57L79,91L50,70L21,91L32,57L5,35L39,35Z',
+    crown:     'M10,70L10,30L30,52L50,10L70,52L90,30L90,70Z M5,76L95,76L95,88L5,88Z',
+    warning:   'M50,5L95,90L5,90Z M47,42L53,42L51,68L49,68Z M50,76A5,5 0 1,1 50,86A5,5 0 1,1 50,76',
+    check:     'M8,50L34,76L92,18',
+    graph:     'M10,90L10,10 M10,90L95,90 M22,72L22,48L40,48L40,72Z M50,72L50,28L68,28L68,72Z M76,72L76,42L90,42',
+    arrow:     'M18,50L78,50 M56,24L82,50L56,76',
+    person:    'M50,32A20,20 0 1,1 50,8A20,20 0 1,1 50,32Z M12,92C12,68 28,54 50,54C72,54 88,68 88,92Z',
   };
   const iconEl = (ic && ic !== 'none' && iconPaths[ic])
-    ? `<g transform="translate(1120,510) scale(0.65)" opacity="0.1">
-         <path d="${iconPaths[ic]}" fill="${acc}" stroke="${acc}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-       </g>` : '';
+    ? `<g transform="translate(1110,490) scale(0.7)" opacity="0.1">
+         <path d="${iconPaths[ic]}" fill="${acc}" stroke="${acc}"
+           stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+       </g>`
+    : '';
 
+  const underlineY = POS.y2 + 10;
+  const underlineX = POS.a2 === 'middle' ? 640 - 180 : POS.x2;
   const deco = `
-    <rect width="8" height="${H}" fill="${acc}" opacity="0.85"/>
-    <rect y="${H-6}" width="${W}" height="6" fill="${acc}" opacity="0.75"/>
-    <circle cx="${Math.round(W*0.76)}" cy="${Math.round(H*0.44)}" r="290" fill="${acc}" opacity="0.05"/>
-    <rect x="18" y="18" width="14" height="14" fill="${acc}" opacity="0.55"/>`;
+    <defs>
+      <linearGradient id="barG" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"   stop-color="${acc}"/>
+        <stop offset="100%" stop-color="${acc}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <rect width="10" height="${H}" fill="${acc}" opacity="0.9"/>
+    <rect y="${H-8}" width="${W}" height="8" fill="url(#barG)"/>
+    <circle cx="${Math.round(W*0.82)}" cy="${Math.round(H*0.38)}" r="320" fill="${acc}" opacity="0.04"/>
+    <rect x="20" y="20" width="16" height="16" fill="${acc}" opacity="0.6"/>
+    <rect x="${underlineX}" y="${underlineY}" width="360" height="4"
+      fill="${acc}" opacity="0.7" rx="2"/>`;
 
-  const filter = `<defs>
-    <filter id="ts" x="-5%" y="-5%" width="115%" height="115%">
-      <feDropShadow dx="2" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.85"/>
-    </filter>
-  </defs>`;
+  const filter = `
+    <defs>
+      <filter id="ts" x="-8%" y="-8%" width="120%" height="130%">
+        <feDropShadow dx="0" dy="3" stdDeviation="6"
+          flood-color="#000000" flood-opacity="0.9"/>
+      </filter>
+    </defs>`;
 
   const textEl = `
-    <text x="${POS.x1}" y="${POS.y1}" font-size="${fs1}" font-weight="700"
-      font-family="'Noto Sans JP',sans-serif" fill="${sub}"
-      text-anchor="${POS.a1}" filter="url(#ts)">${t1}</text>
-    <text x="${POS.x2}" y="${POS.y2}" font-size="${fs2}" font-weight="${fw}"
-      font-family="'Noto Sans JP',sans-serif" fill="${txtC}"
-      text-anchor="${POS.a2}" filter="url(#ts)">${t2}</text>
-    <text x="${POS.x3}" y="${POS.y3}" font-size="${fs3}" font-weight="700"
-      font-family="'Noto Sans JP',sans-serif" fill="${acc}"
-      text-anchor="${POS.a3}" filter="url(#ts)">${t3}</text>`;
+    <text x="${POS.x1}" y="${POS.y1}"
+      font-size="${fs1}" font-weight="700"
+      font-family="'Noto Sans JP',sans-serif"
+      fill="${sub}" text-anchor="${POS.a1}"
+      filter="url(#ts)">${t1}</text>
+    <text x="${POS.x2}" y="${POS.y2}"
+      font-size="${fs2}" font-weight="${fw || '900'}"
+      font-family="'Noto Sans JP',sans-serif"
+      fill="${txt}"
+      stroke="${acc}" stroke-width="1.5" paint-order="stroke"
+      text-anchor="${POS.a2}"
+      filter="url(#ts)">${t2}</text>
+    <text x="${POS.x3}" y="${POS.y3}"
+      font-size="${fs3}" font-weight="700"
+      font-family="'Noto Sans JP',sans-serif"
+      fill="${acc}" text-anchor="${POS.a3}"
+      filter="url(#ts)">${t3}</text>`;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
+  return `<svg xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
     ${filter}${bgEl}${deco}${iconEl}${textEl}
   </svg>`;
 }
