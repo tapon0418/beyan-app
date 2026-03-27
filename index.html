@@ -1950,6 +1950,18 @@ input:focus, textarea:focus, select:focus {
     <!-- ① Gemini (API連携) -->
     <div class="fpanel active" id="fp-gemini">
 
+      <!-- 結果エリア：最上部に常時配置（結果があるときのみ表示） -->
+      <div id="gemini-result-section" style="display:none;margin-bottom:12px">
+        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ リサーチ完了 → ②クロ執筆タブへ自動入力済み</div>
+        <button class="copy-btn" style="width:100%;margin-bottom:8px" onclick="cp('mw-gemini-output')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
+          結果をコピー
+        </button>
+        <div class="copy-box result-box" id="mw-gemini-output"></div>
+        <button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:12px;width:100%"
+          onclick="switchTabByName('chatgpt')">② クロ執筆 へ進む →</button>
+      </div>
+
       <div id="gemini-key-section" style="margin-bottom:12px">
         <div style="display:flex;gap:8px;align-items:center">
           <input type="password" id="gemini-api-key" placeholder="Gemini APIキー（AIStudioで取得）"
@@ -1973,17 +1985,6 @@ input:focus, textarea:focus, select:focus {
         </div>
       </div>
 
-      <div id="gemini-result-section" style="display:none">
-        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ リサーチ完了 → ②クロ執筆タブへ自動入力済み</div>
-        <div class="copy-box result-box" id="mw-gemini-output"></div>
-        <button class="copy-btn" onclick="cp('mw-gemini-output')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
-          結果をコピー
-        </button>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:12px;width:100%"
-          onclick="switchTabByName('chatgpt')">② クロ執筆 へ進む →</button>
-      </div>
-
       <details style="margin-top:12px">
         <summary style="font-size:11px;color:var(--text3);cursor:pointer">APIキーなしで手動コピーする</summary>
         <div style="margin-top:8px">
@@ -2005,11 +2006,6 @@ input:focus, textarea:focus, select:focus {
     <!-- ② クロ執筆 -->
     <div class="fpanel" id="fp-chatgpt">
 
-      <!-- TOP ACTION: 常時表示 クロで開くボタン -->
-      <button id="fp-claude-top-btn" onclick="(()=>{const txt=document.getElementById('mw-chatgpt').textContent.trim();if(txt){navigator.clipboard.writeText(txt).then(()=>{toast('📋 指示文をコピーしました！クロで開きます');setTimeout(()=>openInClaude(txt),600)}).catch(()=>openInClaude(txt));}else{window.open(CLAUDE_PROJECT_URL,'_blank');}})()" style="width:100%;min-height:52px;margin-bottom:14px;background:#7c3aed;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em">
-        📋 指示文をコピーして クロで開く →
-      </button>
-
       <!-- STEP 1 -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <div style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">1</div>
@@ -2030,10 +2026,6 @@ input:focus, textarea:focus, select:focus {
           <div style="font-size:12px;font-weight:700;color:var(--text2)">クロに執筆指示文を送る</div>
         </div>
         <div class="copy-box result-box" id="mw-chatgpt" style="max-height:120px;overflow-y:auto"></div>
-        <button onclick="(()=>{const txt=document.getElementById('mw-chatgpt').textContent;navigator.clipboard.writeText(txt).then(()=>{toast('📋 指示文をコピーしました！クロで開きます');setTimeout(()=>openInClaude(txt),600)}).catch(()=>openInClaude(txt))})()" style="width:100%;min-height:52px;margin-top:8px;background:#7c3aed;border:none;border-radius:12px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;letter-spacing:.02em">
-          📋 指示文をコピーして クロで開く →
-        </button>
-        <div style="font-size:11px;color:var(--text3);text-align:center;margin-top:6px;line-height:1.6">Claudeが開いたら指示文を貼り付けて執筆させてください</div>
       </div>
 
       <!-- Claude result section (API or restored) -->
