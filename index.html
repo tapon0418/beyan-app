@@ -170,10 +170,12 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 }
 .note-item:active{transform:scale(0.98);}
 /* 削除ボタン */
-.note-del-btn{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:8px;
-  border:none;background:transparent;color:var(--text3);font-size:16px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;transition:opacity .12s,background .12s;flex-shrink:0;z-index:2}
-.note-del-btn:hover{background:rgba(204,68,68,.15);color:var(--red)}
+.note-del-btn{position:absolute;top:8px;right:8px;width:44px;height:44px;border-radius:10px;
+  border:none;background:transparent;color:var(--text3);font-size:17px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;transition:background .12s,color .12s;flex-shrink:0;z-index:2;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.note-del-btn:hover{background:rgba(204,68,68,.18);color:var(--red)}
+.note-del-btn:active{background:rgba(204,68,68,.3);color:var(--red)}
 .note-del-btn.pending{background:rgba(204,68,68,.2);color:var(--red);animation:delBlink .4s infinite alternate}
 @keyframes delBlink{from{opacity:.7}to{opacity:1}}
 /* 月編集バッジ */
@@ -2729,7 +2731,7 @@ function renderNotes() {
             <button class="ni-hover-btn" onclick="event.stopPropagation();window.open(CLAUDE_PROJECT_URL,'_blank')">✍ クロ</button>
             <button class="ni-hover-btn" onclick="event.stopPropagation();openWork(${n.id})">⚙ 作業</button>
           </div>
-          <button class="note-del-btn" id="ndb-${n.id}" onclick="deleteNote(${n.id},event)" title="削除" style="position:static;margin-left:2px">🗑</button>
+          <button class="note-del-btn" id="ndb-${n.id}" onclick="deleteNote(${n.id},event)" title="削除" style="position:static;margin-left:0;flex-shrink:0">🗑</button>
           <svg class="ni-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
         <!-- 詳細：展開時に表示 -->
