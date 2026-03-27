@@ -5083,37 +5083,37 @@ function _buildSVG(t1, t2, t3, vars) {
             : t2.length <= 8  ? 84
             : t2.length <= 10 ? 72
             : t2.length <= 12 ? 62 : 52;
-  const fs3 = t3.length <= 10 ? 34
-            : t3.length <= 16 ? 28
-            : t3.length <= 22 ? 24 : 20;
+  const fs3 = t3.length <= 10 ? 38
+            : t3.length <= 16 ? 32
+            : t3.length <= 22 ? 28 : 24;
 
   const POS = {
     center: {
       x1:640, a1:'middle', y1:160,
       x2:640, a2:'middle', y2:370,
-      x3:640, a3:'middle', y3:540,
+      x3:640, a3:'middle', y3:510,
     },
     left_heavy: {
       x1:80,  a1:'start',  y1:150,
       x2:80,  a2:'start',  y2:360,
-      x3:80,  a3:'start',  y3:540,
+      x3:80,  a3:'start',  y3:510,
     },
     top_bottom: {
       x1:640, a1:'middle', y1:120,
       x2:80,  a2:'start',  y2:360,
-      x3:640, a3:'middle', y3:580,
+      x3:640, a3:'middle', y3:550,
     },
     diagonal: {
       x1:80,  a1:'start',  y1:150,
       x2:80,  a2:'start',  y2:380,
-      x3:960, a3:'end',    y3:570,
+      x3:960, a3:'end',    y3:540,
     },
     split: {
       x1:80,  a1:'start',  y1:150,
       x2:80,  a2:'start',  y2:360,
-      x3:820, a3:'start',  y3:480,
+      x3:820, a3:'start',  y3:450,
     },
-  }[ly] || {x1:640,a1:'middle',y1:160,x2:640,a2:'middle',y2:370,x3:640,a3:'middle',y3:540};
+  }[ly] || {x1:640,a1:'middle',y1:160,x2:640,a2:'middle',y2:370,x3:640,a3:'middle',y3:510};
 
   const isSplit = bg.name === 'split_compare';
   let bgEl = '';
@@ -5198,7 +5198,7 @@ function _buildSVG(t1, t2, t3, vars) {
     <text x="${t3x}" y="${POS.y3}"
       font-size="${fs3}" font-weight="700"
       font-family="'Noto Sans JP',sans-serif"
-      fill="${acc}" text-anchor="${POS.a3}"
+      fill="${sub}" text-anchor="${POS.a3}"
       filter="url(#ts)">${t3}</text>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg"
@@ -5214,16 +5214,45 @@ async function runImgGenFromTemplate(n, apiKey) {
   const hist = await _loadImgHist(n.id);
   const vars = _pickPattern(n.cat||'', n.memo||'', hist);
 
+  // 修正1: APIキー未取得時は即フォールバック
+  if (!apiKey) {
+    console.log('[ImgGen] APIキー未取得');
+    const t2fb = _cleanText(kw?.main || '', 12);
+    const t1fb = _cleanText(kwHint.split(' ')[0]||'', 12);
+    const t3fb = _cleanText(kwHint.split(' ').slice(-1)[0]||'', 24);
+    const svg = _buildSVG(t1fb, t2fb, t3fb, vars);
+    await _saveImgHist(n.id, { pi:vars.pi, ly:vars.ly, ic:vars.ic });
+    return svgToBase64PNG(svg);
+  }
+
+  // 修正4: パターン・感情トーンをプロンプトに注入
+  const patternName = vars.bg.name || '';
+  const emotionTone = vars.bg.emotion || '';
+  const patternRule = patternName === 'number_impact'
+    ? '・text_layer2は必ず数字を含む（例：月5万円・80%UP・3倍速）'
+    : patternName === 'warning_fail'
+    ? '・text_layer2はリスク・損失・失敗を暗示するコピー'
+    : patternName === 'question'
+    ? '・text_layer2は疑問形も可（？で終わってよい）'
+    : '・text_layer2は体言止め必須';
+
   const prompt = `あなたはnote人気クリエイターの見出しコピーライターです。
 記事タイトル：${n.title||''}
 ジャンル：${n.cat||''}
 メモ：${n.memo||''}
 キーワード：${kwHint}
+デザインパターン：${patternName}
+感情トーン：${emotionTone}
 
-以下のJSONのみ出力してください（説明・記号・絵文字・マークダウン禁止）：
-{"text_layer1":"（12文字以内・体言止めか疑問形・読者の悩みや状況）","text_layer2":"（12文字以内・体言止め必須・記事の核心・数字推奨）","text_layer3":"（24文字以内・具体的なベネフィット・数字推奨）"}
+パターン別ルール：
+${patternRule}
+・text_layer1は読者の悩み・状況（体言止めか疑問形・12文字以内）
+・text_layer3は具体的なベネフィット（数字推奨・24文字以内）
 
-禁止ワード：絵文字・振り返って・読んでみる・してみた・について・解説・楽天`;
+共通禁止ワード：絵文字・【】・振り返って・読んでみる・してみた・について・解説・楽天
+
+以下のJSONのみ出力してください（説明・記号・マークダウン禁止）：
+{"text_layer1":"（12文字以内）","text_layer2":"（12文字以内）","text_layer3":"（24文字以内）"}`;
 
   let t1='', t2='', t3='';
   try {
@@ -5232,14 +5261,21 @@ async function runImgGenFromTemplate(n, apiKey) {
       body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:256,temperature:0.9} })
     });
     const data = await res.json();
+    // 修正2: パース堅牢化（```json除去→trim→JSON.parse、失敗時ログ）
     const raw = (data.candidates?.[0]?.content?.parts?.[0]?.text||'').replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(raw);
-    t1 = _cleanText(parsed.text_layer1||'', 12);
-    t2 = _cleanText(parsed.text_layer2||'', 12);
-    t3 = _cleanText(parsed.text_layer3||'', 24);
-  } catch(e) {}
-  // フォールバック：空欄をキーワード・タイトルで補完
-  if (!t2) t2 = _cleanText(n.title||'', 12);
+    try {
+      const parsed = JSON.parse(raw);
+      t1 = _cleanText(parsed.text_layer1||'', 12);
+      t2 = _cleanText(parsed.text_layer2||'', 12);
+      t3 = _cleanText(parsed.text_layer3||'', 24);
+      console.log('[ImgGen] パース成功', {t1, t2, t3});
+    } catch(pe) {
+      console.log('[ImgGen] パース失敗', pe.message, raw);
+    }
+  } catch(e) { console.log('[ImgGen] APIエラー', e.message); }
+
+  // フォールバック：タイトルそのままは使わず kw.main を優先
+  if (!t2) t2 = _cleanText(kw?.main || '', 12);
   if (!t1 && kwHint) t1 = _cleanText(kwHint.split(' ')[0]||'', 12);
   if (!t3 && kwHint) t3 = _cleanText(kwHint.split(' ').slice(-1)[0]||'', 24);
 
