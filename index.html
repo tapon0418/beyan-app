@@ -2714,6 +2714,12 @@ function initFirebase() {
             toast('📤 画像テンプレートをクラウドに移行しました');
             return;
           }
+          if (fbVal === null && _imLocalBak === null) {
+            db.ref('beyan_img_template').set(DEFAULT_IMG_TEMPLATE);
+            db.ref('beyan_img_template_ts').set(new Date().toISOString());
+            _imgTemplate = DEFAULT_IMG_TEMPLATE;
+            return;
+          }
           if (fbVal !== null && _imLocalBak !== null) {
             const winner = _imLocalBak.length >= fbVal.length ? _imLocalBak : fbVal;
             if (_imLocalBak.length > fbVal.length) {
@@ -4836,33 +4842,166 @@ function renderNetaList() {
 // ================================================================
 // 見出し画像生成 — テンプレート管理
 // ================================================================
-const DEFAULT_IMG_TEMPLATE = `記事本文を読み込み、内容に合わせたJSON変数を決定してください。JSONのみ出力（コードブロック不要）。
+const DEFAULT_IMG_TEMPLATE = `あなたはnoteの見出し画像生成の専門家です。
+以下の記事情報を読み込み、最適なSVG見出し画像を生成してください。
 
-【重要】記事本文から実際に使われているワード・数字・テーマを必ず抽出して使うこと。デフォルト値を使わないこと。
+【記事情報】
+タイトル：{{title}}
+キャッチコピー：{{catch}}
+メインメッセージ：{{main}}
+サブコピー：{{sub}}
+ジャンル：{{genre}}
+記事メモ：{{memo}}
 
-【デザイン基本方針】黒・チャコール系の背景にオレンジのアクセントカラーを使ったシャープなデザインを基本とする。アイコンは必ず💡（電球）を含めること。
+---
 
-変数の選択基準：
-- badge: 「実体験」「検証済み」「初心者必見」「比較レポ」のどれかを記事内容に合わせて選択
-- number: 記事本文に登場する具体的な数字（PV数・金額・日数・件数など）。なければタイトルから推測
-- unit: 数字の単位（PV、万円、倍、件、時間 など）
-- period: 記事に登場する期間（5日、1ヶ月、2週間 など）。なければ「短期間」
-- achievement: 記事の核心的な成果・気づきを10字以内で（本文から抽出）
-- target: 記事が想定する読者像を15字以内で（本文から抽出）
-- solution: 記事で提示する解決策・行動を10字以内で（本文から抽出）
-- subtitle: 読者の共感を引く一言・問いかけを20字以内で（本文のトーンに合わせる）
-- keywords: 記事本文から抽出した重要ワード3つをカンマ区切り（例：クラウドワークス,ランサーズ,使い比べ）
-- icons: 必ず💡を含む絵文字2つ（例：💡📊 / 💡✍️ / 💡📈 / 💡🔑 / 💡📝）
-- mainColor: チャコール（黒系を基本とする）
-- accentColor: オレンジ（を基本。必要に応じてゴールドも可）
-- mainColorHex: 黒・チャコール系（#1a1a1a / #111111 / #1c1c1e / #0d0d0d など）
-- accentColorHex: オレンジ系（#f5a623 / #e07b20 / #ff6b35 / #f5820a など）
+【絶対ルール】
+・画像サイズ：1280×670px固定
+・文字は必ず読める視認性を確保
+・情報は「1メッセージ」に絞る。詰め込み禁止
+・テキストは最大3層（メイン・サブ・補足）まで
+・前回と同じデザインパターンを繰り返すことは禁止
+・「AIっぽい」画像にならないよう、過剰な装飾・過剰なグラデーション禁止
 
-出力JSONフォーマット例：
-{"badge":"実体験","number":"5","unit":"本","period":"1週間","achievement":"失敗から学んだ","target":"副業ライター志望","solution":"今すぐ実践","subtitle":"失敗してわかった3つのこと","keywords":"AI,ライティング,失敗","icons":"💡📝","mainColor":"チャコール","accentColor":"オレンジ","mainColorHex":"#1a1a1a","accentColorHex":"#f5a623"}`;
+---
+
+【ジャンル別デザイン方針】
+
+■ AI活用・テック系
+→ ノウハウ体系型 or 数字ドーン型を優先
+→ 青・紺・黒をベースに、緑またはオレンジをアクセント
+→ 構造化・整理感を重視。チェック・矢印・数字アイコン
+
+■ 副業・ライター・フリーランス系
+→ 数字ドーン型 or 警告・失敗談型を優先
+→ 黒・濃紺ベース、オレンジ・金をアクセント
+→ 損失回避・実績訴求。炎・稲妻・グラフアイコン
+
+■ 楽天・節約・お金系
+→ 実績型 or 比較対比型を優先
+→ 紺・黒・白ベース、金・黄をアクセント
+→ 数字・実績・変化量を前面に。バッジ・王冠・グラフ
+
+■ エッセイ・自己啓発系
+→ 共感型 or ストーリー型を優先
+→ ベージュ・クリーム・淡色ベース、低彩度オレンジをアクセント
+→ 余白大きめ。人物・吹き出し・手書き風要素
+
+■ 振り返り・体験談系
+→ ストーリー型 or 余白訴求型を優先
+→ 語り手のトーンに合わせた中間色
+→ 転機・変化を感じさせる対角線構図
+
+■ ハウツー・解説系
+→ ノウハウ体系型 or 比較対比型を優先
+→ 白・青・紺ベース、緑をアクセント
+→ 手順感・整理感。矢印・番号・チェック
+
+■ 有料note系
+→ 実績型 or 限定感・緊急型を優先
+→ 紺・黒・金ベース
+→ 権威性・希少性を視覚化。バッジ・星・王冠
+
+---
+
+【感情トーン別デザイン指示】
+
+記事の感情トーンを以下から判断し対応するデザインを適用する：
+
+・驚き → 赤・黄・黒、極太文字中央、稲妻アイコン
+・共感 → ベージュ・薄ピンク、余白大、丸ゴシック、人物アイコン
+・学び → 青・白・紺、左上→右下の流れ、チェック・矢印
+・警告 → 赤・黒、2分割構図、最太級文字、注意マーク
+・達成感 → 金・紺、中央集中、太字、星・王冠
+・好奇心 → 紫・青緑、非対称構図、中太、？マーク
+・悩み解決 → 白・青・緑、整理型構図、読みやすい太さ
+・緊急性 → 赤・黄、上部強調、太字短文、時計・炎
+
+---
+
+【バリエーション強制ルール】
+以下の変数から前回と異なる組み合わせを必ず3つ以上選択すること：
+
+背景スタイル：[単色ダーク/単色ライト/左右グラデ/上下グラデ/斜めグラデ/放射グラデ/写真風テクスチャ/図形パターン/紙質テクスチャ]
+メインカラー：[黒/濃紺/深緑/白/ベージュ/クリーム/赤/青/紫]
+アクセントカラー：[オレンジ/金/黄/赤/緑/水色/ピンク/シルバー]
+構図：[中央集中/左寄せ/右寄せ/上下分割/左右分割/対角線/非対称/余白重視]
+アイコン：[なし/電球/炎/稲妻/矢印/チェック/星/王冠/グラフ/人物シルエット/吹き出し/時計/数字強調/注意マーク]
+テキスト層数：[1層/2層/3層]
+情報密度：[ミニマル/スタンダード/インフォリッチ]
+感情トーン：[緊急・驚き/共感・親しみ/学び・整理/警告・損失/達成・実績/好奇心・問いかけ/悩み解決/権威・信頼]
+
+---
+
+【一本調子防止チェックリスト】
+生成前に以下を確認すること：
+□ 背景スタイルは前回と異なるか
+□ メインカラーは前回と異なるか
+□ 構図は前回と異なるか
+□ アイコンの有無は前回と変えているか
+□ テキスト層数は前回と異なるか
+□ 感情トーンは前回と異なるか
+□ 「前回と同じ雰囲気」になっていない
+
+---
+
+【品質基準】
+・スマホ画面で文字が読めること
+・コントラストが4.5:1以上を確保
+・フォントはNoto Sans JPをベースとし必要に応じてSyneを組み合わせる
+・シャドウ・グロー・アウトラインは視認性向上のためのみ使用。装飾目的での多用禁止
+・画像サイズ：1280×670px、SVG形式で出力
+
+---
+
+【出力形式】
+JSONのみ出力（コードブロック・改行不要）
+
+{"pattern":"使用したデザインパターン名","bg_style":"背景スタイル","main_color":"メインカラー","accent_color":"アクセントカラー","layout":"構図","icon":"使用アイコン","text_layers":"テキスト層数","emotion_tone":"感情トーン","svg":"SVGコード全文"}`;
 
 function getImgPromptTemplate() {
   return (_imgTemplate !== null && _imgTemplate !== undefined) ? _imgTemplate : DEFAULT_IMG_TEMPLATE;
+}
+
+function _applyImgTmplPlaceholders(n) {
+  const tmpl = getImgPromptTemplate();
+  const kw = (() => { try { return JSON.parse(localStorage.getItem('beyan_img_keywords') || 'null'); } catch(e) { return null; } })();
+  const catchTxt = (kw && kw.catch) ? kw.catch : (n.title || '');
+  const mainTxt  = (kw && kw.main)  ? kw.main  : '';
+  const subTxt   = (kw && kw.sub)   ? kw.sub   : '';
+  return tmpl
+    .replace(/\{\{title\}\}/g,  n.title || '')
+    .replace(/\{\{catch\}\}/g,  catchTxt)
+    .replace(/\{\{main\}\}/g,   mainTxt)
+    .replace(/\{\{sub\}\}/g,    subTxt)
+    .replace(/\{\{genre\}\}/g,  n.cat || '')
+    .replace(/\{\{memo\}\}/g,   n.memo || '');
+}
+
+async function runImgGenFromTemplate(n, apiKey) {
+  const TEXT_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
+  const prompt = _applyImgTmplPlaceholders(n);
+  let design = null;
+  for (const model of TEXT_MODELS) {
+    try {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.9, maxOutputTokens: 8192 }
+        })
+      });
+      const d = await r.json();
+      if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
+      const txt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+      const m = txt.match(/\{[\s\S]*\}/);
+      if (m) { try { design = JSON.parse(m[0]); } catch(e2) { continue; } }
+      if (design && design.svg) break;
+      design = null;
+    } catch(e) { console.warn('[imggen] template', model, e.message); }
+  }
+  if (!design || !design.svg) throw new Error('SVG not returned from template');
+  return svgToBase64PNG(design.svg);
 }
 function _syncImgTemplateTAs(value) {
   // 作業モーダル内のtextareaと設定モーダル内のtextareaを両方同期
@@ -5273,12 +5412,26 @@ async function runImgGen() {
   loadEl.style.display = 'block';
   if (btn) btn.disabled = true;
 
-  statusEl.textContent = '① 変数・指示文生成中...';
-  pbar.style.width = '20%';
+  statusEl.textContent = '① SVGテンプレートで画像生成中...';
+  pbar.style.width = '30%';
 
+  // 新テンプレートフロー（Gemini→SVG→PNG）を優先
+  try {
+    pbar.style.width = '60%';
+    const b64 = await runImgGenFromTemplate(n, apiKey);
+    pbar.style.width = '100%';
+    loadEl.style.display = 'none'; if (btn) btn.disabled = false;
+    displayMwImg('image/png', b64, _applyImgTmplPlaceholders(n));
+    return;
+  } catch(e) {
+    console.warn('[imggen] template flow failed, falling back:', e.message);
+  }
+
+  // フォールバック: 旧フロー（変数生成→Imagen API）
+  statusEl.textContent = '② フォールバック: 指示文生成中...';
+  pbar.style.width = '40%';
   const buildBtn = document.getElementById('btn-build-imgprompt');
   if (buildBtn) { buildBtn.disabled = true; buildBtn.textContent = '⏳ 指示文を生成中...'; }
-
   try {
     const { nb2Prompt } = await _buildImgVarsAndPrompt(n, apiKey);
     document.getElementById('mwimg-prompt').value = nb2Prompt;
@@ -5290,7 +5443,6 @@ async function runImgGen() {
     showMwImgError('⚠️ 指示文の生成に失敗しました: ' + e.message);
     return;
   }
-
   await runImgGenFromPrompt();
 }
 
@@ -5378,7 +5530,7 @@ function svgToBase64PNG(svgString) {
     img.onload = () => {
       // フォントロード完了を保証してからcanvas描画（iOS Safariフォント未ロード対策）
       (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
-        const W = 1280, H = 720;
+        const W = 1280, H = 670;
         const canvas = document.createElement('canvas');
         canvas.width = W; canvas.height = H;
         const ctx = canvas.getContext('2d');
