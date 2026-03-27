@@ -2707,8 +2707,27 @@ function initFirebase() {
         const fbVal = snap.val();
         if (_imFirst) {
           _imFirst = false;
+          // 旧フォーマット（SVGを直接返すテンプレート）を検出して自動更新
+          const isOldFmt = fbVal && (fbVal.includes('"svg":"SVGコード全文"') || (fbVal.includes('"svg":') && fbVal.includes('SVGコード')));
+          if (isOldFmt) {
+            db.ref('beyan_img_template').set(DEFAULT_IMG_TEMPLATE);
+            db.ref('beyan_img_template_ts').set(new Date().toISOString());
+            _imgTemplate = DEFAULT_IMG_TEMPLATE;
+            toast('🔄 画像テンプレートを新バージョンに更新しました');
+            _syncImgTemplateTAs(DEFAULT_IMG_TEMPLATE);
+            return;
+          }
           if (fbVal === null && _imLocalBak !== null) {
-            db.ref('beyan_img_template').set(_imLocalBak);
+            // localStorageの旧フォーマットも同様にチェック
+            const lsBak = isOldFmt ? null : _imLocalBak;
+            if (!lsBak || lsBak.includes('"svg":"SVGコード全文"')) {
+              db.ref('beyan_img_template').set(DEFAULT_IMG_TEMPLATE);
+              db.ref('beyan_img_template_ts').set(new Date().toISOString());
+              _imgTemplate = DEFAULT_IMG_TEMPLATE;
+              localStorage.removeItem('beyan_img_template');
+              return;
+            }
+            db.ref('beyan_img_template').set(lsBak);
             db.ref('beyan_img_template_ts').set(new Date().toISOString());
             localStorage.removeItem('beyan_img_template');
             toast('📤 画像テンプレートをクラウドに移行しました');
@@ -4842,122 +4861,58 @@ function renderNetaList() {
 // ================================================================
 // 見出し画像生成 — テンプレート管理
 // ================================================================
-const DEFAULT_IMG_TEMPLATE = `あなたはnoteの見出し画像生成の専門家です。
-以下の記事情報を読み込み、最適なSVG見出し画像を生成してください。
+const DEFAULT_IMG_TEMPLATE = `あなたはnoteの見出し画像デザインの専門家です。
+以下の記事情報を分析し、最適なデザイン変数をJSONのみで返してください。SVGコードは含めない。
 
 【記事情報】
 タイトル：{{title}}
-キャッチコピー：{{catch}}
-メインメッセージ：{{main}}
-サブコピー：{{sub}}
 ジャンル：{{genre}}
+キーワードヒント：{{keywords_hint}}
 記事メモ：{{memo}}
 
 ---
 
-【絶対ルール】
-・画像サイズ：1280×670px固定
-・文字は必ず読める視認性を確保
-・情報は「1メッセージ」に絞る。詰め込み禁止
-・テキストは最大3層（メイン・サブ・補足）まで
-・前回と同じデザインパターンを繰り返すことは禁止
-・「AIっぽい」画像にならないよう、過剰な装飾・過剰なグラデーション禁止
+【text_layerの決め方】
+・text_layer1（キャッチ12文字以内）：読者が「自分のことだ」と思うフック
+・text_layer2（メイン20文字以内）：記事の核心メッセージ・最大の成果・解決策
+・text_layer3（サブ25文字以内）：読者への問いかけまたは行動促進
 
 ---
 
-【ジャンル別デザイン方針】
-
-■ AI活用・テック系
-→ ノウハウ体系型 or 数字ドーン型を優先
-→ 青・紺・黒をベースに、緑またはオレンジをアクセント
-→ 構造化・整理感を重視。チェック・矢印・数字アイコン
-
-■ 副業・ライター・フリーランス系
-→ 数字ドーン型 or 警告・失敗談型を優先
-→ 黒・濃紺ベース、オレンジ・金をアクセント
-→ 損失回避・実績訴求。炎・稲妻・グラフアイコン
-
-■ 楽天・節約・お金系
-→ 実績型 or 比較対比型を優先
-→ 紺・黒・白ベース、金・黄をアクセント
-→ 数字・実績・変化量を前面に。バッジ・王冠・グラフ
-
-■ エッセイ・自己啓発系
-→ 共感型 or ストーリー型を優先
-→ ベージュ・クリーム・淡色ベース、低彩度オレンジをアクセント
-→ 余白大きめ。人物・吹き出し・手書き風要素
-
-■ 振り返り・体験談系
-→ ストーリー型 or 余白訴求型を優先
-→ 語り手のトーンに合わせた中間色
-→ 転機・変化を感じさせる対角線構図
-
-■ ハウツー・解説系
-→ ノウハウ体系型 or 比較対比型を優先
-→ 白・青・紺ベース、緑をアクセント
-→ 手順感・整理感。矢印・番号・チェック
-
-■ 有料note系
-→ 実績型 or 限定感・緊急型を優先
-→ 紺・黒・金ベース
-→ 権威性・希少性を視覚化。バッジ・星・王冠
+【ジャンル別カラーハードルール】
+■ 副業・ライター・フリーランス → accent_color: #f5a623〜#e07b20（オレンジ系必須）
+■ AI活用・テック → bg_color1: #0a1628〜#1a2540（青・紺系）、accent: #00c896〜#4ade80（緑系）
+■ 楽天・節約・お金 → accent_color: #d4a017〜#f0c040（金・黄系必須）
+■ エッセイ・自己啓発 → bg_type: gradient_light、暖色系
+■ 有料note → accent_color: #c9a227〜#d4b060（金系）、icon_type: crown または star
 
 ---
 
-【感情トーン別デザイン指示】
-
-記事の感情トーンを以下から判断し対応するデザインを適用する：
-
-・驚き → 赤・黄・黒、極太文字中央、稲妻アイコン
-・共感 → ベージュ・薄ピンク、余白大、丸ゴシック、人物アイコン
-・学び → 青・白・紺、左上→右下の流れ、チェック・矢印
-・警告 → 赤・黒、2分割構図、最太級文字、注意マーク
-・達成感 → 金・紺、中央集中、太字、星・王冠
-・好奇心 → 紫・青緑、非対称構図、中太、？マーク
-・悩み解決 → 白・青・緑、整理型構図、読みやすい太さ
-・緊急性 → 赤・黄、上部強調、太字短文、時計・炎
+【感情トーン別デザイン指針】
+・達成感 → bg_type:gradient_dark、金・紺、icon:crown/star
+・驚き → bg_type:solid_dark、赤・黄、icon:lightning
+・共感 → bg_type:gradient_light、暖色、icon:person
+・学び → bg_type:gradient_dark、青系、icon:arrow/check
+・警告 → bg_type:solid_dark、赤・黒、icon:warning
+・好奇心 → bg_type:split、紫・青緑、icon:bulb
+・悩み解決 → bg_type:gradient_light、白・青、icon:check
+・緊急性 → bg_type:solid_dark、赤・黄、icon:fire
 
 ---
 
 【バリエーション強制ルール】
-以下の変数から前回と異なる組み合わせを必ず3つ以上選択すること：
+以下から前回と異なる組み合わせを必ず3つ以上選択：
 
-背景スタイル：[単色ダーク/単色ライト/左右グラデ/上下グラデ/斜めグラデ/放射グラデ/写真風テクスチャ/図形パターン/紙質テクスチャ]
-メインカラー：[黒/濃紺/深緑/白/ベージュ/クリーム/赤/青/紫]
-アクセントカラー：[オレンジ/金/黄/赤/緑/水色/ピンク/シルバー]
-構図：[中央集中/左寄せ/右寄せ/上下分割/左右分割/対角線/非対称/余白重視]
-アイコン：[なし/電球/炎/稲妻/矢印/チェック/星/王冠/グラフ/人物シルエット/吹き出し/時計/数字強調/注意マーク]
-テキスト層数：[1層/2層/3層]
-情報密度：[ミニマル/スタンダード/インフォリッチ]
-感情トーン：[緊急・驚き/共感・親しみ/学び・整理/警告・損失/達成・実績/好奇心・問いかけ/悩み解決/権威・信頼]
+bg_type：[gradient_dark/gradient_light/solid_dark/solid_light/split]
+layout：[center/top_bottom/diagonal/left_heavy/split]
+icon_type：[bulb/fire/lightning/arrow/check/star/crown/graph/person/warning/none]
+emotion_tone：[緊急・驚き/共感・親しみ/学び・整理/警告・損失/達成・実績/好奇心・問いかけ/悩み解決/権威・信頼]
 
 ---
 
-【一本調子防止チェックリスト】
-生成前に以下を確認すること：
-□ 背景スタイルは前回と異なるか
-□ メインカラーは前回と異なるか
-□ 構図は前回と異なるか
-□ アイコンの有無は前回と変えているか
-□ テキスト層数は前回と異なるか
-□ 感情トーンは前回と異なるか
-□ 「前回と同じ雰囲気」になっていない
+【出力形式】JSONのみ（コードブロック不要）
 
----
-
-【品質基準】
-・スマホ画面で文字が読めること
-・コントラストが4.5:1以上を確保
-・フォントはNoto Sans JPをベースとし必要に応じてSyneを組み合わせる
-・シャドウ・グロー・アウトラインは視認性向上のためのみ使用。装飾目的での多用禁止
-・画像サイズ：1280×670px、SVG形式で出力
-
----
-
-【出力形式】
-JSONのみ出力（コードブロック・改行不要）
-
-{"pattern":"使用したデザインパターン名","bg_style":"背景スタイル","main_color":"メインカラー","accent_color":"アクセントカラー","layout":"構図","icon":"使用アイコン","text_layers":"テキスト層数","emotion_tone":"感情トーン","svg":"SVGコード全文"}`;
+{"pattern":"パターン名","bg_type":"gradient_dark","bg_color1":"#hex","bg_color2":"#hex","accent_color":"#hex","text_color":"#ffffff","sub_color":"#hex","layout":"center","icon_type":"bulb","text_layer1":"12文字以内","text_layer2":"20文字以内","text_layer3":"25文字以内","font_weight":"black","emotion_tone":"感情トーン名","variation_reason":"前回と変えた3変数の説明"}`;
 
 function getImgPromptTemplate() {
   return (_imgTemplate !== null && _imgTemplate !== undefined) ? _imgTemplate : DEFAULT_IMG_TEMPLATE;
@@ -4966,16 +4921,25 @@ function getImgPromptTemplate() {
 function _applyImgTmplPlaceholders(n) {
   const tmpl = getImgPromptTemplate();
   const kw = (() => { try { return JSON.parse(localStorage.getItem('beyan_img_keywords') || 'null'); } catch(e) { return null; } })();
+  // new format: {{keywords_hint}}
+  let kwHint = '';
+  if (kw) {
+    if (kw.catch) kwHint += `キャッチ「${kw.catch}」`;
+    if (kw.main)  kwHint += ` メイン「${kw.main}」`;
+    if (kw.sub)   kwHint += ` サブ「${kw.sub}」`;
+  }
+  // old format compat: {{catch}} {{main}} {{sub}}
   const catchTxt = (kw && kw.catch) ? kw.catch : (n.title || '');
   const mainTxt  = (kw && kw.main)  ? kw.main  : '';
   const subTxt   = (kw && kw.sub)   ? kw.sub   : '';
   return tmpl
-    .replace(/\{\{title\}\}/g,  n.title || '')
-    .replace(/\{\{catch\}\}/g,  catchTxt)
-    .replace(/\{\{main\}\}/g,   mainTxt)
-    .replace(/\{\{sub\}\}/g,    subTxt)
-    .replace(/\{\{genre\}\}/g,  n.cat || '')
-    .replace(/\{\{memo\}\}/g,   n.memo || '');
+    .replace(/\{\{title\}\}/g,         n.title || '')
+    .replace(/\{\{catch\}\}/g,         catchTxt)
+    .replace(/\{\{main\}\}/g,          mainTxt)
+    .replace(/\{\{sub\}\}/g,           subTxt)
+    .replace(/\{\{genre\}\}/g,         n.cat || '')
+    .replace(/\{\{keywords_hint\}\}/g, kwHint.trim() || 'なし')
+    .replace(/\{\{memo\}\}/g,          n.memo || '');
 }
 
 // ── バリエーション強制: 生成履歴管理 ──
@@ -5002,11 +4966,11 @@ async function _getImgHistory(noteId) {
 async function _saveImgHistory(noteId, design) {
   const hist = await _getImgHistory(noteId);
   const entry = {
-    bg_style:    design.bg_style    || '',
-    main_color:  design.main_color  || '',
-    layout:      design.layout      || '',
-    icon:        design.icon        || '',
-    emotion_tone:design.emotion_tone|| ''
+    bg_type:     design.bg_type      || '',
+    bg_color1:   design.bg_color1    || '',
+    layout:      design.layout       || '',
+    icon_type:   design.icon_type    || '',
+    emotion_tone:design.emotion_tone || ''
   };
   hist.unshift(entry);
   if (hist.length > 3) hist.length = 3;
@@ -5026,9 +4990,209 @@ function _buildHistoryBanStr(hist) {
   if (!hist || hist.length === 0) return '';
   const labels = ['直前回', '2回前', '3回前'];
   const lines = hist.map((h, i) =>
-    `${labels[i] || (i+1)+'回前'}：${h.bg_style}・${h.main_color}・${h.layout}・${h.icon}・${h.emotion_tone}`
+    `${labels[i]}：bg_type=${h.bg_type||'-'}、bg_color1=${h.bg_color1||'-'}、layout=${h.layout||'-'}、icon_type=${h.icon_type||'-'}、emotion_tone=${h.emotion_tone||'-'}`
   );
-  return `\n\n【過去の生成履歴（これらは今回使用禁止）】\n${lines.join('\n')}\n上記5変数（背景スタイル・メインカラー・構図・アイコン・感情トーン）は今回絶対に使用しないこと。3回連続で同じ組み合わせを繰り返すことは禁止。`;
+  return `\n\n【過去の生成履歴（これらは今回使用禁止）】\n${lines.join('\n')}\n上記のbg_type・bg_color1・layout・icon_type・emotion_toneは今回絶対に使用しないこと。`;
+}
+
+// ── hex ユーティリティ（モジュールレベル） ──
+function _hexToRGB(h) {
+  const c = String(h||'#000000').replace('#','');
+  if (c.length < 6) return [0,0,0];
+  return [parseInt(c.slice(0,2),16)||0, parseInt(c.slice(2,4),16)||0, parseInt(c.slice(4,6),16)||0];
+}
+function _darkenHex(h, amt) {
+  const [r,g,b] = _hexToRGB(h);
+  return '#'+[r,g,b].map(v=>Math.max(0,v-amt).toString(16).padStart(2,'0')).join('');
+}
+
+// ── ジャンル別カラーオーバーライド（ハードルール） ──
+function _applyGenreOverrides(vars, genre) {
+  const g = String(genre||'').toLowerCase();
+  const setAccent = hex => { vars.accent_color = hex; if (!vars.sub_color || vars.sub_color === vars.accent_color) vars.sub_color = hex; };
+  if (g.includes('副業') || g.includes('ライター') || g.includes('フリーランス')) {
+    setAccent('#f5a623');
+  } else if (g.includes('ai') || g.includes('テック') || g.includes('人工知能')) {
+    const [r,g2,b] = _hexToRGB(vars.bg_color1||'#000');
+    if ((r*299+g2*587+b*114)/1000 > 80) { vars.bg_color1='#0d1a2e'; vars.bg_color2='#1a2f50'; }
+    if (!vars.accent_color || vars.accent_color === '#ffffff') setAccent('#00c896');
+  } else if (g.includes('楽天') || g.includes('節約') || g.includes('お金')) {
+    setAccent('#d4a017');
+  } else if (g.includes('有料') || g.includes('premium')) {
+    setAccent('#c9a227');
+    if (!vars.icon_type || vars.icon_type === 'none') vars.icon_type = 'crown';
+  }
+  return vars;
+}
+
+// ── デザイン変数からSVGを構築 ──
+function buildSVGFromDesignVars(vars) {
+  const W = 1280, H = 670;
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  const bg1    = vars.bg_color1    || '#1a1a2e';
+  const bg2    = vars.bg_color2    || '#16213e';
+  const accent = vars.accent_color || '#f5a623';
+  const textC  = vars.text_color   || '#ffffff';
+  const subC   = vars.sub_color    || accent;
+  const bgType = vars.bg_type      || 'gradient_dark';
+  const layout = vars.layout       || 'center';
+  const iconTp = vars.icon_type    || 'none';
+  const t1raw  = String(vars.text_layer1 || '');
+  const t2raw  = String(vars.text_layer2 || '');
+  const t3raw  = String(vars.text_layer3 || '');
+  const t1 = esc(t1raw), t2 = esc(t2raw), t3 = esc(t3raw);
+  const fw = vars.font_weight === 'bold' ? '700' : '900';
+  const ff = "'Noto Sans JP',sans-serif";
+  const bg3 = _darkenHex(bg2, 28);
+  const accRGB = _hexToRGB(accent);
+  const lum = ([r,g,b]) => (r*299+g*587+b*114)/1000;
+  const badgeTxtC = lum(_hexToRGB(accent)) > 140 ? '#1a1a1a' : '#ffffff';
+
+  // font-size auto-scale: estimate px per char for JP
+  const calcFS = (base, raw, maxW) => {
+    if (!raw) return base;
+    const est = [...raw].length * base * 0.92;
+    return est <= maxW ? base : Math.max(20, Math.floor(base * maxW / est));
+  };
+
+  // ── SVGアイコンパス (100×100 viewBox) ──
+  const ICONS = {
+    bulb:      'M50,8 C30,8 15,23 15,42 C15,58 24,68 34,74 L34,84 L66,84 L66,74 C76,68 85,58 85,42 C85,23 70,8 50,8Z M38,84 L38,91 L62,91 L62,84Z M44,91 L46,96 L54,96 L56,91Z',
+    fire:      'M50,2 C38,14 20,30 20,50 C20,70 33,82 50,82 C67,82 80,70 80,50 C80,30 62,14 50,2Z M50,32 C44,40 42,52 46,62 C48,67 52,67 54,62 C58,52 56,40 50,32Z',
+    lightning: 'M57,3 L18,55 L44,55 L37,97 L82,42 L56,42Z',
+    arrow:     'M50,5 L90,46 L68,46 L68,93 L32,93 L32,46 L10,46Z',
+    check:     'M14,50 L39,76 L86,21 L76,11 L39,56 L24,40Z',
+    star:      'M50,5 L62,37 L97,37 L70,57 L80,90 L50,69 L20,90 L30,57 L3,37 L38,37Z',
+    crown:     'M5,78 L5,40 L27,60 L50,8 L73,60 L95,40 L95,78Z',
+    graph:     'M8,88 L8,45 L28,45 L28,88Z M40,88 L40,20 L60,20 L60,88Z M72,88 L72,36 L92,36 L92,88Z M4,88 L96,88 L96,94 L4,94Z',
+    person:    'M50,5 C39,5 30,14 30,25 C30,36 39,45 50,45 C61,45 70,36 70,25 C70,14 61,5 50,5Z M12,93 C12,65 28,54 50,54 C72,54 88,65 88,93Z',
+    warning:   'M50,5 L95,88 L5,88Z M46,37 L47,65 L53,65 L54,37Z M50,73 A4,4 0,1,0,50,81 A4,4 0,1,0,50,73Z',
+    none: ''
+  };
+  const iconPath = ICONS[iconTp] || '';
+
+  // ── 背景 ──
+  let bgContent = '';
+  if (bgType === 'solid_dark' || bgType === 'solid_light') {
+    bgContent = `<rect width="${W}" height="${H}" fill="${bg1}"/>
+    <polygon points="0,0 ${W},0 ${W},${H}" fill="${bg2}" opacity="0.22"/>`;
+  } else if (bgType === 'split') {
+    bgContent = `<rect width="${W}" height="${H}" fill="${bg1}"/>
+    <polygon points="580,0 ${W},0 ${W},${H} 700,${H}" fill="${bg2}"/>
+    <polygon points="570,0 610,0 730,${H} 690,${H}" fill="${accent}" opacity="0.16"/>`;
+  } else {
+    bgContent = `<rect width="${W}" height="${H}" fill="url(#mainGrad)"/>
+    <rect width="${W}" height="${H}" fill="url(#vignette)" opacity="0.32"/>`;
+  }
+
+  // ── diagonal layout 用シェイプ ──
+  const diagEl = layout === 'diagonal'
+    ? `<polygon points="0,0 400,0 290,${H} 0,${H}" fill="${bg2}" opacity="0.52"/>
+       <polygon points="390,0 420,0 310,${H} 280,${H}" fill="${accent}" opacity="0.13"/>`
+    : '';
+
+  // ── アイコン配置 ──
+  let iconEl = '';
+  if (iconPath && iconTp !== 'none') {
+    const POS = {
+      center:    {ix:1090, iy:540, sz:160},
+      top_bottom:{ix:640,  iy:365, sz:155},
+      diagonal:  {ix:1065, iy:305, sz:195},
+      left_heavy:{ix:220,  iy:310, sz:210},
+      split:     {ix:990,  iy:315, sz:190}
+    };
+    const {ix,iy,sz} = POS[layout] || POS.center;
+    const sc = sz/100;
+    iconEl = `<g transform="translate(${ix-sz/2},${iy-sz/2}) scale(${sc})" filter="url(#iglow)">
+      <path d="${iconPath}" fill="${accent}" fill-rule="evenodd"/>
+    </g>`;
+  }
+
+  // ── テキスト描画 ──
+  const tsh = 'filter="url(#tsh)"';
+  const txt = (x,y,text,fs,weight,col,anchor='start') =>
+    text ? `<text x="${x}" y="${y}" font-family="${ff}" font-size="${fs}" font-weight="${weight}" fill="${col}" text-anchor="${anchor}" ${tsh}>${text}</text>` : '';
+  const acLine = (x,y,w) =>
+    `<rect x="${x}" y="${y}" width="${w}" height="5" rx="2.5" fill="url(#acLineG)"/>`;
+
+  let textEls = '';
+  if (layout === 'left_heavy') {
+    const tx=440, mw=800;
+    const fs1=calcFS(76,t1raw,mw), fs2=calcFS(60,t2raw,mw), fs3=calcFS(33,t3raw,mw);
+    textEls = txt(tx,215,t1,fs1,fw,textC) + acLine(tx,237,Math.min(W-tx-60,mw))
+            + txt(tx,355,t2,fs2,fw,textC) + txt(tx,445,t3,fs3,'700',subC)
+            + `<line x1="${tx-22}" y1="55" x2="${tx-22}" y2="${H-55}" stroke="${accent}" stroke-width="4" opacity="0.55"/>`;
+  } else if (layout === 'top_bottom') {
+    const cx=W/2, mw=1100;
+    const fs1=calcFS(76,t1raw,mw), fs2=calcFS(58,t2raw,mw), fs3=calcFS(32,t3raw,mw);
+    textEls = txt(cx,143,t1,fs1,fw,textC,'middle') + acLine(cx-220,166,440)
+            + txt(cx,504,t2,fs2,fw,textC,'middle') + txt(cx,564,t3,fs3,'700',subC,'middle');
+  } else if (layout === 'diagonal') {
+    const tx=440, mw=800;
+    const fs1=calcFS(76,t1raw,mw), fs2=calcFS(60,t2raw,mw), fs3=calcFS(33,t3raw,mw);
+    textEls = txt(tx,208,t1,fs1,fw,textC) + acLine(tx,230,Math.min(W-tx-60,mw))
+            + txt(tx,350,t2,fs2,fw,textC) + txt(tx,438,t3,fs3,'700',subC);
+  } else if (layout === 'split') {
+    const tx=80, mw=460;
+    const fs1=calcFS(70,t1raw,mw), fs2=calcFS(52,t2raw,mw), fs3=calcFS(30,t3raw,mw);
+    textEls = txt(tx,228,t1,fs1,fw,textC) + acLine(tx,250,Math.min(420,mw))
+            + txt(tx,358,t2,fs2,fw,textC) + txt(tx,443,t3,fs3,'700',subC);
+  } else { // center
+    const tx=80, mw=1100;
+    const fs1=calcFS(76,t1raw,mw), fs2=calcFS(60,t2raw,mw), fs3=calcFS(33,t3raw,mw);
+    textEls = txt(tx,238,t1,fs1,fw,textC) + acLine(tx,258,700)
+            + txt(tx,370,t2,fs2,fw,textC) + txt(tx,454,t3,fs3,'700',subC);
+  }
+
+  // ── バッジ ──
+  const patRaw = String(vars.pattern || '');
+  const pat = esc(patRaw);
+  const bw = Math.min(patRaw.length * 22 + 44, 380);
+  const badgeEl = pat
+    ? `<rect x="40" y="30" width="${bw}" height="44" rx="22" fill="${accent}"/>
+       <text x="${40+bw/2}" y="60" text-anchor="middle" font-family="${ff}" font-size="20" font-weight="700" fill="${badgeTxtC}">${pat}</text>`
+    : '';
+
+  // ── ボトムバー ──
+  const bottomBar = `<rect x="0" y="${H-28}" width="${W}" height="28" fill="${bg1}" opacity="0.72"/>
+  <rect x="0" y="${H-28}" width="230" height="28" fill="${accent}" opacity="0.82"/>
+  <text x="16" y="${H-8}" font-family="sans-serif" font-size="15" fill="${textC}" opacity="0.78">note.com/beyan51612</text>`;
+
+  const [ar,ag,ab] = accRGB;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <linearGradient id="mainGrad" x1="10%" y1="0%" x2="90%" y2="100%">
+      <stop offset="0%" stop-color="${bg1}"/>
+      <stop offset="52%" stop-color="${bg2}"/>
+      <stop offset="100%" stop-color="${bg3}"/>
+    </linearGradient>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="transparent"/>
+      <stop offset="100%" stop-color="rgba(0,0,0,0.52)"/>
+    </radialGradient>
+    <linearGradient id="acLineG" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="${accent}"/>
+      <stop offset="100%" stop-color="${accent}" stop-opacity="0.1"/>
+    </linearGradient>
+    <filter id="tsh" x="-3%" y="-12%" width="110%" height="135%">
+      <feDropShadow dx="2" dy="3" stdDeviation="4" flood-color="rgba(0,0,0,0.92)" flood-opacity="1"/>
+    </filter>
+    <filter id="iglow" x="-28%" y="-28%" width="156%" height="156%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="11" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="0 0 0 0 ${(ar/255).toFixed(3)}  0 0 0 0 ${(ag/255).toFixed(3)}  0 0 0 0 ${(ab/255).toFixed(3)}  0 0 0 1.6 0"
+        result="glow"/>
+      <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  ${bgContent}
+  ${diagEl}
+  ${iconEl}
+  ${badgeEl}
+  ${textEls}
+  ${bottomBar}
+</svg>`;
 }
 
 async function runImgGenFromTemplate(n, apiKey) {
@@ -5036,7 +5200,6 @@ async function runImgGenFromTemplate(n, apiKey) {
   const hist = await _getImgHistory(n.id);
   const banStr = _buildHistoryBanStr(hist);
   const basePrompt = _applyImgTmplPlaceholders(n);
-  // 出力形式の直前にbansを挿入
   const prompt = banStr
     ? basePrompt.replace('【出力形式】', banStr.trimStart() + '\n\n---\n\n【出力形式】')
     : basePrompt;
@@ -5048,22 +5211,26 @@ async function runImgGenFromTemplate(n, apiKey) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.9, maxOutputTokens: 8192 }
+          generationConfig: { temperature: 0.9, maxOutputTokens: 1024 }
         })
       });
       const d = await r.json();
       if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
       const txt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      const m = txt.match(/\{[\s\S]*\}/);
+      const m = txt.match(/\{[\s\S]*?\}/);
       if (m) { try { design = JSON.parse(m[0]); } catch(e2) { continue; } }
-      if (design && design.svg) break;
+      if (design && (design.bg_type || design.bg_color1)) break;
       design = null;
     } catch(e) { console.warn('[imggen] template', model, e.message); }
   }
-  if (!design || !design.svg) throw new Error('SVG not returned from template');
-  const b64 = await svgToBase64PNG(design.svg);
-  // 生成成功後に履歴保存（awaitしない：UI をブロックしない）
-  _saveImgHistory(n.id, design);
+  if (!design) throw new Error('Design vars not returned from Gemini');
+
+  // ジャンル別カラーオーバーライド
+  _applyGenreOverrides(design, n.cat);
+
+  const svg = buildSVGFromDesignVars(design);
+  const b64 = await svgToBase64PNG(svg);
+  _saveImgHistory(n.id, design); // 非同期・非ブロッキング
   return b64;
 }
 function _syncImgTemplateTAs(value) {
