@@ -2606,6 +2606,15 @@ function initFirebase() {
     const db = firebase.database();
     _fbRef = db.ref('beyan_v6');
 
+    // 起動時一度だけ古い画像テンプレートを強制クリア
+    _fbRef.child('beyan_img_template').once('value').then(snap => {
+      const val = snap.val() || '';
+      if (val === '' || val.includes('あなたはnoteの見出し画像デザインの専門家') || val.includes('SVGコードは含めない')) {
+        _fbRef.child('beyan_img_template').set('');
+        _imgTemplate = '';
+      }
+    });
+
     // ローカルデータがない場合のみローディング表示
     const loadEl = document.getElementById('fb-loading');
     if (loadEl && !_fromLocalStorage) loadEl.style.display = 'flex';
@@ -2699,61 +2708,24 @@ function initFirebase() {
       });
     }
 
-    // ─── 画像テンプレート: 移行対応 + 同期 ───
+    // ─── 画像テンプレート: 古いフォーマット強制クリア + 同期 ───
     {
-      let _imFirst = true;
-      const _imLocalBak = _imgTemplate;
       db.ref('beyan_img_template').on('value', snap => {
         const fbVal = snap.val();
-        if (_imFirst) {
-          _imFirst = false;
-          // 旧フォーマット（SVGを直接返すテンプレート）を検出して自動更新
-          const isOldFmt = fbVal && (fbVal.includes('"svg":"SVGコード全文"') || (fbVal.includes('"svg":') && fbVal.includes('SVGコード')));
-          if (isOldFmt) {
-            db.ref('beyan_img_template').set(DEFAULT_IMG_TEMPLATE);
-            db.ref('beyan_img_template_ts').set(new Date().toISOString());
-            _imgTemplate = DEFAULT_IMG_TEMPLATE;
-            toast('🔄 画像テンプレートを新バージョンに更新しました');
-            _syncImgTemplateTAs(DEFAULT_IMG_TEMPLATE);
-            return;
-          }
-          if (fbVal === null && _imLocalBak !== null) {
-            // localStorageの旧フォーマットも同様にチェック
-            const lsBak = isOldFmt ? null : _imLocalBak;
-            if (!lsBak || lsBak.includes('"svg":"SVGコード全文"')) {
-              db.ref('beyan_img_template').set(DEFAULT_IMG_TEMPLATE);
-              db.ref('beyan_img_template_ts').set(new Date().toISOString());
-              _imgTemplate = DEFAULT_IMG_TEMPLATE;
-              localStorage.removeItem('beyan_img_template');
-              return;
-            }
-            db.ref('beyan_img_template').set(lsBak);
-            db.ref('beyan_img_template_ts').set(new Date().toISOString());
-            localStorage.removeItem('beyan_img_template');
-            toast('📤 画像テンプレートをクラウドに移行しました');
-            return;
-          }
-          if (fbVal === null && _imLocalBak === null) {
-            db.ref('beyan_img_template').set(DEFAULT_IMG_TEMPLATE);
-            db.ref('beyan_img_template_ts').set(new Date().toISOString());
-            _imgTemplate = DEFAULT_IMG_TEMPLATE;
-            return;
-          }
-          if (fbVal !== null && _imLocalBak !== null) {
-            const winner = _imLocalBak.length >= fbVal.length ? _imLocalBak : fbVal;
-            if (_imLocalBak.length > fbVal.length) {
-              db.ref('beyan_img_template').set(_imLocalBak);
-              db.ref('beyan_img_template_ts').set(new Date().toISOString());
-            }
-            _imgTemplate = winner;
-            localStorage.removeItem('beyan_img_template');
-          } else {
-            _imgTemplate = fbVal;
-          }
-        } else {
-          _imgTemplate = fbVal;
+        const isOld = !fbVal
+          || fbVal.includes('あなたはnoteの見出し画像デザインの専門家')
+          || fbVal.includes('SVGコードは含めない')
+          || fbVal.includes('"svg":"SVGコード全文"')
+          || fbVal.includes('"svg":');
+        if (isOld) {
+          db.ref('beyan_img_template').set('');
+          db.ref('beyan_img_template_ts').set(new Date().toISOString());
+          _imgTemplate = '';
+          _syncImgTemplateTAs('');
+          return;
         }
-        _syncImgTemplateTAs(_imgTemplate !== null ? _imgTemplate : DEFAULT_IMG_TEMPLATE);
+        _imgTemplate = fbVal;
+        _syncImgTemplateTAs(fbVal);
       });
       db.ref('beyan_img_template_ts').on('value', snap => {
         _imgTemplateUpdatedAt = snap.val();
