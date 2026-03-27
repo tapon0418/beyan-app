@@ -61,7 +61,7 @@ async function run() {
     const ids = ['mw-title','mw-status','mw-gemini','mw-chatgpt-wrap',
       'claude-result-section','mw-claude-output','claude-manual-panel',
       'claude-manual-input','mw-draft','mw-formatted','mw-xedit',
-      'mwimg-loading','mwimg-result','mwimg-prompt','mwimg-error',
+      'mwimg-loading','mwimg-result','mwimg-error',
       'imgprompt-vault-list','ccheck-prompt','ccheck-result',
       'fp-gemini','fp-chatgpt','fp-format','fp-imggen',
       'fp-imgcheck','fp-note','fp-rakuten','fp-xgen'];

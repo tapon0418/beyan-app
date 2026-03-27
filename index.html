@@ -2175,28 +2175,14 @@ input:focus, textarea:focus, select:focus {
         </div>
       </div>
 
-      <!-- ① 指示文を生成・確認 -->
-      <button class="btn btn-orange" id="btn-build-imgprompt" onclick="buildImgPrompt()"
-        style="width:100%;min-height:44px;font-size:14px;font-weight:700;margin-bottom:8px">
-        📝 指示文を生成・確認
+      <button class="btn btn-accent"
+        style="width:100%;min-height:56px;font-size:17px;font-weight:800;margin-top:12px"
+        onclick="runImgGen()">
+        🖼️ 見出し画像を生成
       </button>
-      <!-- 指示文編集エリア（生成後に表示） -->
-      <div id="mwimg-prompt-wrap" style="display:none;margin-bottom:10px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">見出し画像プロンプト（自由に編集できます）：</div>
-        <textarea id="mwimg-prompt" rows="12"
-          style="width:100%;font-size:12px;line-height:1.65;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;min-height:180px"></textarea>
-        <div style="display:flex;gap:8px;margin-top:6px">
-          <button onclick="navigator.clipboard.writeText(document.getElementById('mwimg-prompt').value).then(()=>toast('コピーしました'))"
-            style="flex:1;min-height:40px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 コピー</button>
-          <button onclick="saveImgPromptFromWork()"
-            style="flex:1;min-height:40px;background:var(--orange-dim);border:1.5px solid var(--orange);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--orange);font-weight:700">📚 保管庫へ保存</button>
-        </div>
-        <!-- ② 編集後に画像生成 -->
-        <button class="btn btn-accent" id="btn-run-imggen" onclick="runImgGenFromPrompt()"
-          style="width:100%;min-height:52px;font-size:15px;margin-top:8px;font-weight:700">
-          🖼️ この内容で画像を生成
-        </button>
-      </div>
+      <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:6px">
+        ジャンル・キーワードから最適なデザインを自動生成します
+      </p>
       <!-- loading -->
       <div id="mwimg-loading" style="display:none;text-align:center;padding:16px 0">
         <div id="mwimg-status" style="font-size:13px;color:var(--accent);font-weight:600">生成中...</div>
@@ -2213,19 +2199,9 @@ input:focus, textarea:focus, select:focus {
             style="flex:1;min-height:44px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
             ⬇️ ダウンロード
           </button>
-          <button onclick="runImgGenFromPrompt()"
+          <button onclick="runImgGen()"
             style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit">
             🔄 再生成
-          </button>
-        </div>
-        <!-- 修正指示エリア -->
-        <div style="border-top:1px solid var(--border);padding-top:10px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:5px;font-weight:600">💬 修正指示（このまま送ると上記プロンプトに追記して再生成）：</div>
-          <textarea id="mwimg-refine-input" rows="3" placeholder="例：背景をもっと明るくして&#10;例：タイトル文字を大きくして&#10;例：アイコンを📝🎯に変えて"
-            style="width:100%;font-size:13px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;min-height:80px"></textarea>
-          <button onclick="refineAndRegenImg()"
-            style="width:100%;min-height:46px;background:var(--orange);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:6px">
-            ✏️ この指示で修正・再生成
           </button>
         </div>
       </div>
@@ -5333,17 +5309,7 @@ let _imggenCurrentNote = null;
 
 // 修正指示をプロンプトに追記して再生成
 function refineAndRegenImg() {
-  const refine = (document.getElementById('mwimg-refine-input').value || '').trim();
-  if (!refine) { toast('修正指示を入力してください'); return; }
-  const promptEl = document.getElementById('mwimg-prompt');
-  if (!promptEl || !promptEl.value.trim()) { toast('先に「指示文を生成・確認」を押してください'); return; }
-  // 修正指示を現在のプロンプトに追記
-  const refined = promptEl.value.trim() + '\n\n■ 修正指示：\n' + refine;
-  promptEl.value = refined;
-  // 修正指示をクリア
-  document.getElementById('mwimg-refine-input').value = '';
-  // 修正後のプロンプトで再生成
-  runImgGenFromPrompt();
+  runImgGen();
 }
 
 function refreshImggenTitle() {
@@ -5661,42 +5627,21 @@ async function runImgGen() {
   const loadEl = document.getElementById('mwimg-loading');
   const statusEl = document.getElementById('mwimg-status');
   const pbar = document.getElementById('mwimg-pbar');
-  const btn = document.getElementById('btn-run-imggen');
   loadEl.style.display = 'block';
-  if (btn) btn.disabled = true;
 
-  statusEl.textContent = '① SVGテンプレートで画像生成中...';
-  pbar.style.width = '30%';
+  statusEl.textContent = 'デザイン生成中...';
+  pbar.style.width = '40%';
 
-  // 新テンプレートフロー（Gemini→SVG→PNG）を優先
   try {
-    pbar.style.width = '60%';
+    pbar.style.width = '70%';
     const b64 = await runImgGenFromTemplate(n, apiKey);
     pbar.style.width = '100%';
-    loadEl.style.display = 'none'; if (btn) btn.disabled = false;
+    loadEl.style.display = 'none';
     displayMwImg('image/png', b64, _applyImgTmplPlaceholders(n));
-    return;
   } catch(e) {
-    console.warn('[imggen] template flow failed, falling back:', e.message);
+    loadEl.style.display = 'none';
+    showMwImgError('⚠️ 画像生成に失敗しました: ' + e.message);
   }
-
-  // フォールバック: 旧フロー（変数生成→Imagen API）
-  statusEl.textContent = '② フォールバック: 指示文生成中...';
-  pbar.style.width = '40%';
-  const buildBtn = document.getElementById('btn-build-imgprompt');
-  if (buildBtn) { buildBtn.disabled = true; buildBtn.textContent = '⏳ 指示文を生成中...'; }
-  try {
-    const { nb2Prompt } = await _buildImgVarsAndPrompt(n, apiKey);
-    document.getElementById('mwimg-prompt').value = nb2Prompt;
-    document.getElementById('mwimg-prompt-wrap').style.display = 'block';
-    if (buildBtn) { buildBtn.disabled = false; buildBtn.textContent = '📝 指示文を再生成'; }
-  } catch(e) {
-    loadEl.style.display = 'none'; if (btn) btn.disabled = false;
-    if (buildBtn) { buildBtn.disabled = false; buildBtn.textContent = '📝 指示文を生成・確認'; }
-    showMwImgError('⚠️ 指示文の生成に失敗しました: ' + e.message);
-    return;
-  }
-  await runImgGenFromPrompt();
 }
 
 async function runImgGenSVG(n, jaPrompt, apiKey, models) {
