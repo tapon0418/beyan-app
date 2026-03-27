@@ -5007,21 +5007,29 @@ function _cleanText(s, max) {
 
 async function _loadImgHist(noteId) {
   if (_imgHistoryCache[noteId]) return _imgHistoryCache[noteId];
-  if (!_fbRef) return [];
   try {
-    const snap = await _fbRef.child('img_hist_' + noteId).once('value');
-    _imgHistoryCache[noteId] = snap.val() || [];
+    if (_fbRef) {
+      const snap = await _fbRef.child('img_hist_' + noteId).once('value');
+      _imgHistoryCache[noteId] = snap.val() || [];
+      return _imgHistoryCache[noteId];
+    }
+  } catch(e) {}
+  try {
+    _imgHistoryCache[noteId] = JSON.parse(localStorage.getItem('img_hist_' + noteId) || '[]');
   } catch(e) { _imgHistoryCache[noteId] = []; }
   return _imgHistoryCache[noteId];
 }
 
 async function _saveImgHist(noteId, entry) {
-  if (!_fbRef) return;
   try {
     const hist = await _loadImgHist(noteId);
     hist.unshift(entry);
-    _imgHistoryCache[noteId] = hist.slice(0, 5);
-    await _fbRef.child('img_hist_' + noteId).set(_imgHistoryCache[noteId]);
+    const trimmed = hist.slice(0, 5);
+    _imgHistoryCache[noteId] = trimmed;
+    if (_fbRef) {
+      await _fbRef.child('img_hist_' + noteId).set(trimmed);
+    }
+    localStorage.setItem('img_hist_' + noteId, JSON.stringify(trimmed));
   } catch(e) {}
 }
 
@@ -5168,23 +5176,31 @@ function _buildSVG(t1, t2, t3, vars) {
       </filter>
     </defs>`;
 
+  const t1MaxW = 1160, t2MaxW = POS.a2 === 'middle' ? 1160 : 1180, t3MaxW = 1160;
+  const t2x = POS.a2 === 'middle' ? 640 : 60;
+  const t1x = POS.a1 === 'middle' ? 640 : POS.x1;
+  const t3x = POS.a3 === 'middle' ? 640 : (POS.a3 === 'end' ? POS.x3 : POS.x3);
+
   const textEl = `
-    <text x="${POS.x1}" y="${POS.y1}"
+    <text x="${t1x}" y="${POS.y1}"
       font-size="${fs1}" font-weight="700"
       font-family="'Noto Sans JP',sans-serif"
       fill="${sub}" text-anchor="${POS.a1}"
+      textLength="${t1MaxW}" lengthAdjust="spacingAndGlyphs"
       filter="url(#ts)">${t1}</text>
-    <text x="${POS.x2}" y="${POS.y2}"
+    <text x="${t2x}" y="${POS.y2}"
       font-size="${fs2}" font-weight="${fw || '900'}"
       font-family="'Noto Sans JP',sans-serif"
       fill="${txt}"
       stroke="${acc}" stroke-width="1.5" paint-order="stroke"
       text-anchor="${POS.a2}"
+      textLength="${t2MaxW}" lengthAdjust="spacingAndGlyphs"
       filter="url(#ts)">${t2}</text>
-    <text x="${POS.x3}" y="${POS.y3}"
+    <text x="${t3x}" y="${POS.y3}"
       font-size="${fs3}" font-weight="700"
       font-family="'Noto Sans JP',sans-serif"
       fill="${acc}" text-anchor="${POS.a3}"
+      textLength="${t3MaxW}" lengthAdjust="spacingAndGlyphs"
       filter="url(#ts)">${t3}</text>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg"
@@ -5211,7 +5227,7 @@ async function runImgGenFromTemplate(n, apiKey) {
 
 禁止ワード：絵文字・振り返って・読んでみる・してみた・について・解説・楽天`;
 
-  let t1='', t2=n.title||'', t3='';
+  let t1='', t2='', t3='';
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,{
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -5221,11 +5237,13 @@ async function runImgGenFromTemplate(n, apiKey) {
     const raw = (data.candidates?.[0]?.content?.parts?.[0]?.text||'').replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(raw);
     t1 = _cleanText(parsed.text_layer1||'', 12);
-    t2 = _cleanText(parsed.text_layer2||'', 18) || n.title;
+    t2 = _cleanText(parsed.text_layer2||'', 18);
     t3 = _cleanText(parsed.text_layer3||'', 24);
-  } catch(e) {
-    t2 = n.title||'';
-  }
+  } catch(e) {}
+  // フォールバック：空欄をキーワード・タイトルで補完
+  if (!t2) t2 = _cleanText(n.title||'', 18);
+  if (!t1 && kwHint) t1 = _cleanText(kwHint.split(' ')[0]||'', 12);
+  if (!t3 && kwHint) t3 = _cleanText(kwHint.split(' ').slice(-1)[0]||'', 24);
 
   const svg = _buildSVG(t1, t2, t3, vars);
   await _saveImgHist(n.id, { pi:vars.pi, ly:vars.ly, ic:vars.ic });
