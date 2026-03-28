@@ -4963,6 +4963,7 @@ async function clickGenerateHeaderSVG() {
     if (statusEl) statusEl.textContent = 'Geminiが画像を生成中...';
     console.log('[ImgGen] gemini request sent');
     console.log('[ImgGen] model: gemini-2.5-pro');
+    console.log('[ImgGen] prompt sent to Gemini:', resolvedPrompt.slice(0, 100));
 
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
@@ -4981,6 +4982,7 @@ async function clickGenerateHeaderSVG() {
 
     const parts = data.candidates?.[0]?.content?.parts || [];
     const responseText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+    console.log('[ImgGen] gemini raw response:', JSON.stringify(responseText).slice(0, 200));
 
     // Step3: SVG抽出
     const svgMatch = responseText.match(/<svg[\s\S]*<\/svg>/);
