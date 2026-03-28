@@ -4834,18 +4834,18 @@ async function autoExtractImgText(formattedText) {
   };
   setStatus('var(--accent)', '🤖 AIが見出し画像テキストを抽出中...');
 
-  const excerpt = formattedText.trim().slice(0, 300);
+  const excerpt = formattedText.trim().slice(0, 200);
   const prompt = `次の記事本文から見出し画像用のテキストを3つ抽出してください。
 
 制約：
 - 必ずJSON形式のみで返す。マークダウン・コードブロック・説明文は一切不要
-- mainTitleは絶対に15文字以内で終わらせる（途中で切らない）
-- subTitleは絶対に20文字以内で終わらせる
-- bodySummaryは絶対に15文字以内で終わらせる
+- mainTitleは絶対に10文字以内で終わらせる（途中で切らない）
+- subTitleは絶対に15文字以内で終わらせる
+- bodySummaryは絶対に10文字以内で終わらせる
 - 文字数を超える場合は意味が変わっても短くカットすること
 
 返すのは以下のJSONのみ：
-{"mainTitle":"15文字以内","subTitle":"20文字以内","bodySummary":"15文字以内"}
+{"mainTitle":"10文字以内","subTitle":"15文字以内","bodySummary":"10文字以内"}
 
 ---
 ${excerpt}`;
@@ -4859,7 +4859,7 @@ ${excerpt}`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 500, temperature: 0 }
+          generationConfig: { maxOutputTokens: 800, temperature: 0 }
         })
       }
     );
@@ -4875,9 +4875,9 @@ ${excerpt}`;
       return m ? m[1].slice(0, limit) : '';
     };
 
-    const mainTitle   = extract('mainTitle', 15);
-    const subTitle    = extract('subTitle', 20);
-    const bodySummary = extract('bodySummary', 15);
+    const mainTitle   = extract('mainTitle', 10);
+    const subTitle    = extract('subTitle', 15);
+    const bodySummary = extract('bodySummary', 10);
 
     if (!mainTitle) throw new Error('抽出失敗: ' + responseText.slice(0, 80));
 
