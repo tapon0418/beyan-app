@@ -5108,6 +5108,7 @@ ${JSON.stringify(patternsList)}`;
 - 過剰なエフェクト・光彩は使わない
 - 日本語テキストは正確に描画する`;
 
+    console.log('[ImgGen] step2 prompt:', step2Prompt);
     const step2Res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
       {
