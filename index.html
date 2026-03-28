@@ -2099,21 +2099,28 @@ input:focus, textarea:focus, select:focus {
         </button>
         <!-- 見出し画像用テキスト -->
         <div style="margin-top:14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;padding:12px">
-          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">🖼️ 見出し画像テキスト設定</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:700;color:var(--text2)">🖼️ 見出し画像テキスト設定</div>
+            <button onclick="autoExtractImgText(document.getElementById('mw-formatted').textContent)"
+              style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);cursor:pointer;font-family:inherit;min-height:28px">
+              🔄 再抽出
+            </button>
+          </div>
+          <div id="img-extract-status" style="display:none;font-size:11px;font-weight:600;margin-bottom:8px;padding:5px 8px;border-radius:6px;background:var(--bg4)"></div>
           <div class="input-group" style="margin-bottom:8px">
-            <label class="input-label" style="font-size:11px">メインタイトル</label>
+            <label class="input-label" style="font-size:11px">メインタイトル <span style="color:var(--text3);font-weight:400">（15字以内目安）</span></label>
             <input id="mw-main-title" type="text" placeholder="記事のメインタイトル"
               style="width:100%;font-size:16px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;box-sizing:border-box"
               oninput="autoSaveImgTextField()">
           </div>
           <div class="input-group" style="margin-bottom:8px">
-            <label class="input-label" style="font-size:11px">サブタイトル</label>
+            <label class="input-label" style="font-size:11px">サブタイトル <span style="color:var(--text3);font-weight:400">（20字以内目安）</span></label>
             <input id="mw-sub-title" type="text" placeholder="サブタイトル・キャッチコピー"
               style="width:100%;font-size:16px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;box-sizing:border-box"
               oninput="autoSaveImgTextField()">
           </div>
           <div class="input-group" style="margin-bottom:0">
-            <label class="input-label" style="font-size:11px">本文要約</label>
+            <label class="input-label" style="font-size:11px">本文要約 <span style="color:var(--text3);font-weight:400">（15字以内目安）</span></label>
             <input id="mw-body-summary" type="text" placeholder="10〜15文字目安"
               style="width:100%;font-size:16px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;box-sizing:border-box"
               oninput="autoSaveImgTextField()">
@@ -3502,6 +3509,7 @@ function doFormat() {
   if (removedOutro) msgs.push('あとがき');
   if (kwIdx !== -1) msgs.push('見出し画像キーワード');
   toast(msgs.length ? `整形しました（${msgs.join('・')}を除去）` : '整形しました');
+  autoExtractImgText(text);
 }
 
 function buildXBases(n) {
@@ -4809,6 +4817,67 @@ function _updateImgPromptVaultTs() {
   if (!raw) { el.textContent = ''; return; }
   const now = new Date();
   el.textContent = `最終更新：${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+}
+
+async function autoExtractImgText(formattedText) {
+  if (!formattedText || formattedText.trim().length < 50) return;
+  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
+  if (!apiKey) return;
+
+  const statusEl = document.getElementById('img-extract-status');
+  if (statusEl) { statusEl.style.display = 'block'; statusEl.style.color = 'var(--accent)'; statusEl.textContent = '🤖 AIが見出し画像テキストを抽出中...'; }
+
+  const excerpt = formattedText.trim().slice(0, 2000);
+  const n = S.notes.find(x => x.id === curId);
+  const noteTitle = n?.title || '';
+
+  const systemPrompt = `あなたはnoteアイキャッチ画像のコピーライターです。記事本文を読み、見出し画像に配置する3つのテキストを抽出してください。
+出力はJSON形式のみ。余計な説明・コードブロック不要。
+形式: {"mainTitle":"...","subTitle":"...","bodySummary":"..."}`;
+
+  const userPrompt = `記事タイトル: ${noteTitle}
+
+記事本文（抜粋）:
+${excerpt}
+
+上記から以下を抽出してJSON出力:
+- mainTitle: 見出し画像のメイン文言。インパクト重視、15文字以内。改行したい場合は「！」「、」など句読点で自然に区切れる位置にする。（例: "採用率向上！提案文の書き方"）
+- subTitle: メインを補足するサブ文言、20文字以内。（例: "テンプレート活用法を解説"）
+- bodySummary: 記事を一言で表す要約、15文字以内。（例: "副業ライター向け実践ガイド"）`;
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 256 }
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error');
+    let raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    raw = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const parsed = JSON.parse(raw);
+    const { mainTitle = '', subTitle = '', bodySummary = '' } = parsed;
+
+    const mainEl    = document.getElementById('mw-main-title');
+    const subEl     = document.getElementById('mw-sub-title');
+    const summaryEl = document.getElementById('mw-body-summary');
+    if (mainEl)    mainEl.value    = mainTitle;
+    if (subEl)     subEl.value     = subTitle;
+    if (summaryEl) summaryEl.value = bodySummary;
+
+    const nf = S.notes.find(x => x.id === curId);
+    if (nf) { nf.mainTitle = mainTitle; nf.subTitle = subTitle; nf.bodySummary = bodySummary; save(); }
+
+    if (statusEl) { statusEl.style.color = 'var(--green)'; statusEl.textContent = `✅ AI抽出完了 — ${mainTitle}`; }
+    console.log('[ImgText] extracted:', parsed);
+  } catch(e) {
+    console.log('[ImgText] extract error:', e.message);
+    if (statusEl) { statusEl.style.color = 'var(--red)'; statusEl.textContent = '⚠️ AI抽出失敗 — 手動で入力してください'; }
+  }
 }
 
 let _imgTextFieldTimer = null;
