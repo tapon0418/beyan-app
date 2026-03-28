@@ -5142,7 +5142,8 @@ ${JSON.stringify(patternsList)}`;
       console.log('[ImgGen] SVG generated');
       if (pbar)     pbar.style.width = '85%';
       if (statusEl) statusEl.textContent = 'PNG変換中...';
-      await _svgToPngAndDisplay(svgMatch[0], loadEl, pbar);
+      const svgCleaned = svgMatch[0].replace(/@import\s+url\([^)]*fonts\.googleapis[^)]*\)[^;]*;/g, '');
+      await _svgToPngAndDisplay(svgCleaned, loadEl, pbar);
       if (statusEl) statusEl.textContent = '完成！';
     } else {
       console.log('[ImgGen] fallback to local SVG');
