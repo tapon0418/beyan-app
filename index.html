@@ -5099,7 +5099,7 @@ async function runImgGen() {
   loadEl.style.display = 'block';
   pbar.style.width = '20%';
 
-  const model = 'gemini-2.0-flash-exp-image-generation';
+  const model = 'gemini-2.5-flash-image';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   console.log(`[ImgGen] model: ${model}`);
   console.log(`[ImgGen] endpoint: ${endpoint.replace(apiKey, '***')}`);
