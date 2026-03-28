@@ -5111,6 +5111,11 @@ async function _saveImgHist(noteId, entry) {
 
 // 【D】パターン選択 v5（nabebase側アルゴリズム・Geminiはテキストのみ生成）
 function _pickPattern(cat, memo, hist) {
+  if (hist && hist.length > 0) {
+    console.log('[ImgGen] 使用履歴', hist.map(h => `${h.patternName||h.pi}(${h.layout||h.ly})`));
+  } else {
+    console.log('[ImgGen] 使用履歴 履歴なし・初回選択');
+  }
   const m = (memo||'').toLowerCase();
   const genreIds = (_imgConfigOverrides.genre_map || GENRE_MAP)[cat]
                 || (_imgConfigOverrides.genre_map || GENRE_MAP)['その他'];
@@ -5173,7 +5178,10 @@ function _pickPattern(cat, memo, hist) {
   if (m.includes('失敗')||m.includes('地雷')) { bg.acc='#ff4500'; bg.sub='#ffd700'; }
   if (m.includes('万円')||m.includes('収益')||m.includes('稼')) { bg.acc='#ffd700'; bg.sub='#ffa500'; }
 
-  console.log('[ImgGen] パターン決定', { pi, name:bg.name, ly, ic, brightness:bg.brightness, emotion:bg.emotion });
+  console.log('[ImgGen] パターン決定',
+    `ID:${pi} name:${bg.name}`,
+    `bg:${bg.bgStyle} layout:${ly}`,
+    `brightness:${bg.brightness}`);
 
   return { pi, ly, ic, bg, fw: bg.fw || '700' };
 }
@@ -5200,6 +5208,10 @@ async function initImgConfig() {
 
 function _buildSVG(t1, t2, t3, vars) {
   const {bg, ly, ic, fw} = vars;
+  console.log('[ImgGen] buildSVG受け取り',
+    `pattern:${bg?.name}`,
+    `bg:${bg?.bgStyle}`,
+    `layout:${ly}`);
   const W = 1280, H = 670;
 
   const acc  = bg.acc;
