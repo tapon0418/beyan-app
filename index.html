@@ -4841,11 +4841,11 @@ async function autoExtractImgText(formattedText) {
 - 必ずJSON形式のみで返す。マークダウン・コードブロック・説明文は一切不要
 - mainTitleは絶対に10文字以内で終わらせる（途中で切らない）
 - subTitleは絶対に15文字以内で終わらせる
-- bodySummaryは絶対に10文字以内で終わらせる
-- 文字数を超える場合は意味が変わっても短くカットすること
+- bodySummaryは15文字以内で、意味が通る形で終わらせる
+- 文章の途中では切らない
 
 返すのは以下のJSONのみ：
-{"mainTitle":"10文字以内","subTitle":"15文字以内","bodySummary":"10文字以内"}
+{"mainTitle":"10文字以内","subTitle":"15文字以内","bodySummary":"15文字以内"}
 
 ---
 ${excerpt}`;
@@ -4877,7 +4877,7 @@ ${excerpt}`;
 
     const mainTitle   = extract('mainTitle', 10);
     const subTitle    = extract('subTitle', 15);
-    const bodySummary = extract('bodySummary', 10);
+    const bodySummary = extract('bodySummary', 15);
 
     if (!mainTitle) throw new Error('抽出失敗: ' + responseText.slice(0, 80));
 
@@ -5057,7 +5057,7 @@ ${JSON.stringify(patternsList)}`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: step1Prompt }] }],
-          generationConfig: { maxOutputTokens: 500, temperature: 0 }
+          generationConfig: { maxOutputTokens: 150, temperature: 0 }
         })
       }
     );
@@ -5088,19 +5088,16 @@ ${JSON.stringify(patternsList)}`;
           .replace('{mainTitle}', mainTitle)
           .replace('{subTitle}', subTitle)
           .replace('{bodySummary}', bodySummary)
-          .replace('{selectedPattern.layout}', selectedPattern.layout_name || '')
-          .replace('{selectedPattern.bg_type}', selectedPattern.background_style?.type || '')
-          .replace('{selectedPattern.bg_color}', selectedPattern.background_style?.color_palette_suggestion?.[0]?.color_example || '')
-          .replace('{selectedPattern.accent_color}', selectedPattern.background_style?.color_palette_suggestion?.[1]?.color_example || '')
-          .replace('{selectedPattern.text_color}', selectedPattern.typography?.title_font_style || '')
-          .replace('{selectedPattern.font_style}', selectedPattern.typography?.title_font_style || '')
-          .replace('{selectedPattern.font_weight}', '')
-          .replace('{selectedPattern.icon}', (selectedPattern.icon_and_illustration?.icon_examples || []).join('・'))
-          .replace('{selectedPattern.icon_placement}', selectedPattern.icon_and_illustration?.placement || '')
-          .replace('{selectedPattern.design_note}',
-            Array.isArray(selectedPattern.best_for)
-              ? selectedPattern.best_for.join('・')
-              : selectedPattern.best_for || '')
+          .replace('{selectedPattern.layout}', selectedPattern.layout || '')
+          .replace('{selectedPattern.bg_type}', selectedPattern.bg_type || '')
+          .replace('{selectedPattern.bg_color}', selectedPattern.bg_color || '')
+          .replace('{selectedPattern.accent_color}', selectedPattern.accent_color || '')
+          .replace('{selectedPattern.text_color}', selectedPattern.text_color || '')
+          .replace('{selectedPattern.font_style}', selectedPattern.font_style || '')
+          .replace('{selectedPattern.font_weight}', selectedPattern.font_weight || '')
+          .replace('{selectedPattern.icon}', selectedPattern.icon || '')
+          .replace('{selectedPattern.icon_placement}', selectedPattern.icon_placement || '')
+          .replace('{selectedPattern.design_note}', selectedPattern.design_note || '')
       : `以下のデザイン仕様で1280×670pxのSVG画像を1枚生成してください。
 <svg>タグから始まり</svg>タグで終わるSVGコードのみ返してください。
 説明文・マークダウン・コードブロック不要。
