@@ -4850,79 +4850,53 @@ async function autoExtractImgText(formattedText) {
 ---
 ${excerpt}`;
 
-  const MAX_ATTEMPTS = 2;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      console.log(`[ImgText] gemini-2.5-flash request sent (attempt ${attempt})`);
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { maxOutputTokens: 500, temperature: 0 }
-          })
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || String(res.status));
-
-      const parts        = data.candidates?.[0]?.content?.parts || [];
-      const responseText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
-      console.log('[ImgText] raw:', responseText);
-
-      // Step1: コードブロック除去
-      let cleaned = responseText
-        .replace(/```json/gi, '')
-        .replace(/```/g, '')
-        .trim();
-
-      // Step2: { } の範囲だけ抽出
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error('JSONが見つかりません');
-      cleaned = jsonMatch[0];
-
-      // Step3: JSON.parse → 失敗時は正規表現フォールバック
-      let parsed;
-      try {
-        parsed = JSON.parse(cleaned);
-      } catch(e) {
-        const extract = (key) => {
-          const m = cleaned.match(new RegExp(`"${key}"\\s*:\\s*"([^"]*)`));
-          return m ? m[1].slice(0, key === 'subTitle' ? 20 : 15) : '';
-        };
-        parsed = {
-          mainTitle:   extract('mainTitle'),
-          subTitle:    extract('subTitle'),
-          bodySummary: extract('bodySummary')
-        };
+  try {
+    console.log('[ImgText] gemini-2.5-flash request sent');
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 500, temperature: 0 }
+        })
       }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || String(res.status));
 
-      const mainTitle   = (parsed.mainTitle   || '').slice(0, 15);
-      const subTitle    = (parsed.subTitle    || '').slice(0, 20);
-      const bodySummary = (parsed.bodySummary || '').slice(0, 15);
+    const parts        = data.candidates?.[0]?.content?.parts || [];
+    const responseText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+    console.log('[ImgText] raw:', responseText);
 
-      console.log(`[ImgText] mainTitle: ${mainTitle} / subTitle: ${subTitle} / bodySummary: ${bodySummary}`);
+    const extract = (key, limit) => {
+      const m = responseText.match(new RegExp('"' + key + '"\\s*:\\s*"([^"]*)'));
+      return m ? m[1].slice(0, limit) : '';
+    };
 
-      ['mw-main-title','mw-sub-title','mw-body-summary'].forEach((id, i) => {
-        const el = document.getElementById(id);
-        if (el) el.value = [mainTitle, subTitle, bodySummary][i];
-      });
+    const mainTitle   = extract('mainTitle', 15);
+    const subTitle    = extract('subTitle', 20);
+    const bodySummary = extract('bodySummary', 15);
 
-      const nf = S.notes.find(x => x.id === curId);
-      if (nf) { nf.mainTitle = mainTitle; nf.subTitle = subTitle; nf.bodySummary = bodySummary; save(); }
+    if (!mainTitle) throw new Error('抽出失敗: ' + responseText.slice(0, 80));
 
-      setStatus('var(--green)', `✅ AI抽出完了 — ${mainTitle}`);
-      console.log('[ImgText] fields filled');
-      await clickGenerateHeaderSVG();
-      return;
-    } catch(e) {
-      console.log(`[ImgText] error (attempt ${attempt}): ${e.message}`);
-      if (attempt === MAX_ATTEMPTS) {
-        setStatus('var(--red)', `⚠️ AI抽出失敗: ${e.message.slice(0, 60)}`);
-      }
-    }
+    console.log(`[ImgText] mainTitle: ${mainTitle} / subTitle: ${subTitle} / bodySummary: ${bodySummary}`);
+
+    ['mw-main-title','mw-sub-title','mw-body-summary'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el) el.value = [mainTitle, subTitle, bodySummary][i];
+    });
+
+    const nf = S.notes.find(x => x.id === curId);
+    if (nf) { nf.mainTitle = mainTitle; nf.subTitle = subTitle; nf.bodySummary = bodySummary; save(); }
+
+    setStatus('var(--green)', `✅ AI抽出完了 — ${mainTitle}`);
+    console.log('[ImgText] fields filled');
+    await clickGenerateHeaderSVG();
+  } catch(e) {
+    console.log('[ImgText] error: ' + e.message);
+    setStatus('var(--red)', `⚠️ AI抽出失敗: ${e.message.slice(0, 60)}`);
   }
 }
 
