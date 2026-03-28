@@ -62,7 +62,7 @@ async function run() {
       'claude-result-section','mw-claude-output','claude-manual-panel',
       'claude-manual-input','mw-draft','mw-formatted','mw-xedit',
       'mwimg-loading','mwimg-result','mwimg-error',
-      'imgprompt-vault-list','ccheck-prompt','ccheck-result',
+      'ccheck-prompt','ccheck-result',
       'fp-gemini','fp-chatgpt','fp-format','fp-imggen',
       'fp-imgcheck','fp-note','fp-rakuten','fp-xgen'];
     return ids.filter(id => !document.getElementById(id));

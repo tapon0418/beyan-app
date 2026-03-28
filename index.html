@@ -2,11 +2,9 @@
  * ⚠️ nabebase 開発ルール（必ず守ること）
  *
  * 1. Firebase上のデータを変更するときは必ず app_version を更新する
- * 2. テンプレート系（beyan_img_template / beyan_gemini_tmpl）を変更するときは
- *    _isLegacyTemplate() のlegacyMarkersに古い識別文字列を追加する
- * 3. 新しい機能を追加するときはFirebaseのキー名をこのファイルの先頭に定数として定義する
- * 4. localStorage を新たに使うことは禁止。必ずFirebaseを使う
- * 5. 関数を削除・置き換えるときは必ずgrepで呼び出し箇所を確認してから削除する
+ * 2. 新しい機能を追加するときはFirebaseのキー名をこのファイルの先頭に定数として定義する
+ * 3. localStorage を新たに使うことは禁止。必ずFirebaseを使う
+ * 4. 関数を削除・置き換えるときは必ずgrepで呼び出し箇所を確認してから削除する
 -->
 <!DOCTYPE html>
 <html lang="ja">
@@ -1441,7 +1439,6 @@ input:focus, textarea:focus, select:focus {
     <button class="tpill" id="tp-xposts" onclick="scrollToSec('sec-xposts')"><span class="tpill-icon">𝕏</span><span class="tpill-label"> X投稿</span></button>
     <button class="tpill" id="tp-today"  onclick="scrollToSec('sec-today')"><span class="tpill-icon">📅</span><span class="tpill-label"> 今日</span></button>
     <button class="tpill" id="tp-tmpl"   onclick="openSettings();switchStab('gemini')"><span class="tpill-icon">📋</span><span class="tpill-label"> 指示文</span></button>
-    <button class="tpill" id="tp-imgprompt" onclick="openSettings();switchStab('imgprompt')"><span class="tpill-icon">🖼️</span><span class="tpill-label"> 見出し</span></button>
     <button class="tpill" id="tp-xprompt" onclick="scrollToSec('sec-xprompt')"><span class="tpill-icon">📋</span><span class="tpill-label"> X管理</span></button>
     <button class="tpill" id="tp-xwrite"  onclick="scrollToSec('sec-xwrite')"><span class="tpill-icon">✍️</span><span class="tpill-label"> X作成</span></button>
     <button class="tpill" id="tp-archive" onclick="scrollToSec('sec-archive')"><span class="tpill-icon">📦</span><span class="tpill-label"> アーカイブ</span></button>
@@ -1465,9 +1462,6 @@ input:focus, textarea:focus, select:focus {
   </button>
   <button class="bnav-btn" id="bn-tmpl"   onclick="openSettings();switchStab('gemini')">
     <span class="bnav-icon">📋</span><span class="bnav-lbl">指示文</span>
-  </button>
-  <button class="bnav-btn" id="bn-imgprompt" onclick="openSettings();switchStab('imgprompt')">
-    <span class="bnav-icon">🖼️</span><span class="bnav-lbl">見出し</span>
   </button>
   <button class="bnav-btn" id="bn-xprompt" onclick="scrollToSec('sec-xprompt');setNavActive('xprompt')">
     <span class="bnav-icon">📋</span><span class="bnav-lbl">X管理</span>
@@ -1581,7 +1575,6 @@ input:focus, textarea:focus, select:focus {
     <div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid #333;padding-bottom:8px;">
       <button id="stab-gemini" class="stab active" onclick="switchStab('gemini')">🔍 ジミー指示文</button>
       <button id="stab-claude" class="stab" onclick="switchStab('claude')">✍️ クロ執筆指示文</button>
-      <button id="stab-imgprompt" class="stab" onclick="switchStab('imgprompt')">🖼️ 見出し画像</button>
       <button id="stab-vault" class="stab" onclick="switchStab('vault')">📚 保管庫</button>
     </div>
 
@@ -1651,29 +1644,6 @@ input:focus, textarea:focus, select:focus {
       <div id="settings-claude-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
     </div>
 
-    <!-- 見出し画像プロンプトテンプレート -->
-    <div id="spanel-imgprompt" style="display:none;">
-      <p style="color:#aaa;font-size:.82rem;margin-bottom:10px;line-height:1.6;">
-        ジミー（Gemini）が記事本文を読んでJSON変数を生成するための指示文です。<br>
-        このテンプレートを変更すると、④見出し画像タブの「指示文を生成・確認」に反映されます。
-      </p>
-      <textarea id="settings-imgprompt-tmpl" rows="16"
-        style="width:100%;background:#111;color:#e8e8e8;border:1px solid #444;border-radius:8px;padding:12px;font-size:.82rem;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;min-height:200px;"
-      ></textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-        <button onclick="saveSettingsImgTemplate()" style="flex:1;background:var(--accent);border:none;color:#fff;padding:10px;border-radius:8px;font-weight:700;cursor:pointer;min-width:80px">💾 保存</button>
-        <button onclick="resetSettingsImgTemplate()" style="background:var(--bg4);border:none;color:var(--text2);padding:10px 14px;border-radius:8px;cursor:pointer;font-size:.82rem;">リセット</button>
-      </div>
-      <div id="settings-imgprompt-msg" style="margin-top:8px;font-size:.82rem;color:#4ade80;display:none;">✅ 保存しました</div>
-      <div id="settings-img-ts" style="margin-top:4px;font-size:.72rem;color:#666;"></div>
-      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
-        <button onclick="exportImgTmpl()" style="flex:1;background:#1a1a2e;border:1px solid #444;color:#aaa;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:.78rem;font-family:inherit">⬇️ エクスポート(.txt)</button>
-        <label style="flex:1;min-width:120px;display:flex;align-items:center;justify-content:center;background:#1a1a2e;border:1px solid #444;color:#aaa;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:.78rem;text-align:center">
-          ⬆️ インポート(.txt)
-          <input type="file" accept=".txt" onchange="importImgTmpl(event)" style="display:none">
-        </label>
-      </div>
-    </div>
 
     <!-- 📚 保管庫タブ -->
     <div id="spanel-vault" style="display:none;">
@@ -2225,14 +2195,6 @@ input:focus, textarea:focus, select:focus {
       <!-- error -->
       <div id="mwimg-error" style="display:none;color:var(--red);font-size:13px;padding:10px;background:rgba(204,68,68,.08);border-radius:8px;line-height:1.6;margin-bottom:10px"></div>
 
-      <!-- 生成履歴 -->
-      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:12px;font-weight:700;color:var(--text2)">📚 生成履歴</div>
-          <div style="font-size:10px;color:var(--text3)" id="imgprompt-vault-count"></div>
-        </div>
-        <div id="imgprompt-vault-list"></div>
-      </div>
 
       <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%;font-size:13px" onclick="switchTabByName('imgcheck');refreshImgCheckTab()">
         ⑤ 画像チェックへ進む →
@@ -2512,7 +2474,6 @@ function downloadBackup() {
   }
   // Firebaseキャッシュも含める
   if (_geminiTmpl !== null) data['_cache_gemini_tmpl'] = _geminiTmpl;
-  if (_imgTemplate !== null) data['_cache_img_template'] = _imgTemplate;
   const json = JSON.stringify(data, null, 2);
   _downloadFile(json, `nabebase_backup_${new Date().toISOString().slice(0,10)}.json`, 'application/json');
   toast('✅ バックアップをダウンロードしました');
@@ -2544,35 +2505,11 @@ function importGeminiTmpl(event) {
   reader.readAsText(file, 'utf-8');
   event.target.value = '';
 }
-function exportImgTmpl() {
-  const content = (_imgTemplate !== null && _imgTemplate !== undefined) ? _imgTemplate : DEFAULT_IMG_TEMPLATE;
-  _downloadFile(content, `img_tmpl_${new Date().toISOString().slice(0,10)}.txt`, 'text/plain');
-  toast('⬇️ 画像テンプレートをエクスポートしました');
-}
-function importImgTmpl(event) {
-  const file = event.target.files[0]; if (!file) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const val = e.target.result;
-    document.getElementById('settings-imgprompt-tmpl').value = val;
-    saveSettingsImgTemplate();
-    toast('✅ 画像テンプレートをインポートしました');
-  };
-  reader.readAsText(file, 'utf-8');
-  event.target.value = '';
-}
 function _updateGeminiTsDisplay() {
   const el = document.getElementById('settings-gemini-ts');
   if (!el) return;
   el.textContent = _geminiTmplUpdatedAt
     ? '最終更新: ' + new Date(_geminiTmplUpdatedAt).toLocaleString('ja-JP')
-    : '';
-}
-function _updateImgTsDisplay() {
-  const el = document.getElementById('settings-img-ts');
-  if (!el) return;
-  el.textContent = _imgTemplateUpdatedAt
-    ? '最終更新: ' + new Date(_imgTemplateUpdatedAt).toLocaleString('ja-JP')
     : '';
 }
 
@@ -2585,42 +2522,14 @@ function renderAll() {
   renderXPromptList();
 }
 
-// ── テンプレート旧フォーマット判定 ──
-function _isLegacyTemplate(val) {
-  if (!val) return false;
-  const legacyMarkers = [
-    'あなたはnoteの見出し画像デザインの専門家',
-    'SVGコードは含めない',
-    'デザイン変数をJSONのみで返して',
-    '"svg":"SVGコード全文"',
-    '"svg":',
-    'bg_type.*gradient_dark.*layout.*icon_type',
-  ];
-  return legacyMarkers.some(marker => val.includes(marker));
-}
 
 // ── システム診断 ──
 async function runSystemDiagnosis() {
   const lines = [];
-  lines.push(`APP_VERSION: ${APP_VERSION} / IMG_SYSTEM_VERSION: ${IMG_SYSTEM_VERSION}`);
+  lines.push(`APP_VERSION: ${APP_VERSION}`);
   lines.push(_fbRef ? '🟢 Firebase: 接続中' : '🔴 Firebase: 未接続');
 
   if (_fbRef) {
-    // beyan_img_template
-    try {
-      const s1 = await _fbRef.child('beyan_img_template').once('value');
-      const tv = s1.val() || '';
-      if (_isLegacyTemplate(tv)) {
-        lines.push('⚠️ beyan_img_template: 古い形式を検出');
-        if (confirm('beyan_img_template が古い形式です。リセットしますか？')) {
-          await _fbRef.child('beyan_img_template').set('');
-          _imgTemplate = '';
-          lines.push('✅ beyan_img_template: リセット済み');
-        }
-      } else {
-        lines.push('✅ beyan_img_template: ' + (tv ? '設定あり' : '空/デフォルト（正常）'));
-      }
-    } catch(e) { lines.push('⚠️ beyan_img_template: 読み取り失敗'); }
 
     // app_version
     try {
@@ -2657,22 +2566,11 @@ function initFirebase() {
     const db = firebase.database();
     _fbRef = db.ref('beyan_v6');
 
-    // 起動時一度だけ古い画像テンプレートを強制クリア
-    _fbRef.child('beyan_img_template').once('value').then(snap => {
-      const val = snap.val() || '';
-      if (!val || _isLegacyTemplate(val) || val.includes('デザイン変数をJSONのみで返して')) {
-        _fbRef.child('beyan_img_template').set('');
-        _imgTemplate = '';
-      }
-    });
-
     // バージョンチェック：変わっていたらテンプレートをリセット
     _fbRef.child('app_version').once('value').then(snap => {
       const savedVersion = snap.val() || '0';
       if (savedVersion !== APP_VERSION) {
-        _fbRef.child('beyan_img_template').set('');
         _fbRef.child('app_version').set(APP_VERSION);
-        _imgTemplate = '';
         console.log(`[nabebase] バージョン更新 ${savedVersion}→${APP_VERSION} テンプレートリセット済み`);
       }
     });
@@ -2770,24 +2668,6 @@ function initFirebase() {
       });
     }
 
-    // ─── 画像テンプレート: 古いフォーマット強制クリア + 同期 ───
-    {
-      db.ref('beyan_img_template').on('value', snap => {
-        const fbVal = snap.val();
-        const isOld = !fbVal || _isLegacyTemplate(fbVal);
-        if (isOld) {
-          db.ref('beyan_img_template').set('');
-          db.ref('beyan_img_template_ts').set(new Date().toISOString());
-          _imgTemplate = '';
-          return;
-        }
-        _imgTemplate = fbVal;
-      });
-      db.ref('beyan_img_template_ts').on('value', snap => {
-        _imgTemplateUpdatedAt = snap.val();
-        _updateImgTsDisplay();
-      });
-    }
 
     // 接続状態インジケーター
     db.ref('.info/connected').on('value', snap => {
@@ -4050,15 +3930,12 @@ function saveManualClaudeResult() {
 
 // ================================================================
 const APP_VERSION       = '4.0.0';
-const IMG_SYSTEM_VERSION = '4';
 const GEMINI_KEY_STORAGE = 'beyan_gemini_key';
 const GEMINI_TMPL_KEY = 'beyan_gemini_tmpl';
 const CLAUDE_TMPL_KEY = 'beyan_claude_tmpl';
 // Firebase同期テンプレートキャッシュ（null = デフォルト使用）
 let _geminiTmpl = localStorage.getItem(GEMINI_TMPL_KEY); // Firebase接続前のフォールバック
-let _imgTemplate = localStorage.getItem('beyan_img_template'); // 同上
 let _geminiTmplUpdatedAt = null;
-let _imgTemplateUpdatedAt = null;
 
 function getDefaultClaudeTmpl() {
   return 'あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。\n\n■ タイトル\n「${n.title}」\n\n■ 読者設定\n・副業ライターとして活動中、または始めたい人\n・${n.memo}\n\n■ 記事の方向性\n・文字数：2,000〜4,000文字\n・体験談ベース。具体的な数字・固有名詞を必ず入れる\n\n■ リサーチ結果（ジミー調べ）\n${result}\n\n■ 構成\n1. 共感リード（「これ自分だ」と思わせる状況描写）\n2. 失敗・壁（具体的なエピソード）\n3. 転機・気づき（何がどう変わったか）\n4. 再現可能な学び（明日から使えること）\n5. まとめ＋次の記事への導線\n\n■ 文体の絶対ルール\n・ですます調。親しみやすいが馴れ馴れしすぎない\n・「しみじみ思う。」「笑」など口語表現OK\n・AI的な説教口調は禁止\n・# ※ ** などの記号は一切使わない\n・抽象論・精神論で終わらない。必ず具体で締める';
@@ -4225,9 +4102,7 @@ initFirebase();
 function openSettings() {
   // 現在のテンプレート値をコンソールに出力（Firebase移行確認用）
   console.log('[nabebase] Geminiテンプレート:', _geminiTmpl !== null && _geminiTmpl !== undefined ? 'カスタム値あり(Firebase)' : 'デフォルト使用');
-  console.log('[nabebase] 画像テンプレート:', _imgTemplate !== null && _imgTemplate !== undefined ? 'カスタム値あり(Firebase)' : 'デフォルト使用');
   if (_geminiTmpl) console.log('[nabebase] Gemini tmpl(先頭100字):', _geminiTmpl.slice(0, 100));
-  if (_imgTemplate) console.log('[nabebase] 画像 tmpl(先頭100字):', _imgTemplate.slice(0, 100));
 
   // ジミー指示文テンプレートをテキストエリアに読み込む（Firebaseキャッシュ使用）
   document.getElementById('settings-gemini-tmpl').value =
@@ -4249,10 +4124,6 @@ function openSettings() {
   document.getElementById('settings-claude-api-key').value = savedClaudeApi;
   document.getElementById('settings-claude-api-msg').textContent =
     savedClaudeApi ? '✅ APIキー保存済み' : '';
-
-  // 見出し画像テンプレートも読み込む
-  const savedImg = document.getElementById('settings-imgprompt-tmpl');
-  if (savedImg) savedImg.value = getImgPromptTemplate();
 
   switchStab('gemini');
   document.getElementById('settings-modal').style.display = 'block';
@@ -4501,14 +4372,10 @@ function copyVaultPrompt(id) {
 }
 
 function switchStab(tab) {
-  ['gemini','claude','imgprompt','vault'].forEach(t => {
+  ['gemini','claude','vault'].forEach(t => {
     document.getElementById('spanel-'+t).style.display = t === tab ? '' : 'none';
     document.getElementById('stab-'+t).classList.toggle('active', t === tab);
   });
-  if (tab === 'imgprompt') {
-    const ta = document.getElementById('settings-imgprompt-tmpl');
-    if (ta) ta.value = getImgPromptTemplate();
-  }
   if (tab === 'vault') renderVaultList();
 }
 
@@ -5046,7 +4913,6 @@ function initImgPromptVault() {
       _updateImgPromptVaultTs();
     }, 800);
   };
-  renderImgPromptVault();
 }
 
 function _updateImgPromptVaultTs() {
@@ -5149,23 +5015,7 @@ async function runImgGen() {
 }
 
 
-function displayMwImg(mimeType, b64, prompt) {
-  const imgEl = document.getElementById('mwimg-img');
-  if (imgEl) { imgEl.src = `data:${mimeType};base64,${b64}`; imgEl.dataset.mime = mimeType; imgEl.dataset.b64 = b64; imgEl.dataset.url = ''; }
-  const resultEl = document.getElementById('mwimg-result');
-  if (resultEl) resultEl.style.display = 'block';
-  updateCcheckImg(`data:${mimeType};base64,${b64}`);
-  toast('🖼️ 画像生成完了！');
-}
 
-function displayMwImgUrl(url, prompt) {
-  const imgEl = document.getElementById('mwimg-img');
-  if (imgEl) { imgEl.src = url; imgEl.dataset.mime = 'image/jpeg'; imgEl.dataset.b64 = ''; imgEl.dataset.url = url; }
-  const resultEl = document.getElementById('mwimg-result');
-  if (resultEl) resultEl.style.display = 'block';
-  updateCcheckImg(url);
-  toast('🖼️ 画像生成完了！(pollinations.ai)');
-}
 
 function showMwImgError(msg) {
   document.getElementById('mwimg-loading').style.display = 'none';
@@ -5192,48 +5042,6 @@ function mwImgDownload() {
   }
 }
 
-// ----- プロンプト保管庫 -----
-function saveImgPromptFromWork() {
-  const prompt = document.getElementById('mwimg-prompt').value.trim();
-  if (!prompt) { toast('プロンプトがありません'); return; }
-  const n = S.notes.find(x => x.id === curId);
-  const entry = { date: new Date().toLocaleDateString('ja-JP'), title: n?.title || '', prompt };
-  const list = JSON.parse(localStorage.getItem('beyan_imgprompts') || '[]');
-  list.unshift(entry);
-  if (list.length > 30) list.pop();
-  localStorage.setItem('beyan_imgprompts', JSON.stringify(list));
-  renderImgPromptVault();
-  toast('📚 保管庫に保存しました');
-}
-
-function deleteImgPrompt(idx) {
-  const list = JSON.parse(localStorage.getItem('beyan_imgprompts') || '[]');
-  list.splice(idx, 1);
-  localStorage.setItem('beyan_imgprompts', JSON.stringify(list));
-  renderImgPromptVault();
-}
-
-function renderImgPromptVault() {
-  const el = document.getElementById('imgprompt-vault-list');
-  if (!el) return;
-  const list = JSON.parse(localStorage.getItem('beyan_imgprompts') || '[]');
-  const cnt = document.getElementById('imgprompt-vault-count');
-  if (cnt) cnt.textContent = list.length ? `${list.length}件保存済み` : '';
-  if (!list.length) {
-    el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:8px 0">まだ保存されたプロンプトはありません</div>';
-    return;
-  }
-  el.innerHTML = list.map((e, i) => `
-    <div style="background:var(--bg3);border-radius:8px;padding:10px;margin-bottom:6px">
-      <div style="font-size:12px;font-weight:700;color:var(--text);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin-bottom:2px">${e.title || '(タイトルなし)'}</div>
-      <div style="font-size:10px;color:var(--text3);margin-bottom:6px">${e.date}</div>
-      <div style="font-size:11px;color:var(--text2);line-height:1.5;max-height:48px;overflow:hidden;margin-bottom:6px">${e.prompt}</div>
-      <div style="display:flex;gap:6px">
-        <button onclick="navigator.clipboard.writeText(${JSON.stringify(e.prompt)}).then(()=>toast('コピーしました'))" style="flex:1;min-height:32px;background:var(--bg2);border:1px solid var(--border2);border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 コピー</button>
-        <button onclick="deleteImgPrompt(${i})" style="min-height:32px;width:36px;background:rgba(152,64,64,.08);border:1px solid rgba(152,64,64,.2);border-radius:6px;font-size:13px;cursor:pointer">🗑️</button>
-      </div>
-    </div>`).join('');
-}
 
 // ----- クロチェックタブ -----
 function updateCcheckImg(src) {
