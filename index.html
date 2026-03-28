@@ -4762,12 +4762,6 @@ function renderNetaList() {
 // 見出し画像生成
 // ================================================================
 let imggenNoteId = null;
-let _imggenCurrentNote = null;
-
-// 修正指示をプロンプトに追記して再生成
-function refineAndRegenImg() {
-  runImgGen();
-}
 
 function refreshImggenTitle() {
   const titleEl = document.getElementById('mwimg-note-title');
