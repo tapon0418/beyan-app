@@ -4847,53 +4847,71 @@ async function runImgGen() {
   loadEl.style.display = 'block';
   pbar.style.width = '20%';
 
-  const model = 'gemini-2.5-flash-image';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  console.log(`[ImgGen] model: ${model}`);
-  console.log(`[ImgGen] endpoint: ${endpoint.replace(apiKey, '***')}`);
+  const MODELS = [
+    'gemini-2.0-flash-exp-image-generation',
+    'gemini-2.0-flash-preview-image-generation',
+    'gemini-2.5-flash-preview-05-20',
+  ];
 
-  statusEl.textContent = `画像生成中 (${model})...`;
-  pbar.style.width = '55%';
-  try {
-    console.log('[ImgGen] Gemini request sent');
-    const r = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: finalPrompt }] }],
-        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
-      })
-    });
-    console.log(`[ImgGen] response status: ${r.status}`);
-    const d = await r.json();
-    if (!r.ok) {
-      console.log(`[ImgGen] error detail: ${JSON.stringify(d)}`);
-      throw new Error(d.error?.message || r.status);
+  for (const model of MODELS) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+    console.log(`[ImgGen] trying model: ${model}`);
+    statusEl.textContent = `画像生成中 (${model})...`;
+    pbar.style.width = '55%';
+    try {
+      const r = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: finalPrompt }] }],
+          generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+        })
+      });
+      console.log(`[ImgGen] response status: ${r.status}`);
+      const d = await r.json();
+      if (!r.ok) {
+        const errMsg = d.error?.message || String(r.status);
+        console.log(`[ImgGen] error detail: ${errMsg}`);
+        // 404/INVALID_ARGUMENT は次のモデルへ
+        if (r.status === 404 || d.error?.status === 'INVALID_ARGUMENT') continue;
+        throw new Error(errMsg);
+      }
+      const parts = d.candidates?.[0]?.content?.parts || [];
+      const imgPart = parts.find(p => p.inlineData);
+      if (!imgPart?.inlineData?.data) {
+        // テキスト応答があれば理由を表示
+        const textPart = parts.find(p => p.text);
+        const reason = textPart?.text?.slice(0, 200) || JSON.stringify(d).slice(0, 300);
+        console.log(`[ImgGen] no image data. reason: ${reason}`);
+        // このモデルは画像未対応 → 次へ
+        continue;
+      }
+      pbar.style.width = '100%'; loadEl.style.display = 'none';
+      const mimeType = imgPart.inlineData.mimeType || 'image/png';
+      const imgSrc = `data:${mimeType};base64,${imgPart.inlineData.data}`;
+      const imgEl2 = document.getElementById('mwimg-img');
+      if (imgEl2) {
+        imgEl2.src = imgSrc;
+        imgEl2.dataset.mime = mimeType;
+        imgEl2.dataset.b64  = imgPart.inlineData.data;
+        imgEl2.dataset.url  = '';
+      }
+      document.getElementById('mwimg-result').style.display = 'block';
+      updateCcheckImg(imgSrc);
+      console.log(`[ImgGen] success with ${model}`);
+      return;
+    } catch(e) {
+      console.log(`[ImgGen] error on ${model}: ${e.message}`);
+      // 致命的エラーは即終了
+      loadEl.style.display = 'none';
+      showMwImgError(`⚠️ 画像生成に失敗しました: ${e.message}`);
+      return;
     }
-    const parts = d.candidates?.[0]?.content?.parts || [];
-    const imgPart = parts.find(p => p.inlineData);
-    if (!imgPart?.inlineData?.data) {
-      console.log(`[ImgGen] error detail: ${JSON.stringify(d)}`);
-      throw new Error('no image data in response');
-    }
-    pbar.style.width = '100%'; loadEl.style.display = 'none';
-    const imgSrc = `data:image/png;base64,${imgPart.inlineData.data}`;
-    const imgEl2 = document.getElementById('mwimg-img');
-    if (imgEl2) {
-      imgEl2.src = imgSrc;
-      imgEl2.dataset.mime = imgPart.inlineData.mimeType || 'image/png';
-      imgEl2.dataset.b64  = imgPart.inlineData.data;
-      imgEl2.dataset.url  = '';
-    }
-    document.getElementById('mwimg-result').style.display = 'block';
-    updateCcheckImg(imgSrc);
-    console.log('[ImgGen] success');
-    return;
-  } catch(e) {
-    console.log(`[ImgGen] error detail: ${e.message}`);
-    loadEl.style.display = 'none';
-    showMwImgError(`⚠️ 画像生成に失敗しました: ${e.message}`);
   }
+
+  // 全モデル失敗
+  loadEl.style.display = 'none';
+  showMwImgError('⚠️ 全モデルで画像生成に失敗しました。APIキー・プロンプトを確認してください。');
 }
 
 
