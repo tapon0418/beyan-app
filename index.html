@@ -4819,23 +4819,6 @@ function _updateImgPromptVaultTs() {
   el.textContent = `最終更新：${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 }
 
-// JSONをテキストから確実に抽出するヘルパー
-function _parseImgTextJSON(raw) {
-  // step1: コードブロック・余分な空白を除去
-  let s = raw
-    .replace(/```json/gi, '')
-    .replace(/```/g, '')
-    .trim();
-  // step2: 直接パース
-  try { return JSON.parse(s); } catch {}
-  // step3: 先頭の{〜末尾の}で切り出し
-  const start = s.indexOf('{');
-  const end   = s.lastIndexOf('}');
-  if (start !== -1 && end > start) {
-    try { return JSON.parse(s.slice(start, end + 1)); } catch {}
-  }
-  return null;
-}
 
 async function autoExtractImgText(formattedText) {
   if (!formattedText || formattedText.trim().length < 50) return;
@@ -4873,11 +4856,14 @@ ${excerpt}`;
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || String(res.status));
 
-    const parts   = data.candidates?.[0]?.content?.parts || [];
-    const rawText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+    const parts        = data.candidates?.[0]?.content?.parts || [];
+    const responseText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
 
-    const parsed = _parseImgTextJSON(rawText);
-    if (!parsed) throw new Error(`JSONパース失敗 (${rawText.slice(0, 60)})`);
+    const cleaned = responseText
+      .replace(/```json/g, '')
+      .replace(/```/g, '')
+      .trim();
+    const parsed = JSON.parse(cleaned);
 
     const mainTitle   = (parsed.mainTitle   || '').slice(0, 20);
     const subTitle    = (parsed.subTitle    || '').slice(0, 25);
@@ -4924,6 +4910,7 @@ async function clickGenerateHeaderSVG() {
   const mainTitle   = (document.getElementById('mw-main-title')?.value   || n?.mainTitle   || n?.title || '').trim();
   const subTitle    = (document.getElementById('mw-sub-title')?.value    || n?.subTitle    || '').trim();
   const bodySummary = (document.getElementById('mw-body-summary')?.value || n?.bodySummary || '').trim();
+  const genre       = n?.type || '';
 
   document.getElementById('mwimg-result').style.display = 'none';
   document.getElementById('mwimg-error').style.display  = 'none';
@@ -4931,10 +4918,76 @@ async function clickGenerateHeaderSVG() {
   const statusEl = document.getElementById('mwimg-status');
   const pbar     = document.getElementById('mwimg-pbar');
   if (loadEl)   loadEl.style.display = 'block';
-  if (pbar)     pbar.style.width = '30%';
+  if (pbar)     pbar.style.width = '20%';
   if (statusEl) statusEl.textContent = 'SVG画像を生成中...';
 
-  const W = 1280, H = 720;
+  // Step1: プロンプト保管庫の読み込み
+  const vaultPrompt = localStorage.getItem('nabebase_imggen_prompt') || '';
+  if (!vaultPrompt) {
+    console.log('[ImgGen] prompt empty, using default SVG');
+    await _genLocalSVG(mainTitle, subTitle, bodySummary, loadEl, statusEl, pbar);
+    return;
+  }
+  console.log('[ImgGen] prompt loaded');
+
+  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
+  if (!apiKey) {
+    console.log('[ImgGen] no API key, using default SVG');
+    await _genLocalSVG(mainTitle, subTitle, bodySummary, loadEl, statusEl, pbar);
+    return;
+  }
+
+  // Step2: 変数埋め込み + Gemini送信
+  const resolvedPrompt = vaultPrompt
+    .replace(/\{mainTitle\}/g,   mainTitle)
+    .replace(/\{subTitle\}/g,    subTitle)
+    .replace(/\{bodySummary\}/g, bodySummary)
+    .replace(/\{genre\}/g,       genre);
+
+  const systemInstruction = 'あなたはグラフィックデザイナーです。以下の指示に従ってSVG画像（1280×670px）をそのまま出力してください。コードブロックや説明文は不要です。<svg>タグから始まる完全なSVGコードのみを返してください。';
+
+  try {
+    if (pbar)     pbar.style.width = '40%';
+    if (statusEl) statusEl.textContent = 'Geminiが画像を生成中...';
+    console.log('[ImgGen] gemini request sent');
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemInstruction }] },
+          contents: [{ role: 'user', parts: [{ text: resolvedPrompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+        })
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || String(res.status));
+
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const responseText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+
+    // Step3: SVG抽出
+    const svgMatch = responseText.match(/<svg[\s\S]*<\/svg>/);
+    if (svgMatch) {
+      console.log('[ImgGen] SVG generated');
+      if (pbar)     pbar.style.width = '70%';
+      if (statusEl) statusEl.textContent = 'PNG変換中...';
+      await _svgToPngAndDisplay(svgMatch[0], loadEl, pbar);
+    } else {
+      console.log('[ImgGen] fallback to local SVG');
+      await _genLocalSVG(mainTitle, subTitle, bodySummary, loadEl, statusEl, pbar);
+    }
+  } catch(e) {
+    console.log('[ImgGen] gemini error: ' + e.message + ', fallback to local SVG');
+    await _genLocalSVG(mainTitle, subTitle, bodySummary, loadEl, statusEl, pbar);
+  }
+}
+
+async function _genLocalSVG(mainTitle, subTitle, bodySummary, loadEl, statusEl, pbar) {
+  const W = 1280, H = 670;
   const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
     <defs>
       <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -4949,17 +5002,19 @@ async function clickGenerateHeaderSVG() {
     <rect width="${W}" height="${H}" fill="url(#bgGrad)"/>
     <rect x="0" y="0" width="10" height="${H}" fill="url(#acGrad)"/>
     <rect x="80" y="60" width="560" height="5" fill="url(#acGrad)" opacity="0.8"/>
-    <text x="80" y="310" font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif" font-size="72" font-weight="900" fill="#ffffff">${_escXml(mainTitle)}</text>
-    <text x="80" y="400" font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif" font-size="40" font-weight="700" fill="#e09040">${_escXml(subTitle)}</text>
-    <text x="80" y="475" font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif" font-size="28" font-weight="400" fill="#99bb99">${_escXml(bodySummary)}</text>
-    <rect x="80" y="630" width="560" height="3" fill="url(#acGrad)" opacity="0.4"/>
-    <text x="${W-60}" y="${H-30}" font-family="'Noto Sans JP',sans-serif" font-size="20" fill="#668866" text-anchor="end" opacity="0.5">nabebase</text>
+    <text x="80" y="290" font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif" font-size="72" font-weight="900" fill="#ffffff">${_escXml(mainTitle)}</text>
+    <text x="80" y="380" font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif" font-size="40" font-weight="700" fill="#e09040">${_escXml(subTitle)}</text>
+    <text x="80" y="450" font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif" font-size="28" font-weight="400" fill="#99bb99">${_escXml(bodySummary)}</text>
+    <rect x="80" y="590" width="560" height="3" fill="url(#acGrad)" opacity="0.4"/>
+    <text x="${W-60}" y="${H-25}" font-family="'Noto Sans JP',sans-serif" font-size="20" fill="#668866" text-anchor="end" opacity="0.5">nabebase</text>
   </svg>`;
-
   console.log('[ImgGen] SVG generated');
   if (pbar)     pbar.style.width = '60%';
   if (statusEl) statusEl.textContent = 'PNG変換中...';
+  await _svgToPngAndDisplay(svgContent, loadEl, pbar);
+}
 
+async function _svgToPngAndDisplay(svgContent, loadEl, pbar) {
   try {
     const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
     const url  = URL.createObjectURL(blob);
@@ -4967,7 +5022,8 @@ async function clickGenerateHeaderSVG() {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        canvas.width = W; canvas.height = H;
+        canvas.width  = img.naturalWidth  || 1280;
+        canvas.height = img.naturalHeight || 670;
         canvas.getContext('2d').drawImage(img, 0, 0);
         URL.revokeObjectURL(url);
         const pngDataUrl = canvas.toDataURL('image/png');
