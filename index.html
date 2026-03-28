@@ -2151,10 +2151,15 @@ input:focus, textarea:focus, select:focus {
           <div style="font-size:13px;font-weight:700;color:var(--text2)">📝 画像プロンプト保管庫</div>
           <div id="imgprompt-vault-ts" style="font-size:11px;color:var(--text3)"></div>
         </div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;line-height:1.6">プロンプト内の <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{mainTitle}</code> <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{subTitle}</code> <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{bodySummary}</code> はカードの値に自動置換されます</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;line-height:1.6">
+          <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{mainTitle}</code>
+          <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{subTitle}</code>
+          <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{bodySummary}</code>
+          はカードの値に自動置換されます。日本語テキスト精度向上のプロンプトが自動付加されます。
+        </div>
         <textarea id="imggen-prompt-vault" rows="10"
           style="width:100%;min-height:180px;font-size:16px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;box-sizing:border-box;word-break:break-all"
-          placeholder="Imagen APIに送るプロンプトをここに入力・編集...&#10;例: note記事アイキャッチ、1280x720px、{mainTitle}、サブ:{subTitle}"></textarea>
+          placeholder="例：&#10;note eyecatch image, 1280x720px, dark navy background with cyan accent.&#10;Large bold title text: {mainTitle}&#10;Subtitle: {subTitle}&#10;Style: professional, modern, high contrast. Japanese text must be rendered precisely."></textarea>
       </div>
 
       <!-- 画像生成ボタン -->
@@ -4831,11 +4836,17 @@ async function runImgGen() {
   const mainTitle   = n.mainTitle   || n.title || '';
   const subTitle    = n.subTitle    || '';
   const bodySummary = n.bodySummary || n.memo  || '';
-  const finalPrompt = vaultPrompt
+  const resolvedPrompt = vaultPrompt
     .replace(/\{mainTitle\}/g,   mainTitle)
     .replace(/\{subTitle\}/g,    subTitle)
     .replace(/\{bodySummary\}/g, bodySummary)
     .replace(/\{title\}/g,       mainTitle);
+
+  // 日本語テキスト精度向上のための指示を自動付加
+  const jpNote = mainTitle
+    ? `\n\n[Text rendering rules]\n- Render ALL Japanese text EXACTLY as specified, character by character. No substitutions, no garbling.\n- Main title exact text: "${mainTitle}"\n- Use a Japanese-compatible font (e.g. Noto Sans JP). Every kanji and kana must be pixel-perfect.\n- Do NOT paraphrase or alter any Japanese text.`
+    : '';
+  const finalPrompt = resolvedPrompt + jpNote;
 
   console.log('[ImgGen] prompt loaded');
 
