@@ -4841,11 +4841,10 @@ async function autoExtractImgText(formattedText) {
 - 必ずJSON形式のみで返す。マークダウン・コードブロック・説明文は一切不要
 - mainTitleは絶対に10文字以内で終わらせる（途中で切らない）
 - subTitleは絶対に15文字以内で終わらせる
-- bodySummaryは15文字以内で、意味が通る形で終わらせる
-- 文章の途中では切らない
+- bodySummaryは15文字以内で、文の途中で切らず、名詞か動詞で完結させる
 
 返すのは以下のJSONのみ：
-{"mainTitle":"10文字以内","subTitle":"15文字以内","bodySummary":"15文字以内"}
+{"mainTitle":"10文字以内","subTitle":"15文字以内","bodySummary":"15字以内・必ず意味が完結する形で終わらせること"}
 
 ---
 ${excerpt}`;
