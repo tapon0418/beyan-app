@@ -5139,22 +5139,33 @@ function _pickPattern(cat, memo, hist) {
   }
 
   // STEP3: 変数ローテーション強制
-  // 明度ローテーション（ダーク3連続 → light強制）
+  // 修正①: 明度ローテーション（直近3回すべてdark → light強制）
   const recentBright = hist.slice(0,3).map(h => h.brightness).filter(Boolean);
   const allDark = recentBright.length >= 3 && recentBright.every(b => b === 'dark');
   if (allDark && PATTERN_DB[pi]?.brightness === 'dark') {
-    const lightIds = genreIds.filter(id => PATTERN_DB[id]?.brightness === 'light' && id !== prevId);
-    if (lightIds.length > 0) pi = lightIds[Math.floor(Math.random() * lightIds.length)];
+    // まずジャンル内のlightパターンを探す
+    let lightIds = genreIds.filter(id => PATTERN_DB[id]?.brightness === 'light' && id !== prevId);
+    // ジャンル内にlightがなければ全PATTERN_DBから選ぶ（強制）
+    if (lightIds.length === 0) {
+      lightIds = Object.keys(PATTERN_DB).map(Number)
+        .filter(id => PATTERN_DB[id]?.brightness === 'light' && id !== prevId);
+    }
+    if (lightIds.length > 0) {
+      pi = lightIds[Math.floor(Math.random() * lightIds.length)];
+      console.log('[ImgGen] brightness強制light選択 ID:', pi);
+    }
   }
 
   const pat = { ...(PATTERN_DB[pi] || PATTERN_DB[1]) };
 
-  // レイアウトローテーション（直前と同じは避ける）
-  const knownLayouts = ['center','left_heavy','top_bottom','diagonal','split'];
-  const availLy = knownLayouts.filter(l => l !== usedLy[0]);
+  // 修正②: レイアウトローテーション（直前と同じlayout禁止）
+  const knownLayouts = ['center','left_heavy','top_bottom','diagonal','split','edge_align','top_heavy','center_top'];
+  const prevLy = usedLy[0];
+  const availLy = knownLayouts.filter(l => l !== prevLy);
   let ly = knownLayouts.includes(pat.layout) ? pat.layout : 'center';
-  if (usedLy[0] === ly && availLy.length > 0) {
+  if (prevLy === ly && availLy.length > 0) {
     ly = availLy[Math.floor(Math.random() * availLy.length)];
+    console.log('[ImgGen] layout重複回避 →', ly);
   }
 
   // アイコンローテーション（あり→なし→あり）
