@@ -5057,7 +5057,7 @@ ${JSON.stringify(patternsList)}`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: step1Prompt }] }],
-          generationConfig: { maxOutputTokens: 300, temperature: 0 }
+          generationConfig: { maxOutputTokens: 500, temperature: 0 }
         })
       }
     );
