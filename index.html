@@ -5315,7 +5315,8 @@ function _buildSVG(t1, t2, t3, vars) {
     <text x="${t1x}" y="${POS.y1}"
       font-size="${fs1}" font-weight="700"
       font-family="'Noto Sans JP',sans-serif"
-      fill="${sub}" text-anchor="${POS.a1}"
+      fill="${sub}" stroke="${dark}" stroke-width="4" paint-order="stroke"
+      text-anchor="${POS.a1}"
       filter="url(#ts)">${t1}</text>
     <text x="${t2x}" y="${POS.y2}"
       font-size="${fs2}" font-weight="${fw || '900'}"
@@ -5327,7 +5328,8 @@ function _buildSVG(t1, t2, t3, vars) {
     <text x="${t3x}" y="${POS.y3}"
       font-size="${fs3}" font-weight="700"
       font-family="'Noto Sans JP',sans-serif"
-      fill="${sub}" text-anchor="${POS.a3}"
+      fill="${sub}" stroke="${dark}" stroke-width="3" paint-order="stroke"
+      text-anchor="${POS.a3}"
       filter="url(#ts)">${t3}</text>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg"
@@ -5919,6 +5921,12 @@ function buildThumbnailSVG(d) {
 async function svgToBase64PNG(svgStr) {
   try {
     await document.fonts.ready;
+    // Noto Sans JP の各ウェイトを明示的にロード（canvas描画前に確実に確保）
+    await Promise.all([
+      document.fonts.load('400 20px "Noto Sans JP"'),
+      document.fonts.load('700 20px "Noto Sans JP"'),
+      document.fonts.load('900 20px "Noto Sans JP"'),
+    ]).catch(() => {});
     const blob = new Blob([svgStr], {type:'image/svg+xml'});
     const url = URL.createObjectURL(blob);
     return new Promise((resolve, reject) => {
