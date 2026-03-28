@@ -4819,6 +4819,24 @@ function _updateImgPromptVaultTs() {
   el.textContent = `最終更新：${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 }
 
+// JSONをテキストから確実に抽出するヘルパー
+function _parseImgTextJSON(raw) {
+  // step1: コードブロック・余分な空白を除去
+  let s = raw
+    .replace(/```json/gi, '')
+    .replace(/```/g, '')
+    .trim();
+  // step2: 直接パース
+  try { return JSON.parse(s); } catch {}
+  // step3: 先頭の{〜末尾の}で切り出し
+  const start = s.indexOf('{');
+  const end   = s.lastIndexOf('}');
+  if (start !== -1 && end > start) {
+    try { return JSON.parse(s.slice(start, end + 1)); } catch {}
+  }
+  return null;
+}
+
 async function autoExtractImgText(formattedText) {
   if (!formattedText || formattedText.trim().length < 50) return;
   const apiKey = localStorage.getItem('beyan_gemini_key') || '';
@@ -4833,78 +4851,79 @@ async function autoExtractImgText(formattedText) {
   };
   setStatus('var(--accent)', '🤖 AIが見出し画像テキストを抽出中...');
 
-  const excerpt = formattedText.trim().slice(0, 2000);
-  const n = S.notes.find(x => x.id === curId);
+  const excerpt   = formattedText.trim().slice(0, 2000);
+  const n         = S.notes.find(x => x.id === curId);
   const noteTitle = n?.title || '';
 
-  // systemとuserを1つのメッセージにまとめる（model互換性向上）
-  const prompt = `あなたはnoteアイキャッチのコピーライターです。以下の記事から見出し画像用テキストを抽出し、JSONのみ返してください。説明文・コードブロック不要。
+  const prompt = `以下のnote記事から見出し画像用テキストを抽出し、下記のJSONだけを返してください。説明文・コードブロック・改行は不要です。
 
-出力形式（JSONのみ）:
-{"mainTitle":"15文字以内","subTitle":"20文字以内","bodySummary":"15文字以内"}
+{"mainTitle":"","subTitle":"","bodySummary":""}
 
-条件:
-- mainTitle: インパクト重視。句読点で自然に2行に分かれる位置にする（例: "採用率向上！提案文の書き方"）
-- subTitle: メインを補足するキャッチ（例: "テンプレート活用法を解説"）
-- bodySummary: 記事の核心を一言で（例: "副業ライター向け実践ガイド"）
+ルール:
+- mainTitle: 15文字以内、インパクト重視（例: 採用率向上！提案文の書き方）
+- subTitle: 20文字以内、補足キャッチ（例: テンプレート活用法を解説）
+- bodySummary: 15文字以内、記事の核心一言（例: 副業ライター向け実践ガイド）
 
 記事タイトル: ${noteTitle}
-記事本文（抜粋）:
+本文抜粋:
 ${excerpt}`;
 
-  // gemini-2.0-flash（安定）→ 2.5-flash（フォールバック）
-  const MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash'];
+  const MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite'];
 
-  for (const model of MODELS) {
+  for (let mi = 0; mi < MODELS.length; mi++) {
+    const model = MODELS[mi];
+    const isLast = mi === MODELS.length - 1;
     try {
       console.log(`[ImgText] trying ${model}`);
-      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
-        })
-      });
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 512 }
+          })
+        }
+      );
       const data = await res.json();
       if (!res.ok) {
         const msg = data.error?.message || String(res.status);
-        console.log(`[ImgText] ${model} API error: ${msg}`);
-        if (res.status === 404) continue;
+        console.log(`[ImgText] ${model} error: ${msg}`);
+        if (!isLast) continue;
         throw new Error(msg);
       }
 
-      // 全partsを結合してrawText構築（チャンク分割対応）
-      const parts = data.candidates?.[0]?.content?.parts || [];
-      const rawText = parts.map(p => p.text || '').join('');
-      console.log(`[ImgText] raw response (${model}): ${rawText.slice(0, 300)}`);
+      // thought:trueのパーツを除外してテキスト結合
+      const parts   = data.candidates?.[0]?.content?.parts || [];
+      const rawText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+      console.log(`[ImgText] rawText (${model}): ${rawText.slice(0, 200)}`);
 
-      // 貪欲マッチで最長のJSONオブジェクトを抽出
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) throw new Error(`JSONが見つかりません (${rawText.slice(0, 80)})`);
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = _parseImgTextJSON(rawText);
+      if (!parsed) {
+        console.log(`[ImgText] parse failed, raw: ${rawText}`);
+        if (!isLast) continue;
+        throw new Error(`JSONパース失敗 (${rawText.slice(0, 60)})`);
+      }
+
       const mainTitle   = (parsed.mainTitle   || '').slice(0, 20);
       const subTitle    = (parsed.subTitle    || '').slice(0, 25);
       const bodySummary = (parsed.bodySummary || '').slice(0, 20);
 
-      const mainEl    = document.getElementById('mw-main-title');
-      const subEl     = document.getElementById('mw-sub-title');
-      const summaryEl = document.getElementById('mw-body-summary');
-      if (mainEl)    mainEl.value    = mainTitle;
-      if (subEl)     subEl.value     = subTitle;
-      if (summaryEl) summaryEl.value = bodySummary;
+      ['mw-main-title','mw-sub-title','mw-body-summary'].forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) el.value = [mainTitle, subTitle, bodySummary][i];
+      });
 
       const nf = S.notes.find(x => x.id === curId);
       if (nf) { nf.mainTitle = mainTitle; nf.subTitle = subTitle; nf.bodySummary = bodySummary; save(); }
 
       setStatus('var(--green)', `✅ AI抽出完了 — ${mainTitle}`);
-      console.log('[ImgText] extracted:', { mainTitle, subTitle, bodySummary });
+      console.log('[ImgText] success:', { mainTitle, subTitle, bodySummary });
       return;
     } catch(e) {
-      console.log(`[ImgText] ${model} error: ${e.message}`);
-      if (MODELS.indexOf(model) < MODELS.length - 1) continue;
-      // 全モデル失敗
-      setStatus('var(--red)', `⚠️ AI抽出失敗: ${e.message.slice(0, 50)}`);
+      console.log(`[ImgText] ${model} threw: ${e.message}`);
+      if (isLast) setStatus('var(--red)', `⚠️ AI抽出失敗: ${e.message.slice(0, 60)}`);
     }
   }
 }
