@@ -5097,7 +5097,10 @@ ${JSON.stringify(patternsList)}`;
           .replace('{selectedPattern.font_weight}', '')
           .replace('{selectedPattern.icon}', (selectedPattern.icon_and_illustration?.icon_examples || []).join('・'))
           .replace('{selectedPattern.icon_placement}', selectedPattern.icon_and_illustration?.placement || '')
-          .replace('{selectedPattern.design_note}', selectedPattern.best_for?.join('・') || '')
+          .replace('{selectedPattern.design_note}',
+            Array.isArray(selectedPattern.best_for)
+              ? selectedPattern.best_for.join('・')
+              : selectedPattern.best_for || '')
       : `以下のデザイン仕様で1280×670pxのSVG画像を1枚生成してください。
 <svg>タグから始まり</svg>タグで終わるSVGコードのみ返してください。
 説明文・マークダウン・コードブロック不要。
