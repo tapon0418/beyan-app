@@ -4835,8 +4835,18 @@ async function autoExtractImgText(formattedText) {
   setStatus('var(--accent)', '🤖 AIが見出し画像テキストを抽出中...');
 
   const excerpt = formattedText.trim().slice(0, 2000);
-  const prompt = `以下の記事から見出し画像用テキストを抽出してください。JSONのみ返してください。
-{"mainTitle":"15字以内","subTitle":"20字以内","bodySummary":"15字以内"}
+  const prompt = `次の記事本文から見出し画像用のテキストを3つ抽出してください。
+
+制約：
+- 必ずJSON形式のみで返す。マークダウン・コードブロック・説明文は一切不要
+- mainTitleは絶対に15文字以内で終わらせる（途中で切らない）
+- subTitleは絶対に20文字以内で終わらせる
+- bodySummaryは絶対に15文字以内で終わらせる
+- 文字数を超える場合は意味が変わっても短くカットすること
+
+返すのは以下のJSONのみ：
+{"mainTitle":"15文字以内","subTitle":"20文字以内","bodySummary":"15文字以内"}
+
 ---
 ${excerpt}`;
 
@@ -4849,7 +4859,7 @@ ${excerpt}`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.2, maxOutputTokens: 512 }
+          generationConfig: { maxOutputTokens: 200, temperature: 0 }
         })
       }
     );
@@ -4859,15 +4869,36 @@ ${excerpt}`;
     const parts        = data.candidates?.[0]?.content?.parts || [];
     const responseText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
 
-    const cleaned = responseText
-      .replace(/```json/g, '')
+    // Step1: コードブロック除去
+    let cleaned = responseText
+      .replace(/```json/gi, '')
       .replace(/```/g, '')
       .trim();
-    const parsed = JSON.parse(cleaned);
 
-    const mainTitle   = (parsed.mainTitle   || '').slice(0, 20);
-    const subTitle    = (parsed.subTitle    || '').slice(0, 25);
-    const bodySummary = (parsed.bodySummary || '').slice(0, 20);
+    // Step2: { } の範囲だけ抽出
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('JSONが見つかりません');
+    cleaned = jsonMatch[0];
+
+    // Step3: JSON.parse → 失敗時は正規表現フォールバック
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch(e) {
+      const extract = (key) => {
+        const m = cleaned.match(new RegExp(`"${key}"\\s*:\\s*"([^"]*)`));
+        return m ? m[1].slice(0, key === 'subTitle' ? 20 : 15) : '';
+      };
+      parsed = {
+        mainTitle:   extract('mainTitle'),
+        subTitle:    extract('subTitle'),
+        bodySummary: extract('bodySummary')
+      };
+    }
+
+    const mainTitle   = (parsed.mainTitle   || '').slice(0, 15);
+    const subTitle    = (parsed.subTitle    || '').slice(0, 20);
+    const bodySummary = (parsed.bodySummary || '').slice(0, 15);
 
     console.log(`[ImgText] mainTitle: ${mainTitle} / subTitle: ${subTitle} / bodySummary: ${bodySummary}`);
 
@@ -4950,9 +4981,10 @@ async function clickGenerateHeaderSVG() {
     if (pbar)     pbar.style.width = '40%';
     if (statusEl) statusEl.textContent = 'Geminiが画像を生成中...';
     console.log('[ImgGen] gemini request sent');
+    console.log('[ImgGen] model: gemini-2.5-pro');
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
