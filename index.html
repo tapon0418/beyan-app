@@ -2779,11 +2779,9 @@ function initFirebase() {
           db.ref('beyan_img_template').set('');
           db.ref('beyan_img_template_ts').set(new Date().toISOString());
           _imgTemplate = '';
-          _syncImgTemplateTAs('');
           return;
         }
         _imgTemplate = fbVal;
-        _syncImgTemplateTAs(fbVal);
       });
       db.ref('beyan_img_template_ts').on('value', snap => {
         _imgTemplateUpdatedAt = snap.val();
@@ -5101,8 +5099,8 @@ async function runImgGen() {
   loadEl.style.display = 'block';
   pbar.style.width = '20%';
 
-  const model = 'imagen-3.0-generate-002';
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+  const model = 'gemini-2.0-flash-exp-image-generation';
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   console.log(`[ImgGen] model: ${model}`);
   console.log(`[ImgGen] endpoint: ${endpoint.replace(apiKey, '***')}`);
 
@@ -5113,7 +5111,10 @@ async function runImgGen() {
     const r = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ instances: [{ prompt: finalPrompt }], parameters: { sampleCount: 1 } })
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: finalPrompt }] }],
+        generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+      })
     });
     console.log(`[ImgGen] response status: ${r.status}`);
     const d = await r.json();
@@ -5121,18 +5122,19 @@ async function runImgGen() {
       console.log(`[ImgGen] error detail: ${JSON.stringify(d)}`);
       throw new Error(d.error?.message || r.status);
     }
-    const pred = d.predictions?.[0];
-    if (!pred?.bytesBase64Encoded) {
+    const parts = d.candidates?.[0]?.content?.parts || [];
+    const imgPart = parts.find(p => p.inlineData);
+    if (!imgPart?.inlineData?.data) {
       console.log(`[ImgGen] error detail: ${JSON.stringify(d)}`);
       throw new Error('no image data in response');
     }
     pbar.style.width = '100%'; loadEl.style.display = 'none';
-    const imgSrc = `data:image/png;base64,${pred.bytesBase64Encoded}`;
+    const imgSrc = `data:image/png;base64,${imgPart.inlineData.data}`;
     const imgEl2 = document.getElementById('mwimg-img');
     if (imgEl2) {
       imgEl2.src = imgSrc;
-      imgEl2.dataset.mime = 'image/png';
-      imgEl2.dataset.b64  = pred.bytesBase64Encoded;
+      imgEl2.dataset.mime = imgPart.inlineData.mimeType || 'image/png';
+      imgEl2.dataset.b64  = imgPart.inlineData.data;
       imgEl2.dataset.url  = '';
     }
     document.getElementById('mwimg-result').style.display = 'block';
@@ -5143,11 +5145,7 @@ async function runImgGen() {
     console.log(`[ImgGen] error detail: ${e.message}`);
     loadEl.style.display = 'none';
     showMwImgError(`⚠️ 画像生成に失敗しました: ${e.message}`);
-    return;
   }
-
-  loadEl.style.display = 'none';
-  showMwImgError('⚠️ 画像生成に失敗しました。APIキーとモデルを確認してください。');
 }
 
 
