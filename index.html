@@ -4851,80 +4851,54 @@ async function autoExtractImgText(formattedText) {
   };
   setStatus('var(--accent)', '🤖 AIが見出し画像テキストを抽出中...');
 
-  const excerpt   = formattedText.trim().slice(0, 2000);
-  const n         = S.notes.find(x => x.id === curId);
-  const noteTitle = n?.title || '';
-
-  const prompt = `以下のnote記事から見出し画像用テキストを抽出し、下記のJSONだけを返してください。説明文・コードブロック・改行は不要です。
-
-{"mainTitle":"","subTitle":"","bodySummary":""}
-
-ルール:
-- mainTitle: 15文字以内、インパクト重視（例: 採用率向上！提案文の書き方）
-- subTitle: 20文字以内、補足キャッチ（例: テンプレート活用法を解説）
-- bodySummary: 15文字以内、記事の核心一言（例: 副業ライター向け実践ガイド）
-
-記事タイトル: ${noteTitle}
-本文抜粋:
+  const excerpt = formattedText.trim().slice(0, 2000);
+  const prompt = `以下の記事から見出し画像用テキストを抽出してください。JSONのみ返してください。
+{"mainTitle":"15字以内","subTitle":"20字以内","bodySummary":"15字以内"}
+---
 ${excerpt}`;
 
-  const MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite'];
-
-  for (let mi = 0; mi < MODELS.length; mi++) {
-    const model = MODELS[mi];
-    const isLast = mi === MODELS.length - 1;
-    try {
-      console.log(`[ImgText] trying ${model}`);
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 512 }
-          })
-        }
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        const msg = data.error?.message || String(res.status);
-        console.log(`[ImgText] ${model} error: ${msg}`);
-        if (!isLast) continue;
-        throw new Error(msg);
+  try {
+    console.log('[ImgText] gemini-2.5-flash request sent');
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 512 }
+        })
       }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || String(res.status));
 
-      // thought:trueのパーツを除外してテキスト結合
-      const parts   = data.candidates?.[0]?.content?.parts || [];
-      const rawText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
-      console.log(`[ImgText] rawText (${model}): ${rawText.slice(0, 200)}`);
+    const parts   = data.candidates?.[0]?.content?.parts || [];
+    const rawText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
 
-      const parsed = _parseImgTextJSON(rawText);
-      if (!parsed) {
-        console.log(`[ImgText] parse failed, raw: ${rawText}`);
-        if (!isLast) continue;
-        throw new Error(`JSONパース失敗 (${rawText.slice(0, 60)})`);
-      }
+    const parsed = _parseImgTextJSON(rawText);
+    if (!parsed) throw new Error(`JSONパース失敗 (${rawText.slice(0, 60)})`);
 
-      const mainTitle   = (parsed.mainTitle   || '').slice(0, 20);
-      const subTitle    = (parsed.subTitle    || '').slice(0, 25);
-      const bodySummary = (parsed.bodySummary || '').slice(0, 20);
+    const mainTitle   = (parsed.mainTitle   || '').slice(0, 20);
+    const subTitle    = (parsed.subTitle    || '').slice(0, 25);
+    const bodySummary = (parsed.bodySummary || '').slice(0, 20);
 
-      ['mw-main-title','mw-sub-title','mw-body-summary'].forEach((id, i) => {
-        const el = document.getElementById(id);
-        if (el) el.value = [mainTitle, subTitle, bodySummary][i];
-      });
+    console.log(`[ImgText] mainTitle: ${mainTitle} / subTitle: ${subTitle} / bodySummary: ${bodySummary}`);
 
-      const nf = S.notes.find(x => x.id === curId);
-      if (nf) { nf.mainTitle = mainTitle; nf.subTitle = subTitle; nf.bodySummary = bodySummary; save(); }
+    ['mw-main-title','mw-sub-title','mw-body-summary'].forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el) el.value = [mainTitle, subTitle, bodySummary][i];
+    });
 
-      setStatus('var(--green)', `✅ AI抽出完了 — ${mainTitle}`);
-      console.log('[ImgText] success:', { mainTitle, subTitle, bodySummary });
-      return;
-    } catch(e) {
-      console.log(`[ImgText] ${model} threw: ${e.message}`);
-      if (isLast) setStatus('var(--red)', `⚠️ AI抽出失敗: ${e.message.slice(0, 60)}`);
-    }
+    const nf = S.notes.find(x => x.id === curId);
+    if (nf) { nf.mainTitle = mainTitle; nf.subTitle = subTitle; nf.bodySummary = bodySummary; save(); }
+
+    setStatus('var(--green)', `✅ AI抽出完了 — ${mainTitle}`);
+    console.log('[ImgText] fields filled');
+    await clickGenerateHeaderSVG();
+  } catch(e) {
+    console.log(`[ImgText] error: ${e.message}`);
+    setStatus('var(--red)', `⚠️ AI抽出失敗: ${e.message.slice(0, 60)}`);
   }
 }
 
@@ -4942,104 +4916,87 @@ function autoSaveImgTextField() {
 }
 
 async function runImgGen() {
+  await clickGenerateHeaderSVG();
+}
+
+async function clickGenerateHeaderSVG() {
   const n = S.notes.find(x => x.id === curId);
-  if (!n) { toast('記事が選択されていません'); return; }
-  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
-  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
-
-  const vaultPrompt = (document.getElementById('imggen-prompt-vault')?.value || '').trim();
-  if (!vaultPrompt) { showMwImgError('⚠️ プロンプト保管庫にプロンプトを入力してください。'); return; }
-
-  const mainTitle   = n.mainTitle   || n.title || '';
-  const subTitle    = n.subTitle    || '';
-  const bodySummary = n.bodySummary || n.memo  || '';
-  const resolvedPrompt = vaultPrompt
-    .replace(/\{mainTitle\}/g,   mainTitle)
-    .replace(/\{subTitle\}/g,    subTitle)
-    .replace(/\{bodySummary\}/g, bodySummary)
-    .replace(/\{title\}/g,       mainTitle);
-
-  // 日本語テキスト精度向上のための指示を自動付加
-  const jpNote = mainTitle
-    ? `\n\n[Text rendering rules]\n- Render ALL Japanese text EXACTLY as specified, character by character. No substitutions, no garbling.\n- Main title exact text: "${mainTitle}"\n- Use a Japanese-compatible font (e.g. Noto Sans JP). Every kanji and kana must be pixel-perfect.\n- Do NOT paraphrase or alter any Japanese text.`
-    : '';
-  const finalPrompt = resolvedPrompt + jpNote;
-
-  console.log('[ImgGen] prompt loaded');
+  const mainTitle   = (document.getElementById('mw-main-title')?.value   || n?.mainTitle   || n?.title || '').trim();
+  const subTitle    = (document.getElementById('mw-sub-title')?.value    || n?.subTitle    || '').trim();
+  const bodySummary = (document.getElementById('mw-body-summary')?.value || n?.bodySummary || '').trim();
 
   document.getElementById('mwimg-result').style.display = 'none';
   document.getElementById('mwimg-error').style.display  = 'none';
   const loadEl   = document.getElementById('mwimg-loading');
   const statusEl = document.getElementById('mwimg-status');
   const pbar     = document.getElementById('mwimg-pbar');
-  loadEl.style.display = 'block';
-  pbar.style.width = '20%';
+  if (loadEl)   loadEl.style.display = 'block';
+  if (pbar)     pbar.style.width = '30%';
+  if (statusEl) statusEl.textContent = 'SVG画像を生成中...';
 
-  const MODELS = [
-    'gemini-2.0-flash-exp-image-generation',
-    'gemini-2.0-flash-preview-image-generation',
-    'gemini-2.5-flash-preview-05-20',
-  ];
+  const W = 1280, H = 720;
+  const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+    <defs>
+      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#1a2e20"/>
+        <stop offset="100%" stop-color="#2d4a35"/>
+      </linearGradient>
+      <linearGradient id="acGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stop-color="#c07030"/>
+        <stop offset="100%" stop-color="#e09040"/>
+      </linearGradient>
+    </defs>
+    <rect width="${W}" height="${H}" fill="url(#bgGrad)"/>
+    <rect x="0" y="0" width="10" height="${H}" fill="url(#acGrad)"/>
+    <rect x="80" y="60" width="560" height="5" fill="url(#acGrad)" opacity="0.8"/>
+    <text x="80" y="310" font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif" font-size="72" font-weight="900" fill="#ffffff">${_escXml(mainTitle)}</text>
+    <text x="80" y="400" font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif" font-size="40" font-weight="700" fill="#e09040">${_escXml(subTitle)}</text>
+    <text x="80" y="475" font-family="'Noto Sans JP','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif" font-size="28" font-weight="400" fill="#99bb99">${_escXml(bodySummary)}</text>
+    <rect x="80" y="630" width="560" height="3" fill="url(#acGrad)" opacity="0.4"/>
+    <text x="${W-60}" y="${H-30}" font-family="'Noto Sans JP',sans-serif" font-size="20" fill="#668866" text-anchor="end" opacity="0.5">nabebase</text>
+  </svg>`;
 
-  for (const model of MODELS) {
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-    console.log(`[ImgGen] trying model: ${model}`);
-    statusEl.textContent = `画像生成中 (${model})...`;
-    pbar.style.width = '55%';
-    try {
-      const r = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: finalPrompt }] }],
-          generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
-        })
-      });
-      console.log(`[ImgGen] response status: ${r.status}`);
-      const d = await r.json();
-      if (!r.ok) {
-        const errMsg = d.error?.message || String(r.status);
-        console.log(`[ImgGen] error detail: ${errMsg}`);
-        // 404/INVALID_ARGUMENT は次のモデルへ
-        if (r.status === 404 || d.error?.status === 'INVALID_ARGUMENT') continue;
-        throw new Error(errMsg);
-      }
-      const parts = d.candidates?.[0]?.content?.parts || [];
-      const imgPart = parts.find(p => p.inlineData);
-      if (!imgPart?.inlineData?.data) {
-        // テキスト応答があれば理由を表示
-        const textPart = parts.find(p => p.text);
-        const reason = textPart?.text?.slice(0, 200) || JSON.stringify(d).slice(0, 300);
-        console.log(`[ImgGen] no image data. reason: ${reason}`);
-        // このモデルは画像未対応 → 次へ
-        continue;
-      }
-      pbar.style.width = '100%'; loadEl.style.display = 'none';
-      const mimeType = imgPart.inlineData.mimeType || 'image/png';
-      const imgSrc = `data:${mimeType};base64,${imgPart.inlineData.data}`;
-      const imgEl2 = document.getElementById('mwimg-img');
-      if (imgEl2) {
-        imgEl2.src = imgSrc;
-        imgEl2.dataset.mime = mimeType;
-        imgEl2.dataset.b64  = imgPart.inlineData.data;
-        imgEl2.dataset.url  = '';
-      }
-      document.getElementById('mwimg-result').style.display = 'block';
-      updateCcheckImg(imgSrc);
-      console.log(`[ImgGen] success with ${model}`);
-      return;
-    } catch(e) {
-      console.log(`[ImgGen] error on ${model}: ${e.message}`);
-      // 致命的エラーは即終了
-      loadEl.style.display = 'none';
-      showMwImgError(`⚠️ 画像生成に失敗しました: ${e.message}`);
-      return;
-    }
+  console.log('[ImgGen] SVG generated');
+  if (pbar)     pbar.style.width = '60%';
+  if (statusEl) statusEl.textContent = 'PNG変換中...';
+
+  try {
+    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = W; canvas.height = H;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        const pngDataUrl = canvas.toDataURL('image/png');
+        const imgEl2 = document.getElementById('mwimg-img');
+        if (imgEl2) {
+          imgEl2.src = pngDataUrl;
+          imgEl2.dataset.mime = 'image/png';
+          imgEl2.dataset.b64  = pngDataUrl.split(',')[1];
+          imgEl2.dataset.url  = '';
+        }
+        document.getElementById('mwimg-result').style.display = 'block';
+        updateCcheckImg(pngDataUrl);
+        if (pbar)   pbar.style.width = '100%';
+        if (loadEl) loadEl.style.display = 'none';
+        console.log('[ImgGen] PNG ready');
+        resolve();
+      };
+      img.onerror = (e) => { URL.revokeObjectURL(url); reject(e); };
+      img.src = url;
+    });
+  } catch(e) {
+    if (loadEl) loadEl.style.display = 'none';
+    showMwImgError('⚠️ SVG生成に失敗しました: ' + e.message);
+    console.log('[ImgGen] SVG error: ' + e.message);
   }
+}
 
-  // 全モデル失敗
-  loadEl.style.display = 'none';
-  showMwImgError('⚠️ 全モデルで画像生成に失敗しました。APIキー・プロンプトを確認してください。');
+function _escXml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 
