@@ -5072,6 +5072,15 @@ const GENRE_TO_PRESET = {
   'その他':       'minimal_white',
 };
 
+const TYPOGRAPHY = {
+  t1: { size: 38, weight: 600, letterSpacing: '0.06em',
+        scaleTable: [[6,38],[10,32],[Infinity,26]] },
+  t2: { size: 92, weight: 900, letterSpacing: '0em',
+        scaleTable: [[6,96],[8,84],[10,72],[12,62],[Infinity,52]] },
+  t3: { size: 38, weight: 500, letterSpacing: '0.04em',
+        scaleTable: [[10,38],[16,32],[22,28],[Infinity,24]] },
+};
+
 // 【C】Geminiプロンプトテンプレート（Firebase beyan_img_config/prompt で上書き可能）
 // プレースホルダーは {varName} 形式
 let GEMINI_IMG_PROMPT = `あなたはnoteで月10万PVを獲得するクリエイターの見出しコピーライターです。
@@ -5323,9 +5332,11 @@ function _buildSVG(t1, t2, t3, vars) {
   const txt  = brightness === 'light' ? '#1a1a2e' : '#ffffff';
   console.log('[ImgGen] buildSVG色確認', `acc:${acc} sub:${sub} bg2:${bg.bg2} brightness:${brightness}`);
 
-  const fs1 = t1.length <= 6 ? 38 : t1.length <= 10 ? 32 : 26;
-  const fs2 = t2.length <= 6 ? 96 : t2.length <= 8 ? 84 : t2.length <= 10 ? 72 : t2.length <= 12 ? 62 : 52;
-  const fs3 = t3.length <= 10 ? 38 : t3.length <= 16 ? 32 : t3.length <= 22 ? 28 : 24;
+  const _scale = (len, table) => (table.find(([th]) => len <= th) || table[table.length-1])[1];
+  const fs1 = _scale(t1.length, TYPOGRAPHY.t1.scaleTable);
+  const fs2 = _scale(t2.length, TYPOGRAPHY.t2.scaleTable);
+  const fs3 = _scale(t3.length, TYPOGRAPHY.t3.scaleTable);
+  console.log(`[ImgGen] typography t2.size:${fs2} t2.weight:${TYPOGRAPHY.t2.weight}`);
 
   // ── POS テーブル（layout別テキスト配置） ──
   const POS = {
@@ -5541,21 +5552,22 @@ function _buildSVG(t1, t2, t3, vars) {
   const t3x = POS.a3 === 'end' ? POS.x3 : (POS.a3 === 'middle' ? 640 : POS.x3);
   const t1UlX = POS.a1 === 'middle' ? 540 : POS.x1;
 
+  const t3y = Math.min(POS.y3, 470);
   const textEl = `
     <text x="${t1x}" y="${POS.y1}"
-      font-size="${fs1}" font-weight="900" letter-spacing="0.05em"
+      font-size="${fs1}" font-weight="${TYPOGRAPHY.t1.weight}" letter-spacing="${TYPOGRAPHY.t1.letterSpacing}"
       font-family="'Noto Sans JP',sans-serif"
       fill="${sub}" stroke="${dark}" stroke-width="4" paint-order="stroke"
       text-anchor="${POS.a1}" filter="url(#ts1)">${t1}</text>
     <rect x="${t1UlX}" y="${POS.y1 + 7}" width="200" height="3"
       fill="${acc}" opacity="0.80" rx="1.5"/>
     <text x="${t2x}" y="${POS.y2}"
-      font-size="${fs2}" font-weight="900"
+      font-size="${fs2}" font-weight="${TYPOGRAPHY.t2.weight}" dominant-baseline="hanging"
       font-family="'Noto Sans JP',sans-serif"
       fill="${txt}" stroke="${acc}" stroke-width="2" paint-order="stroke"
       text-anchor="${POS.a2}" filter="url(#ts2)">${t2}</text>
-    <text x="${t3x}" y="${POS.y3}"
-      font-size="${fs3}" font-weight="700" letter-spacing="0.03em"
+    <text x="${t3x}" y="${t3y}"
+      font-size="${fs3}" font-weight="${TYPOGRAPHY.t3.weight}" letter-spacing="${TYPOGRAPHY.t3.letterSpacing}"
       font-family="'Noto Sans JP',sans-serif"
       fill="${sub}" stroke="${dark}" stroke-width="3" paint-order="stroke"
       text-anchor="${POS.a3}" filter="url(#ts3)">${t3}</text>`;
