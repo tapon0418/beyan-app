@@ -5252,18 +5252,32 @@ ${patternRule}
 共通禁止ワード：絵文字・【】・振り返って・読んでみる・してみた・について・解説・楽天
 
 以下のJSONのみ出力してください（説明・記号・マークダウン禁止）：
-{"text_layer1":"（12文字以内）","text_layer2":"（12文字以内）","text_layer3":"（24文字以内）"}`;
+{"text_layer1":"（12文字以内）","text_layer2":"（12文字以内）","text_layer3":"（24文字以内）"}
+JSONオブジェクトのみ返せ。説明文・改行・コードブロック不要。
+最初の文字は{、最後の文字は}であること。`;
+
+  const _geminiCall = async (maxTokens) => {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:maxTokens,temperature:0.9} })
+    });
+    return res.json();
+  };
 
   let t1='', t2='', t3='';
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:512,temperature:0.9} })
-    });
-    const data = await res.json();
-    console.log('[ImgGen] Gemini成功', res.status);
+    let data = await _geminiCall(512);
+    console.log('[ImgGen] Gemini成功');
+    const finishReason = data.candidates?.[0]?.finishReason || 'unknown';
+    console.log('[ImgGen] finishReason:', finishReason);
+    if (finishReason === 'MAX_TOKENS') {
+      console.log('[ImgGen] MAX_TOKENS検出 → 1024でリトライ');
+      data = await _geminiCall(1024);
+      console.log('[ImgGen] finishReason(retry):', data.candidates?.[0]?.finishReason || 'unknown');
+    }
     // パース堅牢化（```json除去→trim→JSON.parse、失敗時ログ）
     const raw = (data.candidates?.[0]?.content?.parts?.[0]?.text||'').replace(/```json|```/g,'').trim();
+    console.log('[ImgGen] rawText:', raw);
     try {
       const parsed = JSON.parse(raw);
       t1 = _cleanText(parsed.text_layer1||'', 12);
