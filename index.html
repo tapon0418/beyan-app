@@ -2175,6 +2175,12 @@ input:focus, textarea:focus, select:focus {
     <div class="fpanel" id="fp-imggen">
       <div id="mwimg-note-title" style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;padding:5px 10px;background:var(--bg4);border-radius:8px;display:none;text-align:center"></div>
 
+      <!-- ローカルSVG見出し画像生成 -->
+      <button class="btn btn-accent" style="width:100%;min-height:52px;font-size:16px;font-weight:800;margin-bottom:10px" onclick="clickGenerateHeaderSVG()">
+        🎨 見出し画像を生成する
+      </button>
+      <div id="svg-header-preview" style="display:none;margin-bottom:12px;border-radius:10px;overflow:hidden;border:1px solid var(--border)"></div>
+
       <!-- プロンプト保管庫 -->
       <div style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
@@ -4920,6 +4926,112 @@ function openImgGenModal(id) {
 // ================================================================
 // 見出し画像生成（新実装）
 // ================================================================
+
+// ── ジャンル別カラーパレット ──
+const HEADER_COLORS = {
+  'ライティング': { bg1:'#0f1f0f', bg2:'#1e3a1e', acc:'#7ab648', sub:'#c5e8a0' },
+  '副業':         { bg1:'#12122a', bg2:'#1e1e4a', acc:'#f5a623', sub:'#ffd580' },
+  'AI活用':       { bg1:'#061828', bg2:'#0a2a4a', acc:'#00aaff', sub:'#80d4ff' },
+  '有料note':     { bg1:'#120820', bg2:'#1e1040', acc:'#c9a227', sub:'#ffd700' },
+  '楽天':         { bg1:'#200808', bg2:'#3a0a0a', acc:'#ff4444', sub:'#ffaaaa' },
+  '振り返り':     { bg1:'#08142a', bg2:'#0a2040', acc:'#4da6ff', sub:'#b3d9ff' },
+  'その他':       { bg1:'#12122a', bg2:'#1e1e4a', acc:'#7c3aed', sub:'#c4b5fd' },
+};
+
+function generateNoteHeaderSVG(genre, note) {
+  const W = 1280, H = 670;
+  const c = HEADER_COLORS[genre] || HEADER_COLORS['その他'];
+  const mainTitle   = note?.mainTitle   || note?.title || '';
+  const subTitle    = note?.subTitle    || '';
+  const bodySummary = note?.bodySummary || note?.memo  || '';
+  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const t1 = esc(mainTitle), t2 = esc(subTitle), t3 = esc(bodySummary);
+  const fs1 = mainTitle.length <= 10 ? 64 : mainTitle.length <= 18 ? 52 : 40;
+  const fs2 = subTitle.length  <= 12 ? 42 : subTitle.length  <= 20 ? 34 : 28;
+  const fs3 = bodySummary.length <= 16 ? 30 : bodySummary.length <= 24 ? 26 : 22;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <linearGradient id="hbg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="${c.bg1}"/>
+      <stop offset="100%" stop-color="${c.bg2}"/>
+    </linearGradient>
+    <filter id="hts"><feDropShadow dx="2" dy="3" stdDeviation="8" flood-color="#000" flood-opacity="0.8"/></filter>
+  </defs>
+  <rect width="${W}" height="${H}" fill="url(#hbg)"/>
+  <rect x="0" y="0" width="8" height="${H}" fill="${c.acc}" opacity="0.95"/>
+  <rect x="10" y="0" width="2" height="${H}" fill="${c.acc}" opacity="0.3"/>
+  <circle cx="${W-100}" cy="${H*0.4}" r="220" fill="${c.acc}" opacity="0.05"/>
+  <circle cx="${W-100}" cy="${H*0.4}" r="140" fill="${c.acc}" opacity="0.07"/>
+  <circle cx="${W-100}" cy="${H*0.4}" r="70"  fill="${c.acc}" opacity="0.10"/>
+  <line x1="60" y1="215" x2="${W-60}" y2="215" stroke="${c.acc}" stroke-width="1.5" opacity="0.25"/>
+  <line x1="60" y1="${H-70}" x2="${W-60}" y2="${H-70}" stroke="${c.acc}" stroke-width="1.5" opacity="0.25"/>
+  ${t1?`<text x="80" y="148" font-size="${fs1}" font-weight="900" font-family="'Noto Sans JP',sans-serif" fill="${c.sub}" filter="url(#hts)" dominant-baseline="hanging">${t1}</text>`:''}
+  ${t2?`<text x="80" y="240" font-size="${fs2}" font-weight="700" font-family="'Noto Sans JP',sans-serif" fill="${c.acc}" filter="url(#hts)" dominant-baseline="hanging">${t2}</text>`:''}
+  ${t3?`<text x="80" y="330" font-size="${fs3}" font-weight="500" font-family="'Noto Sans JP',sans-serif" fill="rgba(255,255,255,0.72)" filter="url(#hts)" dominant-baseline="hanging">${t3}</text>`:''}
+  <text x="${W*0.5}" y="${H-18}" font-size="18" font-family="sans-serif" fill="rgba(255,255,255,0.3)" text-anchor="middle">note</text>
+</svg>`;
+}
+
+async function _svgHeaderToPng(svgStr) {
+  try {
+    await document.fonts.ready;
+    await Promise.all([
+      document.fonts.load('400 20px "Noto Sans JP"'),
+      document.fonts.load('700 20px "Noto Sans JP"'),
+      document.fonts.load('900 20px "Noto Sans JP"'),
+    ]).catch(() => {});
+  } catch(e) {}
+  return new Promise((resolve) => {
+    const blob = new Blob([svgStr], {type:'image/svg+xml'});
+    const url  = URL.createObjectURL(blob);
+    const img  = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1280; canvas.height = 670;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    img.src = url;
+  });
+}
+
+async function clickGenerateHeaderSVG() {
+  const n = S.notes.find(x => x.id === curId);
+  if (!n) { toast('記事が選択されていません'); return; }
+  const genre = n.cat || n.type || 'その他';
+  console.log(`[ImgGen] button clicked genre: ${genre}`);
+
+  const svgStr = generateNoteHeaderSVG(genre, n);
+  console.log('[ImgGen] SVG generated');
+
+  // SVGプレビュー表示
+  const svgWrap = document.getElementById('svg-header-preview');
+  if (svgWrap) {
+    svgWrap.innerHTML = svgStr;
+    const svgEl = svgWrap.querySelector('svg');
+    if (svgEl) { svgEl.style.width = '100%'; svgEl.style.height = 'auto'; }
+    svgWrap.style.display = 'block';
+  }
+
+  // PNG変換・結果表示
+  const pngDataUrl = await _svgHeaderToPng(svgStr);
+  if (!pngDataUrl) return;
+  console.log('[ImgGen] PNG ready');
+
+  const imgEl = document.getElementById('mwimg-img');
+  if (imgEl) {
+    imgEl.src = pngDataUrl;
+    imgEl.dataset.mime = 'image/png';
+    imgEl.dataset.b64  = pngDataUrl.split(',')[1] || '';
+    imgEl.dataset.url  = '';
+  }
+  document.getElementById('mwimg-result').style.display = 'block';
+  updateCcheckImg(pngDataUrl);
+  toast('🎨 見出し画像を生成しました！');
+}
 
 let _imgPromptVaultTimer = null;
 
