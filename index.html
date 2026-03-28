@@ -5081,7 +5081,24 @@ ${JSON.stringify(patternsList)}`;
     if (pbar) pbar.style.width = '60%';
     console.log('[ImgGen] step2 SVG generating...');
 
-    const step2Prompt = `以下のデザイン仕様で1280×670pxのSVG画像を1枚生成してください。
+    const savedPrompt = localStorage.getItem('nabebase_imggen_prompt') || '';
+
+    const step2Prompt = savedPrompt
+      ? savedPrompt
+          .replace('{mainTitle}', mainTitle)
+          .replace('{subTitle}', subTitle)
+          .replace('{bodySummary}', bodySummary)
+          .replace('{selectedPattern.layout}', selectedPattern.layout || '')
+          .replace('{selectedPattern.bg_type}', selectedPattern.bg_type || '')
+          .replace('{selectedPattern.bg_color}', selectedPattern.bg_color || '')
+          .replace('{selectedPattern.accent_color}', selectedPattern.accent_color || '')
+          .replace('{selectedPattern.text_color}', selectedPattern.text_color || '')
+          .replace('{selectedPattern.font_style}', selectedPattern.font_style || '')
+          .replace('{selectedPattern.font_weight}', selectedPattern.font_weight || '')
+          .replace('{selectedPattern.icon}', selectedPattern.icon || '')
+          .replace('{selectedPattern.icon_placement}', selectedPattern.icon_placement || '')
+          .replace('{selectedPattern.design_note}', selectedPattern.design_note || '')
+      : `以下のデザイン仕様で1280×670pxのSVG画像を1枚生成してください。
 <svg>タグから始まり</svg>タグで終わるSVGコードのみ返してください。
 説明文・マークダウン・コードブロック不要。
 
