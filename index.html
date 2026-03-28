@@ -4922,7 +4922,7 @@ async function clickGenerateHeaderSVG() {
   const mainTitle   = (document.getElementById('mw-main-title')?.value   || n?.mainTitle   || n?.title || '').trim();
   const subTitle    = (document.getElementById('mw-sub-title')?.value    || n?.subTitle    || '').trim();
   const bodySummary = (document.getElementById('mw-body-summary')?.value || n?.bodySummary || '').trim();
-  const genre       = n?.type || '';
+  const category    = n?.type || '';
 
   document.getElementById('mwimg-result').style.display = 'none';
   document.getElementById('mwimg-error').style.display  = 'none';
@@ -4930,17 +4930,8 @@ async function clickGenerateHeaderSVG() {
   const statusEl = document.getElementById('mwimg-status');
   const pbar     = document.getElementById('mwimg-pbar');
   if (loadEl)   loadEl.style.display = 'block';
-  if (pbar)     pbar.style.width = '20%';
-  if (statusEl) statusEl.textContent = 'SVG画像を生成中...';
-
-  // Step1: プロンプト保管庫の読み込み
-  const vaultPrompt = localStorage.getItem('nabebase_imggen_prompt') || '';
-  if (!vaultPrompt) {
-    console.log('[ImgGen] prompt empty, using default SVG');
-    await _genLocalSVG(mainTitle, subTitle, bodySummary, loadEl, statusEl, pbar);
-    return;
-  }
-  console.log('[ImgGen] prompt loaded');
+  if (pbar)     pbar.style.width = '10%';
+  if (statusEl) statusEl.textContent = 'パターンを確認中...';
 
   const apiKey = localStorage.getItem('beyan_gemini_key') || '';
   if (!apiKey) {
@@ -4949,54 +4940,197 @@ async function clickGenerateHeaderSVG() {
     return;
   }
 
-  // Step2: 変数埋め込み + Gemini送信
-  const resolvedPrompt = vaultPrompt
-    .replace(/\{mainTitle\}/g,   mainTitle)
-    .replace(/\{subTitle\}/g,    subTitle)
-    .replace(/\{bodySummary\}/g, bodySummary)
-    .replace(/\{genre\}/g,       genre);
-
-  const systemInstruction = 'あなたはグラフィックデザイナーです。以下の指示に従ってSVG画像（1280×670px）をそのまま出力してください。コードブロックや説明文は不要です。<svg>タグから始まる完全なSVGコードのみを返してください。';
-
   try {
-    if (pbar)     pbar.style.width = '40%';
-    if (statusEl) statusEl.textContent = 'Geminiが画像を生成中...';
-    console.log('[ImgGen] gemini request sent');
-    console.log('[ImgGen] model: gemini-2.5-pro');
-    console.log('[ImgGen] prompt sent to Gemini:', resolvedPrompt.slice(0, 100));
+    // ===== Step0: パターン確認・初回生成 =====
+    let patterns = null;
+    if (typeof firebase !== 'undefined' && firebase.database) {
+      const snap = await firebase.database().ref('imggen_patterns').once('value');
+      patterns = snap.val();
+    }
 
-    const res = await fetch(
+    if (!patterns) {
+      console.log('[ImgGen] step0 generating patterns...');
+      if (pbar) pbar.style.width = '15%';
+
+      const step0Prompt = `あなたは、note記事の見出し画像を専門に制作するプロのアートディレクターです。
+目的は、noteの一覧画面で即座に目を引き、スマホ表示でも内容が一瞬で伝わる、高品質な見出し画像テンプレートを20パターン作成することです。
+
+## 絶対条件
+1. 可読性最優先：スマホで縮小されてもタイトルが読めるサイズ・コントラストを確保
+2. 文字が主役：背景や装飾は文字を引き立てる舞台として徹する
+3. 1枚の情報量は少なめ：2〜4要素に絞る
+4. note実用性：横長比率、一覧画面で埋もれない完成度
+5. プロ品質：AIっぽい派手さ・雑な文字装飾・崩れたフォントは禁止
+
+## 禁止事項
+- 文字が小さすぎる・読みにくい配置
+- 背景が文字と競合する強い主張
+- 過剰な光彩・エフェクト
+- 同じレイアウトの色違い（構成を明確に変える）
+- 情報過多・ごちゃごちゃ
+
+## 20パターンのバリエーション軸（必ず全部網羅）
+- レイアウト：左寄せ/中央/右寄せ/斜め分割/上下分割/カード型/帯型
+- 背景：単色/グラデ/テクスチャ/幾何学模様/分割背景/暗色/明色
+- 文字色：白/金/黒/オレンジ/青系
+- アイコン：なし/1つ大/複数小/透かし
+- 用途：比較/体験談/ノウハウ/解説/感情訴求
+
+## 出力形式
+JSONのみ返す。説明文・マークダウン・コードブロック不要。
+20要素の配列で返す。
+
+[
+  {
+    "id": 1,
+    "name": "レイアウト名",
+    "layout": "左寄せ/中央/右寄せ/斜め分割など",
+    "bg_type": "単色/グラデ/テクスチャなど",
+    "bg_color": "#1e3a8a",
+    "accent_color": "#f59e0b",
+    "text_color": "#ffffff",
+    "font_weight": "極太/太め/中太",
+    "font_style": "ゴシック/丸ゴシック/セリフ",
+    "icon": "電球/チェック/矢印/なし",
+    "icon_placement": "右上/背景透かし/左下/なし",
+    "best_for": "比較記事/体験談/ノウハウ/エッセイ",
+    "design_note": "このパターンの特徴を15文字以内で"
+  }
+]`;
+
+      const step0Res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: step0Prompt }] }],
+            generationConfig: { maxOutputTokens: 3000, temperature: 0.7 }
+          })
+        }
+      );
+      const step0Data = await step0Res.json();
+      if (!step0Res.ok) throw new Error(step0Data.error?.message || String(step0Res.status));
+      const step0Parts = step0Data.candidates?.[0]?.content?.parts || [];
+      const step0Text  = step0Parts.filter(p => !p.thought).map(p => p.text || '').join('');
+
+      const arrMatch = step0Text.replace(/```json/gi,'').replace(/```/g,'').match(/\[[\s\S]*\]/);
+      if (!arrMatch) throw new Error('[step0] patterns JSON array not found');
+      patterns = JSON.parse(arrMatch[0]);
+
+      if (typeof firebase !== 'undefined' && firebase.database) {
+        await firebase.database().ref('imggen_patterns').set(patterns);
+      }
+      console.log('[ImgGen] step0 patterns saved:', patterns.length);
+      if (pbar) pbar.style.width = '30%';
+    }
+
+    // ===== Step1: 最適パターン選択 =====
+    if (statusEl) statusEl.textContent = 'デザインを選択中...';
+    if (pbar) pbar.style.width = '40%';
+
+    const patternsList = Array.isArray(patterns) ? patterns : Object.values(patterns);
+
+    const step1Prompt = `以下の20パターンから、今回の記事に最も合うパターンを1つ選び、
+そのパターンのidと、選んだ理由（10文字以内）のみをJSONで返す。
+説明文・マークダウン・コードブロック不要。
+
+{"selected_id": 3, "reason": "比較系に最適"}
+
+記事情報：
+ジャンル：${category}
+メインタイトル：${mainTitle}
+サブタイトル：${subTitle}
+
+パターン一覧：
+${JSON.stringify(patternsList)}`;
+
+    const step1Res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: step1Prompt }] }],
+          generationConfig: { maxOutputTokens: 100, temperature: 0 }
+        })
+      }
+    );
+    const step1Data = await step1Res.json();
+    if (!step1Res.ok) throw new Error(step1Data.error?.message || String(step1Res.status));
+    const step1Parts = step1Data.candidates?.[0]?.content?.parts || [];
+    const step1Text  = step1Parts.filter(p => !p.thought).map(p => p.text || '').join('');
+
+    const idMatch     = step1Text.match(/"selected_id"\s*:\s*(\d+)/);
+    const reasonMatch = step1Text.match(/"reason"\s*:\s*"([^"]*)"/);
+    const selectedId  = idMatch ? parseInt(idMatch[1]) : 1;
+    const reason      = reasonMatch ? reasonMatch[1] : '';
+    console.log('[ImgGen] step1 selected pattern:', selectedId, reason);
+
+    const selectedPattern = patternsList.find(p => p.id === selectedId) || patternsList[0];
+
+    // ===== Step2: SVG生成 =====
+    if (statusEl) statusEl.textContent = '画像を生成中...';
+    if (pbar) pbar.style.width = '60%';
+    console.log('[ImgGen] step2 SVG generating...');
+
+    const step2Prompt = `以下のデザイン仕様で1280×670pxのSVG画像を1枚生成してください。
+<svg>タグから始まり</svg>タグで終わるSVGコードのみ返してください。
+説明文・マークダウン・コードブロック不要。
+
+【テキスト情報】
+メインタイトル：${mainTitle}
+サブタイトル：${subTitle}
+本文要約：${bodySummary}
+
+【デザイン仕様】
+レイアウト：${selectedPattern.layout}
+背景タイプ：${selectedPattern.bg_type}
+背景色：${selectedPattern.bg_color}
+アクセント色：${selectedPattern.accent_color}
+文字色：${selectedPattern.text_color}
+フォント：${selectedPattern.font_style} ${selectedPattern.font_weight}
+アイコン：${selectedPattern.icon}（配置：${selectedPattern.icon_placement}）
+デザインの方向性：${selectedPattern.design_note}
+
+【必須ルール】
+- 文字は必ず読める大きさ・コントラストにする
+- メインタイトルを最も大きく配置する
+- 情報は2〜4要素に絞る
+- 背景は文字の邪魔をしない
+- 過剰なエフェクト・光彩は使わない
+- 日本語テキストは正確に描画する`;
+
+    const step2Res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemInstruction }] },
-          contents: [{ role: 'user', parts: [{ text: resolvedPrompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+          contents: [{ role: 'user', parts: [{ text: step2Prompt }] }],
+          generationConfig: { maxOutputTokens: 4000, temperature: 0.7 }
         })
       }
     );
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || String(res.status));
+    const step2Data = await step2Res.json();
+    if (!step2Res.ok) throw new Error(step2Data.error?.message || String(step2Res.status));
+    const step2Parts = step2Data.candidates?.[0]?.content?.parts || [];
+    const responseText = step2Parts.filter(p => !p.thought).map(p => p.text || '').join('');
+    console.log('[ImgGen] step2 raw start:', responseText.slice(0, 50));
 
-    const parts = data.candidates?.[0]?.content?.parts || [];
-    const responseText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
-    console.log('[ImgGen] gemini raw response:', JSON.stringify(responseText).slice(0, 200));
-
-    // Step3: SVG抽出
     const svgMatch = responseText.match(/<svg[\s\S]*<\/svg>/);
     if (svgMatch) {
       console.log('[ImgGen] SVG generated');
-      if (pbar)     pbar.style.width = '70%';
+      if (pbar)     pbar.style.width = '85%';
       if (statusEl) statusEl.textContent = 'PNG変換中...';
       await _svgToPngAndDisplay(svgMatch[0], loadEl, pbar);
+      if (statusEl) statusEl.textContent = '完成！';
     } else {
       console.log('[ImgGen] fallback to local SVG');
       await _genLocalSVG(mainTitle, subTitle, bodySummary, loadEl, statusEl, pbar);
     }
   } catch(e) {
-    console.log('[ImgGen] gemini error: ' + e.message + ', fallback to local SVG');
+    console.log('[ImgGen] error: ' + e.message + ', fallback to local SVG');
     await _genLocalSVG(mainTitle, subTitle, bodySummary, loadEl, statusEl, pbar);
   }
 }
