@@ -5320,6 +5320,37 @@ async function initImgConfig() {
   } catch(e) { console.log('[ImgGen] initImgConfig エラー', e.message); }
 }
 
+const LAYOUT_PRESETS = {
+  left_heavy: {
+    t1: { x: 160, y: 140 }, t2: { x: 160, y: 260 }, t3: { x: 160, y: 420 },
+    icon: { x: 1120, y: 480 }, textAnchor: 'start', maxWidth: 950
+  },
+  center: {
+    t1: { x: 640, y: 160 }, t2: { x: 640, y: 300 }, t3: { x: 640, y: 460 },
+    icon: { x: 640, y: 560 }, textAnchor: 'middle', maxWidth: 1000
+  },
+  top_bottom: {
+    t1: { x: 640, y: 120 }, t2: { x: 640, y: 340 }, t3: { x: 640, y: 580 },
+    icon: { x: 1120, y: 140 }, textAnchor: 'middle', maxWidth: 980
+  },
+  diagonal: {
+    t1: { x: 200, y: 520 }, t2: { x: 380, y: 340 }, t3: { x: 560, y: 180 },
+    icon: { x: 1060, y: 520 }, textAnchor: 'start', maxWidth: 1000
+  },
+  split: {
+    t1: { x: 360, y: 200 }, t2: { x: 900, y: 200 }, t3: { x: 360, y: 430 },
+    icon: { x: 940, y: 490 }, textAnchor: 'start', maxWidth: 1280
+  },
+  edge_align: {
+    t1: { x: 200, y: 160 }, t2: { x: 200, y: 320 }, t3: { x: 200, y: 500 },
+    icon: { x: 1080, y: 340 }, textAnchor: 'start', maxWidth: 950
+  },
+  top_heavy: {
+    t1: { x: 640, y: 100 }, t2: { x: 640, y: 250 }, t3: { x: 640, y: 440 },
+    icon: { x: 640, y: 600 }, textAnchor: 'middle', maxWidth: 900
+  },
+};
+
 const SVG_FILTERS = `
 <filter id="paperNoise">
   <feTurbulence baseFrequency="0.8" numOctaves="3" seed="4" result="noise"/>
@@ -5389,17 +5420,9 @@ function _buildSVG(t1, t2, t3, vars) {
   const fs3 = _scale(t3.length, TYPOGRAPHY.t3.scaleTable);
   console.log(`[ImgGen] typography t2.size:${fs2} t2.weight:${TYPOGRAPHY.t2.weight}`);
 
-  // ── POS テーブル（layout別テキスト配置） ──
-  const POS = {
-    center:     { x1:640, a1:'middle', y1:160, x2:640, a2:'middle', y2:370, x3:640, a3:'middle', y3:510 },
-    left_heavy: { x1:90,  a1:'start',  y1:150, x2:90,  a2:'start',  y2:360, x3:90,  a3:'start',  y3:510 },
-    top_bottom: { x1:640, a1:'middle', y1:100, x2:90,  a2:'start',  y2:360, x3:640, a3:'middle', y3:580 },
-    diagonal:   { x1:90,  a1:'start',  y1:120, x2:90,  a2:'start',  y2:335, x3:650, a3:'start',  y3:560 },
-    split:      { x1:90,  a1:'start',  y1:150, x2:90,  a2:'start',  y2:340, x3:90,  a3:'start',  y3:500 },
-    edge_align: { x1:60,  a1:'start',  y1:150, x2:60,  a2:'start',  y2:360, x3:60,  a3:'start',  y3:510 },
-    top_heavy:  { x1:640, a1:'middle', y1:80,  x2:640, a2:'middle', y2:200, x3:640, a3:'middle', y3:580 },
-    center_top: { x1:640, a1:'middle', y1:130, x2:640, a2:'middle', y2:340, x3:640, a3:'middle', y3:510 },
-  }[ly] || { x1:640, a1:'middle', y1:160, x2:640, a2:'middle', y2:370, x3:640, a3:'middle', y3:510 };
+  // ── POS（LAYOUT_PRESETSから取得） ──
+  const pos = LAYOUT_PRESETS[ly] || LAYOUT_PRESETS['center'];
+  console.log(`[ImgGen] layout:${ly} t1(${pos.t1.x},${pos.t1.y}) t2(${pos.t2.x},${pos.t2.y})`);
 
   // ── フィルター（テキストシャドウ・アイコングロー・セミグロウ） ──
   const t2FilterId = bg.colorData?.filterId || 'dropShadow1';
@@ -5530,20 +5553,17 @@ function _buildSVG(t1, t2, t3, vars) {
     arrow:     'M18,50L78,50 M56,24L82,50L56,76',
     person:    'M50,32A20,20 0 1,1 50,8A20,20 0 1,1 50,32Z M12,92C12,68 28,54 50,54C72,54 88,68 88,92Z',
   };
-  const iconPos = {
-    left_heavy: [940, 220], center:     [545, 420], top_bottom: [960, 400],
-    diagonal:   [950, 400], split:      [920, 210], edge_align: [1050, 215],
-    top_heavy:  [960, 410], center_top: [950, 370],
-  }[ly] || [940, 380];
+  const iconX = pos.icon.x;
+  const iconY = pos.icon.y;
 
   let iconEl = '';
   if (ic && ic !== 'none' && iconPaths[ic]) {
     iconEl = `
-      <g transform="translate(${iconPos[0]},${iconPos[1]}) scale(1.7)" filter="url(#ig)" opacity="0.65">
+      <g transform="translate(${iconX},${iconY}) scale(1.7)" filter="url(#ig)" opacity="0.65">
         <path d="${iconPaths[ic]}" fill="${acc}" stroke="${acc}"
           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
       </g>
-      <g transform="translate(${iconPos[0]},${iconPos[1]}) scale(1.7)" opacity="0.15">
+      <g transform="translate(${iconX},${iconY}) scale(1.7)" opacity="0.15">
         <path d="${iconPaths[ic]}" fill="${acc}"/>
       </g>`;
   } else {
@@ -5564,12 +5584,12 @@ function _buildSVG(t1, t2, t3, vars) {
       <rect x="8" y="0" width="1" height="${H}" fill="${acc}" opacity="0.30"/>`;
   } else if (ly === 'center') {
     layoutDeco = `
-      <rect x="160" y="${POS.y1 - 55}" width="${W-320}" height="2" fill="${acc}" opacity="0.40"/>
-      <rect x="160" y="${POS.y3 + 22}" width="${W-320}" height="2" fill="${acc}" opacity="0.40"/>`;
+      <rect x="160" y="${pos.t1.y - 55}" width="${W-320}" height="2" fill="${acc}" opacity="0.40"/>
+      <rect x="160" y="${pos.t3.y + 22}" width="${W-320}" height="2" fill="${acc}" opacity="0.40"/>`;
   } else if (ly === 'top_bottom') {
     layoutDeco = `
-      <rect x="0" y="${POS.y1 + 22}" width="${W}" height="1.5" fill="${acc}" opacity="0.30"/>
-      <rect x="0" y="${POS.y3 - 52}" width="${W}" height="1.5" fill="${acc}" opacity="0.30"/>`;
+      <rect x="0" y="${pos.t1.y + 22}" width="${W}" height="1.5" fill="${acc}" opacity="0.30"/>
+      <rect x="0" y="${pos.t3.y - 52}" width="${W}" height="1.5" fill="${acc}" opacity="0.30"/>`;
   } else if (ly === 'diagonal') {
     layoutDeco = `
       <polygon points="0,0 ${W*0.4},0 ${W*0.62},${H} 0,${H}" fill="${acc}" opacity="0.06"/>
@@ -5591,30 +5611,26 @@ function _buildSVG(t1, t2, t3, vars) {
   }
 
   // ── 強化③: テキスト（letter-spacing・2重シャドウ・アンダーライン） ──
-  const t1x = POS.a1 === 'middle' ? 640 : POS.x1;
-  const t2x = POS.a2 === 'middle' ? 640 : POS.x2;
-  const t3x = POS.a3 === 'end' ? POS.x3 : (POS.a3 === 'middle' ? 640 : POS.x3);
-  const t1UlX = POS.a1 === 'middle' ? 540 : POS.x1;
-
-  const t3y = Math.min(POS.y3, 470);
+  const t1UlX = pos.textAnchor === 'middle' ? 540 : pos.t1.x;
+  const t3y = Math.min(pos.t3.y, 470);
   const textEl = `
-    <text x="${t1x}" y="${POS.y1}"
+    <text x="${pos.t1.x}" y="${pos.t1.y}"
       font-size="${fs1}" font-weight="${TYPOGRAPHY.t1.weight}" letter-spacing="${TYPOGRAPHY.t1.letterSpacing}"
       font-family="'Noto Sans JP',sans-serif"
       fill="${sub}" stroke="${dark}" stroke-width="4" paint-order="stroke"
-      text-anchor="${POS.a1}" filter="url(#dropShadow1)">${t1}</text>
-    <rect x="${t1UlX}" y="${POS.y1 + 7}" width="200" height="3"
+      text-anchor="${pos.textAnchor}" filter="url(#dropShadow1)">${t1}</text>
+    <rect x="${t1UlX}" y="${pos.t1.y + 7}" width="200" height="3"
       fill="${acc}" opacity="0.80" rx="1.5"/>
-    <text x="${t2x}" y="${POS.y2}"
+    <text x="${pos.t2.x}" y="${pos.t2.y}"
       font-size="${fs2}" font-weight="${TYPOGRAPHY.t2.weight}" dominant-baseline="hanging"
       font-family="'Noto Sans JP',sans-serif"
       fill="${txt}" stroke="${acc}" stroke-width="2" paint-order="stroke"
-      text-anchor="${POS.a2}" filter="url(#${t2FilterId})">${t2}</text>
-    <text x="${t3x}" y="${t3y}"
+      text-anchor="${pos.textAnchor}" filter="url(#${t2FilterId})">${t2}</text>
+    <text x="${pos.t3.x}" y="${t3y}"
       font-size="${fs3}" font-weight="${TYPOGRAPHY.t3.weight}" letter-spacing="${TYPOGRAPHY.t3.letterSpacing}"
       font-family="'Noto Sans JP',sans-serif"
       fill="${sub}" stroke="${dark}" stroke-width="3" paint-order="stroke"
-      text-anchor="${POS.a3}" filter="url(#dropShadow1)">${t3}</text>`;
+      text-anchor="${pos.textAnchor}" filter="url(#dropShadow1)">${t3}</text>`;
 
   return `<svg xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
