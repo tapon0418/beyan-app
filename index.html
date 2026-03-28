@@ -4983,6 +4983,95 @@ let GENRE_MAP = {
   'その他':      [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
 };
 
+// 【B-2】カラープリセット辞書
+const COLOR_PRESETS = {
+  healing_beige: {
+    background:'#FBE8C6', backgroundGrad:'#FFF9E5', gradAngle:45,
+    main:'#3E2B1C', sub:'#9C7E5A', accent:'#EFCB9A',
+    contrastRatio:6.1, genre:'ライティング', tone:'light', filterId:'paperNoise'
+  },
+  minimal_white: {
+    background:'#FAFAFA', backgroundGrad:null, gradAngle:null,
+    main:'#000000', sub:'#707070', accent:'#007AFF',
+    contrastRatio:12.0, genre:'その他', tone:'standard', filterId:'dropShadow1'
+  },
+  high_yellow: {
+    background:'#FFED00', backgroundGrad:null, gradAngle:null,
+    main:'#000000', sub:'#333333', accent:'#FFFFFF',
+    contrastRatio:15.8, genre:'有料note', tone:'standard', filterId:'toneBoost'
+  },
+  study_blue: {
+    background:'#E1F4F3', backgroundGrad:'#C8E3E1', gradAngle:0,
+    main:'#1A1A1A', sub:'#444444', accent:'#00A1A7',
+    contrastRatio:10.5, genre:'振り返り', tone:'light', filterId:'dropShadow1'
+  },
+  medical_navy: {
+    background:'#234E70', backgroundGrad:'#406E8E', gradAngle:90,
+    main:'#FFFFFF', sub:'#B6CEE5', accent:'#F0B429',
+    contrastRatio:9.8, genre:'その他', tone:'dark', filterId:'softGlow'
+  },
+  tech_dark: {
+    background:'#0F141A', backgroundGrad:null, gradAngle:null,
+    main:'#00B5AD', sub:'#C0C0C0', accent:'#FFFFFF',
+    contrastRatio:11.2, genre:'AI活用', tone:'dark', filterId:'softGlow'
+  },
+  energy_red: {
+    background:'#FF5740', backgroundGrad:'#FF7B00', gradAngle:120,
+    main:'#FFFFFF', sub:'#FFE1C3', accent:'#FFC107',
+    contrastRatio:13.4, genre:'副業', tone:'standard', filterId:'warmTone'
+  },
+  mint_green: {
+    background:'#D6F5E3', backgroundGrad:null, gradAngle:null,
+    main:'#004D35', sub:'#228B66', accent:'#00AA77',
+    contrastRatio:9.3, genre:'その他', tone:'light', filterId:'coolTone'
+  },
+  premium_gray: {
+    background:'#ECECEC', backgroundGrad:'#DED5B9', gradAngle:90,
+    main:'#1C1C1C', sub:'#555555', accent:'#BDA76B',
+    contrastRatio:10.8, genre:'有料note', tone:'standard', filterId:'multiShadow'
+  },
+  neon_night: {
+    background:'#2B2F6E', backgroundGrad:'#0E0C23', gradAngle:45,
+    main:'#FFFFFF', sub:'#C3C5FF', accent:'#F9F871',
+    contrastRatio:12.8, genre:'ライティング', tone:'dark', filterId:'strongGlow'
+  },
+  glow_orange: {
+    background:'#FFE5B4', backgroundGrad:null, gradAngle:null,
+    main:'#FF6F00', sub:'#5A3A22', accent:'#FFC300',
+    contrastRatio:8.9, genre:'楽天', tone:'light', filterId:'warmTone'
+  },
+  midnight_blue: {
+    background:'#0A1730', backgroundGrad:'#1C2C5B', gradAngle:90,
+    main:'#FFFFFF', sub:'#8094B5', accent:'#5169B5',
+    contrastRatio:11.8, genre:'AI活用', tone:'dark', filterId:'toneBoost'
+  },
+  ai_cyan: {
+    background:'#0E1820', backgroundGrad:'#003E4D', gradAngle:null,
+    main:'#00FFFF', sub:'#00B5AD', accent:'#FFFFFF',
+    contrastRatio:12.5, genre:'AI活用', tone:'dark', filterId:'strongGlow'
+  },
+  gold_gray: {
+    background:'#ECECEC', backgroundGrad:'#DED5B9', gradAngle:90,
+    main:'#1C1C1C', sub:'#3C3C3C', accent:'#BDA76B',
+    contrastRatio:9.6, genre:'有料note', tone:'standard', filterId:'multiShadow'
+  },
+  pale_orange: {
+    background:'#FFEEDD', backgroundGrad:null, gradAngle:null,
+    main:'#5A3A22', sub:'#8E6E4D', accent:'#D6B792',
+    contrastRatio:7.2, genre:'ライティング', tone:'light', filterId:'paperNoise'
+  },
+};
+
+const GENRE_TO_PRESET = {
+  'ライティング': 'healing_beige',
+  '副業':         'energy_red',
+  'AI活用':       'ai_cyan',
+  '有料note':     'premium_gray',
+  '楽天':         'glow_orange',
+  '振り返り':     'study_blue',
+  'その他':       'minimal_white',
+};
+
 // 【C】Geminiプロンプトテンプレート（Firebase beyan_img_config/prompt で上書き可能）
 // プレースホルダーは {varName} 形式
 let GEMINI_IMG_PROMPT = `あなたはnoteで月10万PVを獲得するクリエイターの見出しコピーライターです。
@@ -5189,10 +5278,15 @@ function _pickPattern(cat, memo, hist) {
   if (m.includes('失敗')||m.includes('地雷')) { bg.acc='#ff4500'; bg.sub='#ffd700'; }
   if (m.includes('万円')||m.includes('収益')||m.includes('稼')) { bg.acc='#ffd700'; bg.sub='#ffa500'; }
 
+  // colorData付与（ジャンル→プリセット→カラーデータ）
+  const presetKey = GENRE_TO_PRESET[cat] || 'minimal_white';
+  bg.colorData = COLOR_PRESETS[presetKey] || COLOR_PRESETS['minimal_white'];
+
   console.log('[ImgGen] パターン決定',
     `ID:${pi} name:${bg.name}`,
     `bg:${bg.bgStyle} layout:${ly}`,
-    `brightness:${bg.brightness}`);
+    `brightness:${bg.brightness}`,
+    'colorData:', bg.colorData);
 
   return { pi, ly, ic, bg, fw: bg.fw || '700' };
 }
