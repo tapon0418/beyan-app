@@ -5101,54 +5101,49 @@ async function runImgGen() {
   loadEl.style.display = 'block';
   pbar.style.width = '20%';
 
-  const MODELS = [
-    'gemini-2.0-flash-preview-image-generation',
-    'imagen-3.0-fast-generate-001',
-    'imagen-3.0-generate-001'
-  ];
+  const model = 'imagen-3.0-generate-002';
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`;
+  console.log(`[ImgGen] model: ${model}`);
+  console.log(`[ImgGen] endpoint: ${endpoint.replace(apiKey, '***')}`);
 
-  for (const model of MODELS) {
-    statusEl.textContent = `画像生成中 (${model})...`;
-    pbar.style.width = '55%';
-    try {
-      console.log('[ImgGen] Gemini request sent');
-      if (model.startsWith('gemini')) {
-        const r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-          { method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({
-              contents:[{role:'user',parts:[{text:finalPrompt}]}],
-              generationConfig:{responseModalities:['image'],temperature:1.0}
-            })
-          }
-        );
-        const d = await r.json();
-        if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
-        const part = d.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-        if (!part?.inlineData?.data) throw new Error('no image data');
-        pbar.style.width = '100%'; loadEl.style.display = 'none';
-        displayMwImg(part.inlineData.mimeType || 'image/png', part.inlineData.data, finalPrompt);
-        console.log('[ImgGen] success');
-        return;
-      } else {
-        const r = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`,
-          { method:'POST', headers:{'Content-Type':'application/json'},
-            body: JSON.stringify({instances:[{prompt:finalPrompt}],parameters:{sampleCount:1,aspectRatio:'16:9'}})
-          }
-        );
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error?.message || r.status);
-        const pred = d.predictions?.[0];
-        if (!pred?.bytesBase64Encoded) throw new Error('no image data');
-        pbar.style.width = '100%'; loadEl.style.display = 'none';
-        displayMwImg(pred.mimeType || 'image/png', pred.bytesBase64Encoded, finalPrompt);
-        console.log('[ImgGen] success');
-        return;
-      }
-    } catch(e) {
-      console.log('[ImgGen] error:', e.message);
+  statusEl.textContent = `画像生成中 (${model})...`;
+  pbar.style.width = '55%';
+  try {
+    console.log('[ImgGen] Gemini request sent');
+    const r = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instances: [{ prompt: finalPrompt }], parameters: { sampleCount: 1 } })
+    });
+    console.log(`[ImgGen] response status: ${r.status}`);
+    const d = await r.json();
+    if (!r.ok) {
+      console.log(`[ImgGen] error detail: ${JSON.stringify(d)}`);
+      throw new Error(d.error?.message || r.status);
     }
+    const pred = d.predictions?.[0];
+    if (!pred?.bytesBase64Encoded) {
+      console.log(`[ImgGen] error detail: ${JSON.stringify(d)}`);
+      throw new Error('no image data in response');
+    }
+    pbar.style.width = '100%'; loadEl.style.display = 'none';
+    const imgSrc = `data:image/png;base64,${pred.bytesBase64Encoded}`;
+    const imgEl2 = document.getElementById('mwimg-img');
+    if (imgEl2) {
+      imgEl2.src = imgSrc;
+      imgEl2.dataset.mime = 'image/png';
+      imgEl2.dataset.b64  = pred.bytesBase64Encoded;
+      imgEl2.dataset.url  = '';
+    }
+    document.getElementById('mwimg-result').style.display = 'block';
+    updateCcheckImg(imgSrc);
+    console.log('[ImgGen] success');
+    return;
+  } catch(e) {
+    console.log(`[ImgGen] error detail: ${e.message}`);
+    loadEl.style.display = 'none';
+    showMwImgError(`⚠️ 画像生成に失敗しました: ${e.message}`);
+    return;
   }
 
   loadEl.style.display = 'none';
