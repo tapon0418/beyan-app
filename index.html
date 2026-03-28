@@ -5406,6 +5406,7 @@ function _buildSVG(t1, t2, t3, vars) {
   const {bg, ly, ic, fw} = vars;
   console.log('[ImgGen] buildSVG受け取り', `pattern:${bg?.name}`, `bg:${bg?.bgStyle}`, `layout:${ly}`);
   const W = 1280, H = 670;
+  const MAX_CIRCLE_RADIUS = 80;
   const brightness = bg.brightness || 'dark';
   const bgStyle    = bg.bgStyle    || 'solid_dark';
   const acc  = bg.acc;
@@ -5567,11 +5568,20 @@ function _buildSVG(t1, t2, t3, vars) {
         <path d="${iconPaths[ic]}" fill="${acc}"/>
       </g>`;
   } else {
-    // アイコンなし → acc色の幾何学シェイプで右側を装飾
+    // アイコンなし → acc色の幾何学シェイプで右側を装飾（半径をMAX_CIRCLE_RADIUSでクランプ）
+    const cr1 = Math.min(90, MAX_CIRCLE_RADIUS);
+    const cr2 = Math.min(55, MAX_CIRCLE_RADIUS);
+    const accentArea = Math.PI * cr1 * cr1;
+    const canvasArea = W * H;
+    const accentRatio = accentArea / canvasArea;
+    console.log(`[ImgGen] accent面積: ${(accentRatio * 100).toFixed(1)}% (r=${cr1})`);
+    if (accentRatio > 0.12) {
+      console.warn('[ImgGen] accent面積超過:', (accentRatio * 100).toFixed(1) + '%');
+    }
     iconEl = `
-      <circle cx="${W*0.82}" cy="${H*0.38}" r="90" fill="none"
+      <circle cx="${W*0.82}" cy="${H*0.38}" r="${cr1}" fill="none"
         stroke="${acc}" stroke-width="2.5" opacity="0.35"/>
-      <circle cx="${W*0.82}" cy="${H*0.38}" r="55" fill="${acc}" opacity="0.10"/>
+      <circle cx="${W*0.82}" cy="${H*0.38}" r="${cr2}" fill="${acc}" opacity="0.10"/>
       <line x1="${W*0.72}" y1="${H*0.20}" x2="${W*0.92}" y2="${H*0.55}"
         stroke="${acc}" stroke-width="1.5" opacity="0.25"/>`;
   }
