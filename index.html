@@ -1994,7 +1994,7 @@ input:focus, textarea:focus, select:focus {
       <button class="ftab active" data-tab="gemini"   onclick="switchTab(this,'gemini')">① リサーチ</button>
       <button class="ftab" data-tab="chatgpt"  onclick="switchTab(this,'chatgpt')">② 執筆</button>
       <button class="ftab" data-tab="format"   onclick="switchTab(this,'format')">③ 整形</button>
-      <button class="ftab" data-tab="imggen"   onclick="switchTab(this,'imggen');renderImgPromptVault();loadImgTemplateEditor();refreshImggenTitle()">④ 見出し画像</button>
+      <button class="ftab" data-tab="imggen"   onclick="switchTab(this,'imggen');initImgPromptVault();refreshImggenTitle()">④ 見出し画像</button>
       <button class="ftab" data-tab="imgcheck" onclick="switchTab(this,'imgcheck');refreshImgCheckTab()">⑤ 画像チェック</button>
       <button class="ftab" data-tab="note"     onclick="switchTab(this,'note')">⑥ note執筆</button>
       <button class="ftab" data-tab="rakuten"  onclick="switchTab(this,'rakuten')">⑦ 楽天アフィ</button>
@@ -2127,7 +2127,29 @@ input:focus, textarea:focus, select:focus {
         <button class="copy-btn" onclick="cp('mw-formatted')">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー（note用）
         </button>
-        <button class="btn btn-accent" style="margin-top:10px;width:100%;min-height:50px;font-size:15px;font-weight:700" onclick="switchTabByName('imggen');renderImgPromptVault();refreshImggenTitle();setTimeout(runImgGen,150)">
+        <!-- 見出し画像用テキスト -->
+        <div style="margin-top:14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;padding:12px">
+          <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px">🖼️ 見出し画像テキスト設定</div>
+          <div class="input-group" style="margin-bottom:8px">
+            <label class="input-label" style="font-size:11px">メインタイトル</label>
+            <input id="mw-main-title" type="text" placeholder="記事のメインタイトル"
+              style="width:100%;font-size:16px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;box-sizing:border-box"
+              oninput="autoSaveImgTextField()">
+          </div>
+          <div class="input-group" style="margin-bottom:8px">
+            <label class="input-label" style="font-size:11px">サブタイトル</label>
+            <input id="mw-sub-title" type="text" placeholder="サブタイトル・キャッチコピー"
+              style="width:100%;font-size:16px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;box-sizing:border-box"
+              oninput="autoSaveImgTextField()">
+          </div>
+          <div class="input-group" style="margin-bottom:0">
+            <label class="input-label" style="font-size:11px">本文要約</label>
+            <input id="mw-body-summary" type="text" placeholder="10〜15文字目安"
+              style="width:100%;font-size:16px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;box-sizing:border-box"
+              oninput="autoSaveImgTextField()">
+          </div>
+        </div>
+        <button class="btn btn-accent" style="margin-top:10px;width:100%;min-height:50px;font-size:15px;font-weight:700" onclick="switchTabByName('imggen');initImgPromptVault();refreshImggenTitle()">
           🖼️ ④ 見出し画像を作成する →
         </button>
       </div>
@@ -2151,38 +2173,25 @@ input:focus, textarea:focus, select:focus {
 
     <!-- ④ 見出し画像生成 -->
     <div class="fpanel" id="fp-imggen">
-      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;line-height:1.6">ジミーが記事情報からテンプレートに沿ったプロンプトを生成 → Imagen APIで1280×720px画像を作成します</div>
-      <!-- キーワード自動入力エリア -->
-      <div id="mwimg-keywords-section" style="margin-bottom:10px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;padding:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">🔑 見出し画像キーワード</div>
-        <div id="mwimg-keywords-status" style="font-size:11px;margin-bottom:8px;line-height:1.6"></div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <div style="display:flex;align-items:center;gap:6px">
-            <label style="font-size:11px;color:var(--text3);white-space:nowrap;width:50px">キャッチ</label>
-            <input id="mwimg-kw-catch" type="text" placeholder="12文字以内"
-              style="flex:1;font-size:12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;color:var(--text);font-family:inherit">
-          </div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <label style="font-size:11px;color:var(--text3);white-space:nowrap;width:50px">メイン</label>
-            <input id="mwimg-kw-main" type="text" placeholder="15文字以内"
-              style="flex:1;font-size:12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;color:var(--text);font-family:inherit">
-          </div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <label style="font-size:11px;color:var(--text3);white-space:nowrap;width:50px">サブ</label>
-            <input id="mwimg-kw-sub" type="text" placeholder="20文字以内"
-              style="flex:1;font-size:12px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;color:var(--text);font-family:inherit">
-          </div>
+      <div id="mwimg-note-title" style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;padding:5px 10px;background:var(--bg4);border-radius:8px;display:none;text-align:center"></div>
+
+      <!-- プロンプト保管庫 -->
+      <div style="margin-bottom:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <div style="font-size:13px;font-weight:700;color:var(--text2)">📝 画像プロンプト保管庫</div>
+          <div id="imgprompt-vault-ts" style="font-size:11px;color:var(--text3)"></div>
         </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;line-height:1.6">プロンプト内の <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{mainTitle}</code> <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{subTitle}</code> <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{bodySummary}</code> はカードの値に自動置換されます</div>
+        <textarea id="imggen-prompt-vault" rows="10"
+          style="width:100%;min-height:180px;font-size:16px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;box-sizing:border-box;word-break:break-all"
+          placeholder="Imagen APIに送るプロンプトをここに入力・編集...&#10;例: note記事アイキャッチ、1280x720px、{mainTitle}、サブ:{subTitle}"></textarea>
       </div>
 
-      <button class="btn btn-accent"
-        style="width:100%;min-height:56px;font-size:17px;font-weight:800;margin-top:12px"
-        onclick="runImgGen()">
-        🖼️ 見出し画像を生成
+      <!-- 画像生成ボタン -->
+      <button class="btn btn-accent" style="width:100%;min-height:52px;font-size:17px;font-weight:800;margin-bottom:12px" onclick="runImgGen()">
+        🖼️ 画像生成
       </button>
-      <p style="font-size:12px;color:var(--text3);text-align:center;margin-top:6px">
-        ジャンル・キーワードから最適なデザインを自動生成します
-      </p>
+
       <!-- loading -->
       <div id="mwimg-loading" style="display:none;text-align:center;padding:16px 0">
         <div id="mwimg-status" style="font-size:13px;color:var(--accent);font-weight:600">生成中...</div>
@@ -2190,11 +2199,12 @@ input:focus, textarea:focus, select:focus {
           <div id="mwimg-pbar" style="height:100%;width:20%;background:var(--accent);border-radius:2px;animation:pbarAnim 1.2s ease-in-out infinite alternate;transition:width .4s"></div>
         </div>
       </div>
+
       <!-- image result -->
       <div id="mwimg-result" style="display:none;margin-bottom:12px">
         <img id="mwimg-img" src="#" alt="生成された見出し画像"
           style="width:100%;border-radius:10px;display:block;border:1px solid var(--border);margin-bottom:8px">
-        <div style="display:flex;gap:8px;margin-bottom:10px">
+        <div style="display:flex;gap:8px">
           <button onclick="mwImgDownload()"
             style="flex:1;min-height:44px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
             ⬇️ ダウンロード
@@ -2205,43 +2215,22 @@ input:focus, textarea:focus, select:focus {
           </button>
         </div>
       </div>
+
       <!-- error -->
       <div id="mwimg-error" style="display:none;color:var(--red);font-size:13px;padding:10px;background:rgba(204,68,68,.08);border-radius:8px;line-height:1.6;margin-bottom:10px"></div>
-      <!-- 指示文テンプレート編集エリア -->
-      <details id="imgtemplate-details" style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
-        <summary style="font-size:12px;font-weight:700;color:var(--text2);cursor:pointer;user-select:none;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:2px 0">
-          <span>📝 指示文テンプレート（編集可）</span>
-          <svg id="imgtemplate-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
-        </summary>
-        <div style="margin-top:10px">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:6px;line-height:1.6">ジミーへの指示文テンプレートです。変数例も含めて自由に編集できます。変更後は「保存」を押してください。</div>
-          <textarea id="imgtemplate-textarea" rows="18"
-            style="width:100%;font-size:12px;line-height:1.65;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;min-height:300px"></textarea>
-          <div style="display:flex;gap:8px;margin-top:8px">
-            <button onclick="saveImgPromptTemplate()"
-              style="flex:2;min-height:44px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
-              💾 保存
-            </button>
-            <button onclick="resetImgPromptTemplate()"
-              style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text3);font-size:12px;cursor:pointer;font-family:inherit">
-              🔄 デフォルトに戻す
-            </button>
-          </div>
-        </div>
-      </details>
 
-      <!-- prompt vault（常時表示） -->
+      <!-- 生成履歴 -->
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-          <div style="font-size:12px;font-weight:700;color:var(--text2)">📚 生成プロンプト保管庫</div>
+          <div style="font-size:12px;font-weight:700;color:var(--text2)">📚 生成履歴</div>
           <div style="font-size:10px;color:var(--text3)" id="imgprompt-vault-count"></div>
         </div>
         <div id="imgprompt-vault-list"></div>
       </div>
+
       <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%;font-size:13px" onclick="switchTabByName('imgcheck');refreshImgCheckTab()">
         ⑤ 画像チェックへ進む →
       </button>
-      <div id="mwimg-note-title" style="font-size:12px;font-weight:700;color:var(--text3);margin-top:10px;padding:5px 10px;background:var(--bg4);border-radius:8px;display:none;text-align:center"></div>
     </div>
 
     <!-- ⑤ 画像チェック（手動・クロ確認） -->
@@ -2659,7 +2648,6 @@ function initFirebase() {
   try {
     if (typeof firebase === 'undefined' || !firebase.initializeApp) return;
     firebase.initializeApp(_fbConfig);
-    initImgConfig();
     const db = firebase.database();
     _fbRef = db.ref('beyan_v6');
 
@@ -3386,17 +3374,18 @@ function openWork(id) {
     document.getElementById('mw-formatted-wrap').style.display = 'none';
   }
   // ④タブの画像エリアをリセット（別記事の画像が残らないように）
-  ['mwimg-result','mwimg-prompt-wrap','mwimg-error','mwimg-loading'].forEach(function(eid) {
+  ['mwimg-result','mwimg-error','mwimg-loading'].forEach(function(eid) {
     const el = document.getElementById(eid); if (el) el.style.display = 'none';
   });
   const imgEl = document.getElementById('mwimg-img');
   if (imgEl) imgEl.src = '#';
-  const mwpEl = document.getElementById('mwimg-prompt');
-  if (mwpEl) mwpEl.value = '';
-  const refineEl = document.getElementById('mwimg-refine-input');
-  if (refineEl) refineEl.value = '';
-  const buildBtn = document.getElementById('btn-build-imgprompt');
-  if (buildBtn) { buildBtn.disabled = false; buildBtn.textContent = '📝 指示文を生成・確認'; }
+  // 見出し画像テキストフィールドを復元
+  const mainTitleEl = document.getElementById('mw-main-title');
+  const subTitleEl  = document.getElementById('mw-sub-title');
+  const bodySummaryEl = document.getElementById('mw-body-summary');
+  if (mainTitleEl)    mainTitleEl.value    = n.mainTitle    || '';
+  if (subTitleEl)     subTitleEl.value     = n.subTitle     || '';
+  if (bodySummaryEl)  bodySummaryEl.value  = n.bodySummary  || '';
   document.getElementById('mw-xedit').value='';
   document.getElementById('mw-xbases').innerHTML = buildXBases(n);
   setWorkType('A'); updateXcc();
@@ -4897,917 +4886,6 @@ function renderNetaList() {
   }
 }
 
-// ================================================================
-// 見出し画像生成システム v5（PATTERN_DB 15種・Geminiテキスト専用版）
-// ================================================================
-const DEFAULT_IMG_TEMPLATE = '';
-
-// ── Firebase動的設定上書き用 ──
-let _imgConfigOverrides = {};
-
-// 【A】PATTERN_DB 15種（Firebase beyan_img_config/patterns で上書き可能）
-// _buildSVG互換フィールド: bg2(グラデ色), acc(アクセント), sub(サブ), name
-let PATTERN_DB = {
-  1:  { name:'number_impact',  bg2:'#0d1b2a', acc:'#ff6b00', sub:'#ffd700',
-        layout:'left_heavy',  icon:'lightning', brightness:'dark',  bgStyle:'solid_dark',
-        fw:'900', emotion:'urgent',        textRule:'t2に必ず数字（5つ・3倍・月2万など）',
-        genre:['副業','AI活用','ハウツー'] },
-  2:  { name:'emotion_appeal', bg2:'#1a1a3e', acc:'#ff8c69', sub:'#ffb6c1',
-        layout:'center',      icon:'person',    brightness:'dark',  bgStyle:'grad_soft',
-        fw:'700', emotion:'empathy',       textRule:'t1に「あなたも〜？」系の問いかけ',
-        genre:['エッセイ','自己啓発'] },
-  3:  { name:'howto_system',   bg2:'#0d2137', acc:'#00aaff', sub:'#4da6ff',
-        layout:'top_bottom',  icon:'check',     brightness:'dark',  bgStyle:'solid_dark',
-        fw:'700', emotion:'learning',      textRule:'t2に「〇ステップ」「〇つの方法」',
-        genre:['AI活用','ライティング','学習'] },
-  4:  { name:'warning_fail',   bg2:'#0d0d0d', acc:'#ff3300', sub:'#ffcc00',
-        layout:'top_bottom',  icon:'warning',   brightness:'dark',  bgStyle:'grad_diag',
-        fw:'900', emotion:'warning',       textRule:'t1に読者の失敗・後悔を入れる',
-        genre:['副業','節約','投資'] },
-  5:  { name:'authority',      bg2:'#0d1b0d', acc:'#c9a227', sub:'#ffd700',
-        layout:'left_heavy',  icon:'crown',     brightness:'dark',  bgStyle:'solid_dark',
-        fw:'900', emotion:'authority',     textRule:'t2に具体的な数字・実績',
-        genre:['有料note','ビジネス','金融'] },
-  6:  { name:'achievement',    bg2:'#0a1a0a', acc:'#00ff88', sub:'#4dffaa',
-        layout:'center',      icon:'star',      brightness:'dark',  bgStyle:'grad_lr',
-        fw:'700', emotion:'achievement',   textRule:'t3に読者へのベネフィット・変化',
-        genre:['副業','自己啓発'] },
-  7:  { name:'minimal',        bg2:'#1a1a2e', acc:'#c0c0c0', sub:'#e8e8e8',
-        layout:'left_heavy',  icon:'none',      brightness:'dark',  bgStyle:'solid_dark',
-        fw:'700', emotion:'sophisticated', textRule:'t2のみ。1行で完結させる',
-        genre:['ビジネス','マーケ'] },
-  8:  { name:'question',       bg2:'#1a0030', acc:'#bf5fff', sub:'#e0aaff',
-        layout:'center',      icon:'bulb',      brightness:'dark',  bgStyle:'solid_dark',
-        fw:'700', emotion:'curiosity',     textRule:'質問が主役。答えはまだ見せない',
-        genre:['エッセイ','思考系','振り返り'] },
-  9:  { name:'realstory',      bg2:'#252525', acc:'#ff8c00', sub:'#ffd699',
-        layout:'center',      icon:'person',    brightness:'dark',  bgStyle:'photo_warm',
-        fw:'700', emotion:'empathy2',      textRule:'生活の手触りが伝わる具体語を使う',
-        genre:['エッセイ','育児','働き方'] },
-  10: { name:'urgency',        bg2:'#000000', acc:'#ff0000', sub:'#ffcc00',
-        layout:'top_bottom',  icon:'lightning', brightness:'dark',  bgStyle:'solid_dark',
-        fw:'900', emotion:'urgency',       textRule:'期間感を視覚化、短く切る',
-        genre:['販売','イベント','告知'] },
-  11: { name:'story',          bg2:'#2e1a1a', acc:'#ff9944', sub:'#ffd699',
-        layout:'diagonal',    icon:'arrow',     brightness:'dark',  bgStyle:'grad_diag',
-        fw:'700', emotion:'story',         textRule:'t1に転機・t3に余韻を入れる',
-        genre:['エッセイ','体験談','自己啓発','振り返り'] },
-  12: { name:'split_compare',  bg2:'#0a0f1e', acc:'#ffd700', sub:'#ffa500',
-        layout:'split',       icon:'arrow',     brightness:'dark',  bgStyle:'split_lr',
-        fw:'900', emotion:'contrast',      textRule:'t1とt3で対比構造にする',
-        genre:['ノウハウ','マーケ','AI活用'] },
-  13: { name:'friendly',       bg2:'#2e1a2e', acc:'#ff6688', sub:'#ffaa44',
-        layout:'center',      icon:'person',    brightness:'light', bgStyle:'solid_light',
-        fw:'700', emotion:'friendly',      textRule:'キャラを主役にし、文字は補助',
-        genre:['エッセイ','日常','教育'] },
-  14: { name:'reallife',       bg2:'#252525', acc:'#d4a96a', sub:'#ffd699',
-        layout:'center',      icon:'none',      brightness:'light', bgStyle:'photo_natural',
-        fw:'700', emotion:'reallife',      textRule:'リアルな小物、自然光、過剰演出なし',
-        genre:['節約','育児','フリーランス'] },
-  15: { name:'premium',        bg2:'#0a0f1e', acc:'#c9a227', sub:'#e8e8e8',
-        layout:'left_heavy',  icon:'none',      brightness:'light', bgStyle:'solid_cream',
-        fw:'700', emotion:'premium',       textRule:'要素数を減らし、空間で見せる',
-        genre:['エッセイ','思想','上質系'] },
-};
-
-// 【B】ジャンルマッピング（Firebase beyan_img_config/genre_map で上書き可能）
-let GENRE_MAP = {
-  'AI活用':      [3,1,7,12],
-  '副業':        [1,4,6,5],
-  '楽天':        [5,12,1,10],
-  'エッセイ':    [9,11,8,15,2],
-  '振り返り':    [11,15,9,8],
-  'ハウツー':    [3,12,1,7],
-  'ライティング':[3,4,9,11],
-  '有料note':    [5,10,1,7],
-  'その他':      [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
-};
-
-// 【B-2】カラープリセット辞書
-const COLOR_PRESETS = {
-  healing_beige: {
-    background:'#FBE8C6', backgroundGrad:'#FFF9E5', gradAngle:45,
-    main:'#3E2B1C', sub:'#9C7E5A', accent:'#EFCB9A',
-    contrastRatio:6.1, genre:'ライティング', tone:'light', filterId:'paperNoise'
-  },
-  minimal_white: {
-    background:'#FAFAFA', backgroundGrad:null, gradAngle:null,
-    main:'#000000', sub:'#707070', accent:'#007AFF',
-    contrastRatio:12.0, genre:'その他', tone:'standard', filterId:'dropShadow1'
-  },
-  high_yellow: {
-    background:'#FFED00', backgroundGrad:null, gradAngle:null,
-    main:'#000000', sub:'#333333', accent:'#FFFFFF',
-    contrastRatio:15.8, genre:'有料note', tone:'standard', filterId:'toneBoost'
-  },
-  study_blue: {
-    background:'#E1F4F3', backgroundGrad:'#C8E3E1', gradAngle:0,
-    main:'#1A1A1A', sub:'#444444', accent:'#00A1A7',
-    contrastRatio:10.5, genre:'振り返り', tone:'light', filterId:'dropShadow1'
-  },
-  medical_navy: {
-    background:'#234E70', backgroundGrad:'#406E8E', gradAngle:90,
-    main:'#FFFFFF', sub:'#B6CEE5', accent:'#F0B429',
-    contrastRatio:9.8, genre:'その他', tone:'dark', filterId:'softGlow'
-  },
-  tech_dark: {
-    background:'#0F141A', backgroundGrad:null, gradAngle:null,
-    main:'#00B5AD', sub:'#C0C0C0', accent:'#FFFFFF',
-    contrastRatio:11.2, genre:'AI活用', tone:'dark', filterId:'softGlow'
-  },
-  energy_red: {
-    background:'#FF5740', backgroundGrad:'#FF7B00', gradAngle:120,
-    main:'#FFFFFF', sub:'#FFE1C3', accent:'#FFC107',
-    contrastRatio:13.4, genre:'副業', tone:'standard', filterId:'warmTone'
-  },
-  mint_green: {
-    background:'#D6F5E3', backgroundGrad:null, gradAngle:null,
-    main:'#004D35', sub:'#228B66', accent:'#00AA77',
-    contrastRatio:9.3, genre:'その他', tone:'light', filterId:'coolTone'
-  },
-  premium_gray: {
-    background:'#ECECEC', backgroundGrad:'#DED5B9', gradAngle:90,
-    main:'#1C1C1C', sub:'#555555', accent:'#BDA76B',
-    contrastRatio:10.8, genre:'有料note', tone:'standard', filterId:'multiShadow'
-  },
-  neon_night: {
-    background:'#2B2F6E', backgroundGrad:'#0E0C23', gradAngle:45,
-    main:'#FFFFFF', sub:'#C3C5FF', accent:'#F9F871',
-    contrastRatio:12.8, genre:'ライティング', tone:'dark', filterId:'strongGlow'
-  },
-  glow_orange: {
-    background:'#FFE5B4', backgroundGrad:null, gradAngle:null,
-    main:'#FF6F00', sub:'#5A3A22', accent:'#FFC300',
-    contrastRatio:8.9, genre:'楽天', tone:'light', filterId:'warmTone'
-  },
-  midnight_blue: {
-    background:'#0A1730', backgroundGrad:'#1C2C5B', gradAngle:90,
-    main:'#FFFFFF', sub:'#8094B5', accent:'#5169B5',
-    contrastRatio:11.8, genre:'AI活用', tone:'dark', filterId:'toneBoost'
-  },
-  ai_cyan: {
-    background:'#0E1820', backgroundGrad:'#003E4D', gradAngle:null,
-    main:'#00FFFF', sub:'#00B5AD', accent:'#FFFFFF',
-    contrastRatio:12.5, genre:'AI活用', tone:'dark', filterId:'strongGlow'
-  },
-  gold_gray: {
-    background:'#ECECEC', backgroundGrad:'#DED5B9', gradAngle:90,
-    main:'#1C1C1C', sub:'#3C3C3C', accent:'#BDA76B',
-    contrastRatio:9.6, genre:'有料note', tone:'standard', filterId:'multiShadow'
-  },
-  pale_orange: {
-    background:'#FFEEDD', backgroundGrad:null, gradAngle:null,
-    main:'#5A3A22', sub:'#8E6E4D', accent:'#D6B792',
-    contrastRatio:7.2, genre:'ライティング', tone:'light', filterId:'paperNoise'
-  },
-};
-
-const GENRE_TO_PRESET = {
-  'ライティング': 'healing_beige',
-  '副業':         'energy_red',
-  'AI活用':       'ai_cyan',
-  '有料note':     'premium_gray',
-  '楽天':         'glow_orange',
-  '振り返り':     'study_blue',
-  'その他':       'minimal_white',
-};
-
-const TYPOGRAPHY = {
-  t1: { size: 38, weight: 600, letterSpacing: '0.06em',
-        scaleTable: [[6,38],[10,32],[Infinity,26]] },
-  t2: { size: 92, weight: 900, letterSpacing: '0em',
-        scaleTable: [[6,96],[8,84],[10,72],[12,62],[Infinity,52]] },
-  t3: { size: 38, weight: 500, letterSpacing: '0.04em',
-        scaleTable: [[10,38],[16,32],[22,28],[Infinity,24]] },
-};
-
-// 【C】Geminiプロンプトテンプレート（Firebase beyan_img_config/prompt で上書き可能）
-// プレースホルダーは {varName} 形式
-let GEMINI_IMG_PROMPT = `あなたはnoteで月10万PVを獲得するクリエイターの見出しコピーライターです。
-
-【今回の設計（変更禁止）】
-パターン：{patternName}
-感情トーン：{emotionTone}
-背景：{bgStyle}
-構図：{layout}
-明度：{brightness}
-アイコン：{iconType}
-
-【記事情報】
-タイトル：{title}
-ジャンル：{genre}
-メモ：{memo}
-キーワード：{kwHint}
-
-【直近の使用パターン（これらと差別化すること）】
-{historyHint}
-
-【あなたの仕事はテキスト3行のみ】
-デザイン変数はすでに決定済みのため変更しないこと。
-
-テキスト生成ルール（今回のパターン優先）：
-{textRule}
-
-パターン別参考：
-・数字ドーン型 → t2に必ず具体的な数字
-・警告・失敗談型 → t1に読者が既にしている失敗
-・感情訴求型 → t1に「あなたも〜？」の問いかけ
-・ノウハウ体系型 → t2に「〇ステップ」「〇つの方法」
-・実績・権威型 → t2に検証済みの数字・実績
-・達成・成功型 → t3に読者が得る具体的な変化
-・ストーリー型 → t1に転機・t3に余韻
-・比較対比型 → t1とt3で対比構造
-・余白訴求型 → t2の1行だけで完結
-・生活実感型 → 生活の具体的な場面・物の名前を入れる
-・キャラクター型 → 親しみのある語り口・日常語
-・問いかけ型 → 答えをまだ見せない問い
-・限定感・緊急型 → 期限・数量・今だけ感
-・ミニマル洗練型 → 削ぎ落とした1フレーズ
-・共感型 → 「わかる」が起きる日常語
-
-品質基準（必須）：
-・読んだ瞬間に記事を読みたくなるか
-・スマホ画面で3秒以内に意味が伝わるか
-・同ジャンルの他記事と差別化できているか
-
-絶対禁止ワード：絵文字・【】・振り返って・読んでみる・してみた・について・解説・楽天・まとめ・紹介
-
-文字数制限（厳守）：
-t1: 12文字以内（キャッチ）
-t2: 12文字以内（メイン）
-t3: 24文字以内（サブ）
-
-JSONオブジェクトのみ返せ。説明文不要。最初の文字は{、最後の文字は}。
-{"text_layer1":"","text_layer2":"","text_layer3":""}`;
-
-const _VALID_ICONS = ['none','bulb','fire','lightning','star','crown','warning','check','graph','arrow','person'];
-
-function getImgPromptTemplate() {
-  return (_imgTemplate !== null && _imgTemplate !== undefined) ? _imgTemplate : DEFAULT_IMG_TEMPLATE;
-}
-
-function _applyImgTmplPlaceholders(n) {
-  const tmpl = getImgPromptTemplate();
-  const kw = (() => { try { return JSON.parse(localStorage.getItem('beyan_img_keywords') || 'null'); } catch(e) { return null; } })();
-  // new format: {{keywords_hint}}
-  let kwHint = '';
-  if (kw) {
-    if (kw.catch) kwHint += `キャッチ「${kw.catch}」`;
-    if (kw.main)  kwHint += ` メイン「${kw.main}」`;
-    if (kw.sub)   kwHint += ` サブ「${kw.sub}」`;
-  }
-  // old format compat: {{catch}} {{main}} {{sub}}
-  const catchTxt = (kw && kw.catch) ? kw.catch : (n.title || '');
-  const mainTxt  = (kw && kw.main)  ? kw.main  : '';
-  const subTxt   = (kw && kw.sub)   ? kw.sub   : '';
-  return tmpl
-    .replace(/\{\{title\}\}/g,         n.title || '')
-    .replace(/\{\{catch\}\}/g,         catchTxt)
-    .replace(/\{\{main\}\}/g,          mainTxt)
-    .replace(/\{\{sub\}\}/g,           subTxt)
-    .replace(/\{\{genre\}\}/g,         n.cat || '')
-    .replace(/\{\{keywords_hint\}\}/g, kwHint.trim() || 'なし')
-    .replace(/\{\{memo\}\}/g,          n.memo || '');
-}
-
-// ── 画像生成履歴管理（v4）──
-const _imgHistoryCache = {};
-
-function _cleanText(s, max) {
-  if (!s) return '';
-  s = s.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}【】〔〕（）()「」『』]/gu, '').trim();
-  return s.length > max ? s.slice(0, max) : s;
-}
-
-async function _loadImgHist(noteId) {
-  if (_imgHistoryCache[noteId]) return _imgHistoryCache[noteId];
-  try {
-    if (_fbRef) {
-      const snap = await _fbRef.child('img_hist_' + noteId).once('value');
-      _imgHistoryCache[noteId] = snap.val() || [];
-      return _imgHistoryCache[noteId];
-    }
-  } catch(e) {}
-  try {
-    _imgHistoryCache[noteId] = JSON.parse(localStorage.getItem('img_hist_' + noteId) || '[]');
-  } catch(e) { _imgHistoryCache[noteId] = []; }
-  return _imgHistoryCache[noteId];
-}
-
-async function _saveImgHist(noteId, entry) {
-  try {
-    const hist = await _loadImgHist(noteId);
-    hist.unshift({ ...entry, timestamp: Date.now() });
-    const trimmed = hist.slice(0, 10);
-    _imgHistoryCache[noteId] = trimmed;
-    if (_fbRef) {
-      await _fbRef.child('img_hist_' + noteId).set(trimmed);
-    }
-    localStorage.setItem('img_hist_' + noteId, JSON.stringify(trimmed));
-  } catch(e) {}
-}
-
-// 【D】パターン選択 v5（nabebase側アルゴリズム・Geminiはテキストのみ生成）
-function _pickPattern(cat, memo, hist) {
-  if (hist && hist.length > 0) {
-    console.log('[ImgGen] 使用履歴', hist.map(h => `${h.patternName||h.pi}(${h.layout||h.ly})`));
-  } else {
-    console.log('[ImgGen] 使用履歴 履歴なし・初回選択');
-  }
-  const m = (memo||'').toLowerCase();
-  const genreIds = (_imgConfigOverrides.genre_map || GENRE_MAP)[cat]
-                || (_imgConfigOverrides.genre_map || GENRE_MAP)['その他'];
-
-  // STEP2: 履歴で重み付け（直前=禁止、直前2回=0.1倍）
-  const prevId  = hist[0]?.patternId ?? hist[0]?.pi;
-  const prev2Id = hist[1]?.patternId ?? hist[1]?.pi;
-  const usedLy  = hist.map(h => h.layout || h.ly).filter(Boolean);
-  const usedIc  = hist.map(h => h.iconType || h.ic).filter(Boolean);
-
-  const pool = genreIds.filter(id => id !== prevId);
-  const activePools = pool.length > 0 ? pool : genreIds;
-
-  // 重み付きランダム選択
-  const weights = activePools.map(id => id === prev2Id ? 0.1 : 1.0);
-  const total = weights.reduce((a, b) => a + b, 0);
-  let r = Math.random() * total, pi = activePools[0];
-  for (let i = 0; i < activePools.length; i++) {
-    r -= weights[i];
-    if (r <= 0) { pi = activePools[i]; break; }
-  }
-
-  // STEP3: 変数ローテーション強制
-  // 修正①: 明度ローテーション（直近3回すべてdark → light強制）
-  const recentBright = hist.slice(0,3).map(h => h.brightness).filter(Boolean);
-  const allDark = recentBright.length >= 3 && recentBright.every(b => b === 'dark');
-  if (allDark && PATTERN_DB[pi]?.brightness === 'dark') {
-    // まずジャンル内のlightパターンを探す
-    let lightIds = genreIds.filter(id => PATTERN_DB[id]?.brightness === 'light' && id !== prevId);
-    // ジャンル内にlightがなければ全PATTERN_DBから選ぶ（強制）
-    if (lightIds.length === 0) {
-      lightIds = Object.keys(PATTERN_DB).map(Number)
-        .filter(id => PATTERN_DB[id]?.brightness === 'light' && id !== prevId);
-    }
-    if (lightIds.length > 0) {
-      pi = lightIds[Math.floor(Math.random() * lightIds.length)];
-      console.log('[ImgGen] brightness強制light選択 ID:', pi);
-    }
-  }
-
-  const pat = { ...(PATTERN_DB[pi] || PATTERN_DB[1]) };
-
-  // 修正②: レイアウトローテーション（直前と同じlayout禁止）
-  const knownLayouts = ['center','left_heavy','top_bottom','diagonal','split','edge_align','top_heavy','center_top'];
-  const prevLy = usedLy[0];
-  const availLy = knownLayouts.filter(l => l !== prevLy);
-  let ly = knownLayouts.includes(pat.layout) ? pat.layout : 'center';
-  if (prevLy === ly && availLy.length > 0) {
-    ly = availLy[Math.floor(Math.random() * availLy.length)];
-    console.log('[ImgGen] layout重複回避 →', ly);
-  }
-
-  // アイコンローテーション（あり→なし→あり）
-  const prevHasIcon = usedIc[0] && usedIc[0] !== 'none';
-  let ic = _VALID_ICONS.includes(pat.icon) ? pat.icon : 'none';
-  if (hist.length >= 1) {
-    if (prevHasIcon) {
-      // 前回アイコンあり → 今回なしを優先
-      if (ic !== 'none') ic = 'none';
-    } else {
-      // 前回アイコンなし → 今回ありを優先
-      if (ic === 'none') {
-        const availIc = _VALID_ICONS.filter(i => i !== 'none' && !usedIc.includes(i));
-        if (availIc.length > 0) ic = availIc[Math.floor(Math.random() * availIc.length)];
-      }
-    }
-  }
-
-  // メモキーワードで色調整
-  const bg = {...pat};
-  if (m.includes('失敗')||m.includes('地雷')) { bg.acc='#ff4500'; bg.sub='#ffd700'; }
-  if (m.includes('万円')||m.includes('収益')||m.includes('稼')) { bg.acc='#ffd700'; bg.sub='#ffa500'; }
-
-  // colorData付与（ジャンル→プリセット→カラーデータ）
-  const presetKey = GENRE_TO_PRESET[cat] || 'minimal_white';
-  bg.colorData = COLOR_PRESETS[presetKey] || COLOR_PRESETS['minimal_white'];
-
-  console.log('[ImgGen] パターン決定',
-    `ID:${pi} name:${bg.name}`,
-    `bg:${bg.bgStyle} layout:${ly}`,
-    `brightness:${bg.brightness}`,
-    'colorData:', bg.colorData);
-
-  return { pi, ly, ic, bg, fw: bg.fw || '700' };
-}
-
-// 【E】Firebase beyan_img_config から設定を動的ロード
-async function initImgConfig() {
-  try {
-    if (typeof firebase === 'undefined') return;
-    const snap = await firebase.database().ref('beyan_img_config').once('value');
-    const cfg = snap.val();
-    if (!cfg) return;
-    _imgConfigOverrides = cfg;
-    if (cfg.patterns) {
-      Object.entries(cfg.patterns).forEach(([k, v]) => {
-        const id = Number(k);
-        if (PATTERN_DB[id]) PATTERN_DB[id] = { ...PATTERN_DB[id], ...v };
-      });
-    }
-    if (cfg.prompt)    GEMINI_IMG_PROMPT = cfg.prompt;
-    if (cfg.genre_map) Object.entries(cfg.genre_map).forEach(([k, v]) => { GENRE_MAP[k] = v; });
-    console.log('[ImgGen] beyan_img_config 読み込み完了 version:', cfg.version || '-');
-  } catch(e) { console.log('[ImgGen] initImgConfig エラー', e.message); }
-}
-
-const LAYOUT_PRESETS = {
-  left_heavy: {
-    t1: { x: 160, y: 140 }, t2: { x: 160, y: 260 }, t3: { x: 160, y: 420 },
-    icon: { x: 1120, y: 480 }, textAnchor: 'start', maxWidth: 950
-  },
-  center: {
-    t1: { x: 640, y: 160 }, t2: { x: 640, y: 300 }, t3: { x: 640, y: 460 },
-    icon: { x: 640, y: 560 }, textAnchor: 'middle', maxWidth: 1000
-  },
-  top_bottom: {
-    t1: { x: 640, y: 120 }, t2: { x: 640, y: 340 }, t3: { x: 640, y: 580 },
-    icon: { x: 1120, y: 140 }, textAnchor: 'middle', maxWidth: 980
-  },
-  diagonal: {
-    t1: { x: 200, y: 520 }, t2: { x: 380, y: 340 }, t3: { x: 560, y: 180 },
-    icon: { x: 1060, y: 520 }, textAnchor: 'start', maxWidth: 1000
-  },
-  split: {
-    t1: { x: 360, y: 200 }, t2: { x: 900, y: 200 }, t3: { x: 360, y: 430 },
-    icon: { x: 940, y: 490 }, textAnchor: 'start', maxWidth: 1280
-  },
-  edge_align: {
-    t1: { x: 200, y: 160 }, t2: { x: 200, y: 320 }, t3: { x: 200, y: 500 },
-    icon: { x: 1080, y: 340 }, textAnchor: 'start', maxWidth: 950
-  },
-  top_heavy: {
-    t1: { x: 640, y: 100 }, t2: { x: 640, y: 250 }, t3: { x: 640, y: 440 },
-    icon: { x: 640, y: 600 }, textAnchor: 'middle', maxWidth: 900
-  },
-};
-
-const SVG_FILTERS = `
-<filter id="paperNoise">
-  <feTurbulence baseFrequency="0.8" numOctaves="3" seed="4" result="noise"/>
-  <feColorMatrix in="noise" type="matrix"
-    values="0 0 0 0 0.8  0 0 0 0 0.7  0 0 0 0 0.6  0 0 0 0.05 0"/>
-  <feBlend in="SourceGraphic" in2="noise" mode="multiply"/>
-</filter>
-<filter id="softGlow">
-  <feGaussianBlur stdDeviation="6" result="blur"/>
-  <feBlend in="SourceGraphic" in2="blur" mode="screen"/>
-</filter>
-<filter id="strongGlow">
-  <feGaussianBlur stdDeviation="14" result="glow"/>
-  <feMerge>
-    <feMergeNode in="glow"/>
-    <feMergeNode in="SourceGraphic"/>
-  </feMerge>
-</filter>
-<filter id="warmTone">
-  <feColorMatrix type="matrix"
-    values="1.1 0 0 0 0
-            0 1.05 0 0 0
-            0 0 0.85 0 0
-            0 0 0 1 0"/>
-</filter>
-<filter id="coolTone">
-  <feColorMatrix type="matrix"
-    values="0.9 0 0 0 0
-            0 1 0 0 0
-            0 0 1.2 0 0
-            0 0 0 1 0"/>
-</filter>
-<filter id="toneBoost">
-  <feComponentTransfer>
-    <feFuncR type="gamma" amplitude="1.2" exponent="1.1"/>
-    <feFuncG type="gamma" amplitude="1.2" exponent="1.1"/>
-    <feFuncB type="gamma" amplitude="1.2" exponent="1.1"/>
-  </feComponentTransfer>
-</filter>
-<filter id="dropShadow1">
-  <feDropShadow dx="5" dy="5" stdDeviation="4"
-    flood-color="#000000" flood-opacity="0.3"/>
-</filter>
-<filter id="multiShadow">
-  <feDropShadow dx="4" dy="4" stdDeviation="2"
-    flood-color="#000000" flood-opacity="0.3"/>
-  <feDropShadow dx="8" dy="8" stdDeviation="6"
-    flood-color="#000000" flood-opacity="0.2"/>
-</filter>
-`;
-
-function _buildSVG(t1, t2, t3, vars) {
-  const {bg, ly, ic, fw} = vars;
-  console.log('[ImgGen] buildSVG受け取り', `pattern:${bg?.name}`, `bg:${bg?.bgStyle}`, `layout:${ly}`);
-  const W = 1280, H = 670;
-  const MAX_CIRCLE_RADIUS = 80;
-  const brightness = bg.brightness || 'dark';
-  const bgStyle    = bg.bgStyle    || 'solid_dark';
-  const acc  = bg.acc;
-  const sub  = bg.sub;
-  const dark = brightness === 'light' ? '#0d0d1a' : '#080808';
-  const txt  = brightness === 'light' ? '#1a1a2e' : '#ffffff';
-  console.log('[ImgGen] buildSVG色確認', `acc:${acc} sub:${sub} bg2:${bg.bg2} brightness:${brightness}`);
-
-  const _scale = (len, table) => (table.find(([th]) => len <= th) || table[table.length-1])[1];
-  const fs1 = _scale(t1.length, TYPOGRAPHY.t1.scaleTable);
-  const fs2 = _scale(t2.length, TYPOGRAPHY.t2.scaleTable);
-  const fs3 = _scale(t3.length, TYPOGRAPHY.t3.scaleTable);
-  console.log(`[ImgGen] typography t2.size:${fs2} t2.weight:${TYPOGRAPHY.t2.weight}`);
-
-  // ── POS（LAYOUT_PRESETSから取得） ──
-  const pos = LAYOUT_PRESETS[ly] || LAYOUT_PRESETS['center'];
-  console.log(`[ImgGen] layout:${ly} t1(${pos.t1.x},${pos.t1.y}) t2(${pos.t2.x},${pos.t2.y})`);
-
-  // ── フィルター（テキストシャドウ・アイコングロー・セミグロウ） ──
-  const t2FilterId = bg.colorData?.filterId || 'dropShadow1';
-  console.log(`[ImgGen] buildSVG t2filter:${t2FilterId}`);
-  const filter = `
-    <defs>
-      ${SVG_FILTERS}
-      <filter id="ig" x="-40%" y="-40%" width="180%" height="180%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="22" result="blur"/>
-        <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-      </filter>
-    </defs>`;
-
-  // ── 強化①: bgStyle別リッチ背景 ──
-  let bgEl = '';
-  if (bgStyle === 'split_lr' || bg.name === 'split_compare') {
-    bgEl = `
-      <rect width="${W}" height="${H}" fill="${dark}"/>
-      <polygon points="610,0 ${W},0 ${W},${H} 650,${H}" fill="${bg.bg2}" opacity="0.92"/>
-      <line x1="625" y1="0" x2="665" y2="${H}" stroke="${acc}" stroke-width="4"   opacity="0.85"/>
-      <line x1="629" y1="0" x2="669" y2="${H}" stroke="${acc}" stroke-width="1.5" opacity="0.30"/>
-      <ellipse cx="${W*0.82}" cy="${H*0.55}" rx="280" ry="220" fill="${acc}" opacity="0.35"/>`;
-  } else if (bgStyle === 'solid_dark') {
-    bgEl = `
-      <defs>
-        <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stop-color="#050510"/>
-          <stop offset="50%"  stop-color="${bg.bg2}"/>
-          <stop offset="100%" stop-color="#080810"/>
-        </linearGradient>
-      </defs>
-      <rect width="${W}" height="${H}" fill="url(#bgG)"/>
-      <ellipse cx="${W*0.85}" cy="${H*0.80}" rx="260" ry="200" fill="${acc}" opacity="0.30"/>`;
-  } else if (bgStyle === 'grad_lr') {
-    bgEl = `
-      <defs>
-        <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%"   stop-color="${dark}"/>
-          <stop offset="55%"  stop-color="${bg.bg2}" stop-opacity="0.85"/>
-          <stop offset="100%" stop-color="${acc}"    stop-opacity="0.25"/>
-        </linearGradient>
-      </defs>
-      <rect width="${W}" height="${H}" fill="url(#bgG)"/>
-      <ellipse cx="${W*0.85}" cy="${H*0.80}" rx="260" ry="200" fill="${acc}" opacity="0.20"/>`;
-  } else if (bgStyle === 'grad_tb') {
-    bgEl = `
-      <defs>
-        <linearGradient id="bgG" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%"   stop-color="${dark}"/>
-          <stop offset="50%"  stop-color="${bg.bg2}" stop-opacity="0.90"/>
-          <stop offset="100%" stop-color="${dark}"/>
-        </linearGradient>
-      </defs>
-      <rect width="${W}" height="${H}" fill="url(#bgG)"/>
-      <ellipse cx="${W*0.85}" cy="${H*0.80}" rx="240" ry="190" fill="${acc}" opacity="0.18"/>`;
-  } else if (bgStyle === 'grad_diag') {
-    bgEl = `
-      <defs>
-        <linearGradient id="bgG" x1="0%" y1="0%" x2="75%" y2="100%">
-          <stop offset="0%"   stop-color="${dark}"/>
-          <stop offset="55%"  stop-color="${bg.bg2}" stop-opacity="0.88"/>
-          <stop offset="100%" stop-color="${acc}"    stop-opacity="0.20"/>
-        </linearGradient>
-      </defs>
-      <rect width="${W}" height="${H}" fill="url(#bgG)"/>
-      <polygon points="0,0 360,0 ${W},${H} 0,${H}" fill="${dark}" opacity="0.30"/>
-      <ellipse cx="${W*0.85}" cy="${H*0.80}" rx="260" ry="200" fill="${acc}" opacity="0.35"/>`;
-  } else if (bgStyle === 'grad_soft') {
-    bgEl = `
-      <defs>
-        <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stop-color="${bg.bg2}"/>
-          <stop offset="50%"  stop-color="${dark}"   stop-opacity="0.80"/>
-          <stop offset="100%" stop-color="${bg.bg2}" stop-opacity="0.60"/>
-        </linearGradient>
-      </defs>
-      <rect width="${W}" height="${H}" fill="url(#bgG)"/>
-      <ellipse cx="${W*0.30}" cy="${H*0.30}" rx="400" ry="300" fill="${sub}" opacity="0.06"/>
-      <ellipse cx="${W*0.85}" cy="${H*0.80}" rx="240" ry="190" fill="${acc}" opacity="0.18"/>`;
-  } else if (bgStyle === 'solid_light' || bgStyle === 'solid_cream') {
-    bgEl = `
-      <defs>
-        <linearGradient id="bgG" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%"   stop-color="${bg.bg2}"/>
-          <stop offset="55%"  stop-color="${dark}"   stop-opacity="0.70"/>
-          <stop offset="100%" stop-color="${dark}"/>
-        </linearGradient>
-      </defs>
-      <rect width="${W}" height="${H}" fill="url(#bgG)"/>
-      <ellipse cx="${W*0.85}" cy="${H*0.80}" rx="260" ry="200" fill="${acc}" opacity="0.22"/>`;
-  } else if (bgStyle === 'photo_warm' || bgStyle === 'photo_natural') {
-    bgEl = `
-      <defs>
-        <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stop-color="${dark}"/>
-          <stop offset="60%"  stop-color="${bg.bg2}" stop-opacity="0.85"/>
-          <stop offset="100%" stop-color="${bg.bg2}"/>
-        </linearGradient>
-      </defs>
-      <rect width="${W}" height="${H}" fill="url(#bgG)"/>
-      <ellipse cx="${W*0.65}" cy="${H*0.40}" rx="380" ry="250" fill="${acc}" opacity="0.25"/>
-      <ellipse cx="${W*0.20}" cy="${H*0.70}" rx="200" ry="180" fill="${sub}" opacity="0.20"/>
-      <polygon points="${W*0.6},0 ${W},0 ${W},${H*0.5}" fill="${acc}" opacity="0.18"/>
-      <ellipse cx="${W*0.85}" cy="${H*0.80}" rx="250" ry="200" fill="${acc}" opacity="0.35"/>`;
-  } else {
-    bgEl = `
-      <defs>
-        <linearGradient id="bgG" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%"   stop-color="${dark}"/>
-          <stop offset="55%"  stop-color="${bg.bg2}" stop-opacity="0.85"/>
-          <stop offset="100%" stop-color="${bg.bg2}"/>
-        </linearGradient>
-      </defs>
-      <rect width="${W}" height="${H}" fill="url(#bgG)"/>
-      <ellipse cx="${W*0.85}" cy="${H*0.80}" rx="260" ry="200" fill="${acc}" opacity="0.18"/>`;
-  }
-
-  // ── 強化②: アイコン（25〜30%サイズ＝scale 1.7、layout別配置・グロー付き） ──
-  const iconPaths = {
-    bulb:      'M50,10C28,10 10,28 10,50C10,65 18,78 30,85L30,95L70,95L70,85C82,78 90,65 90,50C90,28 72,10 50,10Z M35,100L65,100 M40,108L60,108',
-    fire:      'M50,5C50,5 65,25 65,40C55,30 50,35 60,50C55,65 45,50 40,55C35,60 35,75 50,90C30,80 15,65 20,45C30,55 35,50 25,30Z',
-    lightning: 'M58,5L18,58L46,58L38,98L78,42L52,42Z',
-    star:      'M50,5L61,35L95,35L68,57L79,91L50,70L21,91L32,57L5,35L39,35Z',
-    crown:     'M10,70L10,30L30,52L50,10L70,52L90,30L90,70Z M5,76L95,76L95,88L5,88Z',
-    warning:   'M50,5L95,90L5,90Z M47,42L53,42L51,68L49,68Z M50,76A5,5 0 1,1 50,86A5,5 0 1,1 50,76',
-    check:     'M8,50L34,76L92,18',
-    graph:     'M10,90L10,10 M10,90L95,90 M22,72L22,48L40,48L40,72Z M50,72L50,28L68,28L68,72Z M76,72L76,42L90,42',
-    arrow:     'M18,50L78,50 M56,24L82,50L56,76',
-    person:    'M50,32A20,20 0 1,1 50,8A20,20 0 1,1 50,32Z M12,92C12,68 28,54 50,54C72,54 88,68 88,92Z',
-  };
-  const iconX = pos.icon.x;
-  const iconY = pos.icon.y;
-
-  let iconEl = '';
-  if (ic && ic !== 'none' && iconPaths[ic]) {
-    iconEl = `
-      <g transform="translate(${iconX},${iconY}) scale(1.7)" filter="url(#ig)" opacity="0.65">
-        <path d="${iconPaths[ic]}" fill="${acc}" stroke="${acc}"
-          stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>
-      <g transform="translate(${iconX},${iconY}) scale(1.7)" opacity="0.15">
-        <path d="${iconPaths[ic]}" fill="${acc}"/>
-      </g>`;
-  } else {
-    // アイコンなし → acc色の幾何学シェイプで右側を装飾（半径をMAX_CIRCLE_RADIUSでクランプ）
-    const cr1 = Math.min(90, MAX_CIRCLE_RADIUS);
-    const cr2 = Math.min(55, MAX_CIRCLE_RADIUS);
-    const accentArea = Math.PI * cr1 * cr1;
-    const canvasArea = W * H;
-    const accentRatio = accentArea / canvasArea;
-    console.log(`[ImgGen] accent面積: ${(accentRatio * 100).toFixed(1)}% (r=${cr1})`);
-    if (accentRatio > 0.12) {
-      console.warn('[ImgGen] accent面積超過:', (accentRatio * 100).toFixed(1) + '%');
-    }
-    iconEl = `
-      <circle cx="${W*0.82}" cy="${H*0.38}" r="${cr1}" fill="none"
-        stroke="${acc}" stroke-width="2.5" opacity="0.35"/>
-      <circle cx="${W*0.82}" cy="${H*0.38}" r="${cr2}" fill="${acc}" opacity="0.10"/>
-      <line x1="${W*0.72}" y1="${H*0.20}" x2="${W*0.92}" y2="${H*0.55}"
-        stroke="${acc}" stroke-width="1.5" opacity="0.25"/>`;
-  }
-
-  // ── 強化④: layout固有デコレーション ──
-  let layoutDeco = '';
-  if (ly === 'left_heavy') {
-    layoutDeco = `
-      <rect x="0" y="0" width="6" height="${H}" fill="${acc}" opacity="0.90"/>
-      <rect x="8" y="0" width="1" height="${H}" fill="${acc}" opacity="0.30"/>`;
-  } else if (ly === 'center') {
-    layoutDeco = `
-      <rect x="160" y="${pos.t1.y - 55}" width="${W-320}" height="2" fill="${acc}" opacity="0.40"/>
-      <rect x="160" y="${pos.t3.y + 22}" width="${W-320}" height="2" fill="${acc}" opacity="0.40"/>`;
-  } else if (ly === 'top_bottom') {
-    layoutDeco = `
-      <rect x="0" y="${pos.t1.y + 22}" width="${W}" height="1.5" fill="${acc}" opacity="0.30"/>
-      <rect x="0" y="${pos.t3.y - 52}" width="${W}" height="1.5" fill="${acc}" opacity="0.30"/>`;
-  } else if (ly === 'diagonal') {
-    layoutDeco = `
-      <polygon points="0,0 ${W*0.4},0 ${W*0.62},${H} 0,${H}" fill="${acc}" opacity="0.06"/>
-      <line x1="${W*0.38}" y1="0" x2="${W*0.60}" y2="${H}"
-        stroke="${acc}" stroke-width="1.5" opacity="0.22"/>`;
-  } else if (ly === 'split') {
-    layoutDeco = `
-      <line x1="630" y1="0" x2="600" y2="${H}" stroke="${acc}" stroke-width="3"   opacity="0.75"/>
-      <line x1="634" y1="0" x2="604" y2="${H}" stroke="${acc}" stroke-width="1.5" opacity="0.25"/>`;
-  } else if (ly === 'edge_align') {
-    layoutDeco = `
-      <line x1="${W*0.68}" y1="${H*0.12}" x2="${W*0.68}" y2="${H*0.88}"
-        stroke="${acc}" stroke-width="1.5" opacity="0.35"/>
-      <circle cx="${W*0.75}" cy="${H*0.50}" r="4" fill="${acc}" opacity="0.50"/>`;
-  } else if (ly === 'top_heavy') {
-    layoutDeco = `
-      <rect x="0" y="0" width="${W}" height="265" fill="${acc}" opacity="0.10"/>
-      <rect x="0" y="263" width="${W}" height="2"  fill="${acc}" opacity="0.50"/>`;
-  }
-
-  // ── 強化③: テキスト（letter-spacing・2重シャドウ・アンダーライン） ──
-  const t1UlX = pos.textAnchor === 'middle' ? 540 : pos.t1.x;
-  const t3y = Math.min(pos.t3.y, 470);
-  const textEl = `
-    <text x="${pos.t1.x}" y="${pos.t1.y}"
-      font-size="${fs1}" font-weight="${TYPOGRAPHY.t1.weight}" letter-spacing="${TYPOGRAPHY.t1.letterSpacing}"
-      font-family="'Noto Sans JP',sans-serif"
-      fill="${sub}" stroke="${dark}" stroke-width="4" paint-order="stroke"
-      text-anchor="${pos.textAnchor}" filter="url(#dropShadow1)">${t1}</text>
-    <rect x="${t1UlX}" y="${pos.t1.y + 7}" width="200" height="3"
-      fill="${acc}" opacity="0.80" rx="1.5"/>
-    <text x="${pos.t2.x}" y="${pos.t2.y}"
-      font-size="${fs2}" font-weight="${TYPOGRAPHY.t2.weight}" dominant-baseline="hanging"
-      font-family="'Noto Sans JP',sans-serif"
-      fill="${txt}" stroke="${acc}" stroke-width="2" paint-order="stroke"
-      text-anchor="${pos.textAnchor}" filter="url(#${t2FilterId})">${t2}</text>
-    <text x="${pos.t3.x}" y="${t3y}"
-      font-size="${fs3}" font-weight="${TYPOGRAPHY.t3.weight}" letter-spacing="${TYPOGRAPHY.t3.letterSpacing}"
-      font-family="'Noto Sans JP',sans-serif"
-      fill="${sub}" stroke="${dark}" stroke-width="3" paint-order="stroke"
-      text-anchor="${pos.textAnchor}" filter="url(#dropShadow1)">${t3}</text>`;
-
-  return `<svg xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">
-    ${filter}${bgEl}${layoutDeco}${iconEl}${textEl}
-  </svg>`;
-}
-
-async function runImgGenFromTemplate(n, apiKey) {
-  const kw = (() => { try { return JSON.parse(localStorage.getItem('beyan_img_keywords')||'null'); } catch(e){return null;} })();
-  const kwHint = kw ? `${kw.catch||''} ${kw.main||''} ${kw.sub||''}`.trim() : '';
-
-  const hist = await _loadImgHist(n.id);
-  const vars = _pickPattern(n.cat||'', n.memo||'', hist);
-
-  // 修正1: APIキー未取得時は即フォールバック
-  if (!apiKey) {
-    console.log('[ImgGen] APIキー未取得');
-    const t2fb = _cleanText(kw?.main || '', 12);
-    const t1fb = _cleanText(kwHint.split(' ')[0]||'', 12);
-    const t3fb = _cleanText(kwHint.split(' ').slice(-1)[0]||'', 24);
-    const svg = _buildSVG(t1fb, t2fb, t3fb, vars);
-    await _saveImgHist(n.id, {
-      patternId: vars.pi, patternName: vars.bg.name, emotionTone: vars.bg.emotion,
-      bgStyle: vars.bg.bgStyle, layout: vars.ly, brightness: vars.bg.brightness, iconType: vars.ic,
-    });
-    return svgToBase64PNG(svg);
-  }
-
-  // STEP4: 変数をGeminiプロンプトに注入（Geminiはテキストのみ生成）
-  const pat = vars.bg;
-  const historyHint = hist.slice(0,3)
-    .map(h => `${h.patternName || h.pi}（${h.layout || h.ly || ''}・${h.brightness || ''}）`)
-    .join(' / ') || 'なし';
-
-  const prompt = (_imgConfigOverrides.prompt || GEMINI_IMG_PROMPT)
-    .replace('{patternName}', pat.name       || '')
-    .replace('{emotionTone}', pat.emotion    || '')
-    .replace('{bgStyle}',     pat.bgStyle    || '')
-    .replace('{layout}',      vars.ly        || '')
-    .replace('{brightness}',  pat.brightness || '')
-    .replace('{iconType}',    vars.ic        || '')
-    .replace('{title}',       n.title        || '')
-    .replace('{genre}',       n.cat          || '')
-    .replace('{memo}',        n.memo         || '')
-    .replace('{kwHint}',      kwHint)
-    .replace('{historyHint}', historyHint)
-    .replace('{textRule}',    pat.textRule   || '');
-
-  const _geminiCall = async (maxTokens) => {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ contents:[{parts:[{text:prompt}]}], generationConfig:{maxOutputTokens:maxTokens,temperature:0.9} })
-    });
-    return res.json();
-  };
-
-  let t1='', t2='', t3='';
-  try {
-    let data = await _geminiCall(1024);
-    console.log('[ImgGen] Gemini成功');
-    const finishReason = data.candidates?.[0]?.finishReason || 'unknown';
-    console.log('[ImgGen] finishReason:', finishReason);
-    if (finishReason === 'MAX_TOKENS') {
-      console.log('[ImgGen] MAX_TOKENS検出 → 1024でリトライ');
-      data = await _geminiCall(1024);
-      console.log('[ImgGen] finishReason(retry):', data.candidates?.[0]?.finishReason || 'unknown');
-    }
-    // パース堅牢化（```json除去→trim→JSON.parse、失敗時ログ）
-    const raw = (data.candidates?.[0]?.content?.parts?.[0]?.text||'').replace(/```json|```/g,'').trim();
-    console.log('[ImgGen] rawText:', raw);
-    try {
-      const parsed = JSON.parse(raw);
-      t1 = _cleanText(parsed.text_layer1||'', 12);
-      t2 = _cleanText(parsed.text_layer2||'', 12);
-      t3 = _cleanText(parsed.text_layer3||'', 24);
-      console.log('[ImgGen] パース成功', {t1, t2, t3});
-    } catch(pe) {
-      console.log('[ImgGen] パース失敗', pe.message, raw);
-    }
-  } catch(e) { console.log('[ImgGen] APIエラー', e.message); }
-
-  // フォールバック：タイトルそのままは使わず kw.main を優先
-  if (!t2) t2 = _cleanText(kw?.main || '', 12);
-  if (!t1 && kwHint) t1 = _cleanText(kwHint.split(' ')[0]||'', 12);
-  if (!t3 && kwHint) t3 = _cleanText(kwHint.split(' ').slice(-1)[0]||'', 24);
-
-  const svg = _buildSVG(t1, t2, t3, vars);
-  await _saveImgHist(n.id, {
-    patternId:   vars.pi,
-    patternName: vars.bg.name,
-    emotionTone: vars.bg.emotion,
-    bgStyle:     vars.bg.bgStyle,
-    layout:      vars.ly,
-    brightness:  vars.bg.brightness,
-    iconType:    vars.ic,
-  });
-  return svgToBase64PNG(svg);
-}
-function _syncImgTemplateTAs(value) {
-  // 作業モーダル内のtextareaと設定モーダル内のtextareaを両方同期
-  const wta = document.getElementById('imgtemplate-textarea');
-  if (wta) { wta.value = value; wta.dataset.loaded = '1'; }
-  const sta = document.getElementById('settings-imgprompt-tmpl');
-  if (sta) sta.value = value;
-}
-function _fbImgTmplSet(val) {
-  _imgTemplate = val;
-  if (_fbRef) { firebase.database().ref('beyan_img_template').set(val); }
-  else { localStorage.setItem('beyan_img_template', val); }
-}
-function _fbImgTmplRemove() {
-  _imgTemplate = null;
-  if (_fbRef) { firebase.database().ref('beyan_img_template').remove(); }
-  else { localStorage.removeItem('beyan_img_template'); }
-}
-function saveImgPromptTemplate() {
-  const ta = document.getElementById('imgtemplate-textarea');
-  if (!ta) return;
-  if (_fbRef && _imgTemplate) { _fbRef.child('beyan_img_template_bak').set(_imgTemplate); }
-  _fbImgTmplSet(ta.value);
-  _syncImgTemplateTAs(ta.value);
-  toast('✅ テンプレートを保存しました');
-}
-function resetImgPromptTemplate() {
-  _fbImgTmplRemove();
-  _syncImgTemplateTAs(DEFAULT_IMG_TEMPLATE);
-  toast('🔄 デフォルトに戻しました');
-}
-function saveSettingsImgTemplate() {
-  const ta = document.getElementById('settings-imgprompt-tmpl');
-  if (!ta) return;
-  _fbImgTmplSet(ta.value);
-  _syncImgTemplateTAs(ta.value);
-  const ts = new Date().toISOString();
-  _imgTemplateUpdatedAt = ts;
-  if (_fbRef) firebase.database().ref('beyan_img_template_ts').set(ts);
-  _updateImgTsDisplay();
-  const msg = document.getElementById('settings-imgprompt-msg');
-  if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 2000); }
-  toast('✅ 見出し画像テンプレートを保存しました');
-}
-function resetSettingsImgTemplate() {
-  _fbImgTmplRemove();
-  _syncImgTemplateTAs(DEFAULT_IMG_TEMPLATE);
-  const msg = document.getElementById('settings-imgprompt-msg');
-  if (msg) { msg.style.display = 'block'; setTimeout(() => msg.style.display = 'none', 2000); }
-  toast('🔄 デフォルトに戻しました');
-}
-function loadImgTemplateEditor() {
-  const ta = document.getElementById('imgtemplate-textarea');
-  if (ta && !ta.dataset.loaded) {
-    ta.value = getImgPromptTemplate();
-    ta.dataset.loaded = '1';
-  }
-  // detailsのchevron同期
-  const det = document.getElementById('imgtemplate-details');
-  const chev = document.getElementById('imgtemplate-chev');
-  if (det && chev) {
-    det.addEventListener('toggle', () => {
-      chev.style.transform = det.open ? 'rotate(180deg)' : '';
-      if (det.open) {
-        const ta2 = document.getElementById('imgtemplate-textarea');
-        if (ta2) ta2.value = getImgPromptTemplate();
-      }
-    });
-  }
-}
 
 // ================================================================
 // 見出し画像生成
@@ -5830,446 +4908,147 @@ function refreshImggenTitle() {
   } else {
     titleEl.style.display = 'none';
   }
-  loadImgKeywords();
-}
-
-function loadImgKeywords() {
-  const statusEl = document.getElementById('mwimg-keywords-status');
-  const catchEl  = document.getElementById('mwimg-kw-catch');
-  const mainEl   = document.getElementById('mwimg-kw-main');
-  const subEl    = document.getElementById('mwimg-kw-sub');
-  if (!statusEl) return;
-  try {
-    const saved = JSON.parse(localStorage.getItem('beyan_img_keywords') || 'null');
-    if (saved && (saved.catch || saved.main || saved.sub)) {
-      if (catchEl) catchEl.value = saved.catch || '';
-      if (mainEl)  mainEl.value  = saved.main  || '';
-      if (subEl)   subEl.value   = saved.sub   || '';
-      statusEl.innerHTML = '<span style="color:var(--green)">✅ 執筆時のキーワードが自動入力されました</span>';
-    } else {
-      // 記事情報から自動入力（空欄で開かない）
-      const n = S.notes.find(x => x.id === curId);
-      if (n) {
-        const titleWords = n.title || '';
-        const memoWords  = (n.memo || '').replace(/^📌\s*/, '');
-        if (catchEl) catchEl.value = titleWords.slice(0, 12);
-        if (mainEl)  mainEl.value  = titleWords.slice(0, 15);
-        if (subEl)   subEl.value   = memoWords.slice(0, 20) || titleWords.slice(0, 20);
-        statusEl.innerHTML = '<span style="color:var(--blue)">📝 記事情報から自動入力しました。内容を確認して調整してください。</span>';
-      } else {
-        if (catchEl) catchEl.value = '';
-        if (mainEl)  mainEl.value  = '';
-        if (subEl)   subEl.value   = '';
-        statusEl.innerHTML = '<span style="color:var(--orange)">⚠️ キーワード未取得です。執筆→整形を完了すると自動入力されます。または手動で入力して生成することもできます。</span>';
-      }
-    }
-  } catch(e) {
-    statusEl.innerHTML = '<span style="color:var(--orange)">⚠️ キーワード未取得です。手動で入力できます。</span>';
-  }
 }
 
 function openImgGenModal(id) {
   openWork(id);
   switchTabByName('imggen');
-  renderImgPromptVault();
-  loadImgTemplateEditor();
+  initImgPromptVault();
   refreshImggenTitle();
 }
 
 // ================================================================
-// 見出し画像生成（作業モーダル ④）
+// 見出し画像生成（新実装）
 // ================================================================
 
-// ── STEP1共通: 記事情報から変数取得 + nb2Prompt/jaPrompt を組み立てて返す ──
-async function _buildImgVarsAndPrompt(n, apiKey) {
-  const TEXT_MODELS = ['gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-  const varInstruction = getImgPromptTemplate();
-  const bodyText = (n.formattedText || n.draftText || '').trim().slice(0, 1500);
-  const articleInfo = `記事タイトル: ${n.title}
-カテゴリ: ${n.cat || 'ライティング'}
-メモ・訴求ポイント: ${n.memo || 'なし'}
-記事本文（抜粋）:
-${bodyText || '（本文なし：タイトルから推測してください）'}
+let _imgPromptVaultTimer = null;
 
-【重要指示】見出し画像のコンセプトはシンプルに1メッセージに絞ること。
-読者が「読んでみたい」と感じる訴求ワードを1〜2個だけ選ぶこと。
-情報を詰め込む方向は禁止。一言で刺さるメッセージを優先すること。`;
-
-  let vars = null;
-  for (const model of TEXT_MODELS) {
-    try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: varInstruction + '\n\n' + articleInfo }] }],
-          generationConfig: { temperature: 0.85, maxOutputTokens: 400 }
-        })
-      });
-      const d = await r.json();
-      if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
-      const txt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      const m = txt.match(/\{[\s\S]*?\}/);
-      if (m) { try { vars = JSON.parse(m[0]); break; } catch(e2) {} }
-    } catch(e) { console.warn('[imggen] step1', model, e.message); }
-  }
-  if (!vars) vars = {
-    badge:'実体験', number:'体験談', unit:'', period:'実践',
-    achievement: n.title.slice(0, 10), target:'同じ悩みのあなた', solution:'解決策あり',
-    subtitle: n.title.slice(0, 20) + '…',
-    keywords: n.title, icons:'💡📝',
-    mainColor:'チャコール', accentColor:'オレンジ',
-    mainColorHex:'#1a1a1a', accentColorHex:'#f5a623'
+function initImgPromptVault() {
+  const ta = document.getElementById('imggen-prompt-vault');
+  if (!ta) return;
+  const saved = localStorage.getItem('nabebase_imggen_prompt') || '';
+  if (saved) ta.value = saved;
+  _updateImgPromptVaultTs();
+  ta.oninput = () => {
+    clearTimeout(_imgPromptVaultTimer);
+    _imgPromptVaultTimer = setTimeout(() => {
+      localStorage.setItem('nabebase_imggen_prompt', ta.value);
+      _updateImgPromptVaultTs();
+    }, 800);
   };
-
-  const kw = vars.keywords ? vars.keywords.split(',').map(s=>s.trim()).filter(Boolean) : [];
-  const kwLine = kw.length ? `キーワード：${kw.join('・')}` : '';
-  const _savedKw = (() => { try { return JSON.parse(localStorage.getItem('beyan_img_keywords') || 'null'); } catch(e) { return null; } })();
-  const _kwSection = (_savedKw && (_savedKw.catch || _savedKw.main || _savedKw.sub))
-    ? `■ 画像に使うキーワード（優先的に使うこと）\nキャッチコピー：${_savedKw.catch || ''}\nメインメッセージ：${_savedKw.main || ''}\nサブコピー：${_savedKw.sub || ''}`
-    : `キーワード：${kw.length ? kw.join('、') : '（タイトルから判断）'}`;
-  const icons = vars.icons || '📊💡';
-
-  const jaPrompt = `note記事用アイキャッチ画像、1280x720px、プロフェッショナル・クリック欲求高めるデザイン
-記事タイトル：${n.title}
-${kwLine}
-
-【${vars.badge}】${vars.number}${vars.unit}を${vars.period}で達成！
-${vars.achievement}！${vars.target}への${vars.solution}
-${vars.subtitle}
-
-レイアウト：
-- 上段：「【${vars.badge}】${vars.number}${vars.unit}を${vars.period}で達成！」太字${vars.mainColor}、白抜き縁取り
-- 中段：「${vars.achievement}」${vars.accentColor}グラデ強調、数字「${vars.number}」特大
-- 下段：「${vars.subtitle}」太字、励まし/疑問トーン
-- 右側：${icons}（記事テーマに合うアイコン）、シャープ
-
-視覚要素：
-- 背景：${vars.mainColor}（${vars.mainColorHex}）から濃い${vars.mainColor}へのグラデ、70%ベース
-- 配色：${vars.mainColor}(70%) × ${vars.accentColor}(25%) × 白(5%)、3色厳守
-- noteロゴ：左上に微か配置
-- 全体：信頼感+注目度UP、初見で「読みたい！」となる構図 --ar 16:9 --v 6 --style raw`;
-
-  const nb2Prompt = `あなたはnoteのトップクリエイターが使う
-見出し画像を生成する専門デザイナーです。
-以下の条件を全て守り、クリック率が最大化される
-アイキャッチ画像を1枚生成してください。
-
-■ 基本情報
-記事タイトル：${n.title}
-${_kwSection}
-画像サイズ：1280×720px（横長16:9）
-
-■ テンプレート自動選択
-記事タイトルを分析して以下のA〜Eから1つ選ぶこと。
-
-A（比較・検証型）：vs・使い比べ・ランキング含む記事
-デザイン：
-・背景：濃紺×ダークネイビーの斜め2分割グラデーション
-・上段：キャッチコピーを白・極太ゴシック・大きく配置
-・中段：左エリアにAのサービス名、右エリアにBのサービス名を
-  それぞれ白・極太ゴシックで大きく1行で収める
-  ※サービス名が長い場合はフォントサイズを小さくして1行維持
-・中央境界線上にVSを金色・極太・インパクト重視で配置
-  VSはテキストと重ならない位置に独立して配置
-・下段：サブコピーを金色・中サイズ。説明文を白・小サイズ
-・全体的に文字を大きく・背景は暗め・コントラスト最大化
-
-B（体験談・失敗談型）：実体験・やらかし・這い上がり含む記事
-デザイン：
-・背景：深緑×黒のグラデーション
-・上段：読者の悩みを白・極太ゴシック・大きく配置
-・中段：メインメッセージを白・最大サイズで中央に配置
-・下段：サブコピーを黄緑・中サイズ。説明文を白・小サイズ
-・右下に人物シルエットアイコンを薄く配置（透かし効果）
-
-C（ハウツー・解説型）：方法・コツ・手順含む記事
-デザイン：
-・背景：黒×濃いオレンジのグラデーション
-・左上に電球または矢印アイコンを金色で大きく配置
-・メインメッセージを白・極太ゴシック・最大サイズで配置
-・サブコピーをオレンジ・中サイズで配置
-・右下にチェックマークアイコンを薄く配置（透かし効果）
-
-D（数字・実績型）：収益・金額・期間含む記事
-デザイン：
-・背景：濃紺×黒のグラデーション
-・数字を画面の50%を占める極大サイズで中央に金色で配置
-・数字の上にコンテキストを白・小サイズで配置
-・数字の下に結果説明を白・中サイズで配置
-・右下にグラフ上昇アイコンを薄く配置（透かし効果）
-
-E（マインド・エッセイ型）：気づき・想い・考え含む記事
-デザイン：
-・背景：深い茶色×クリームのグラデーション
-・余白を多めに取ったミニマルデザイン
-・メインメッセージを白・丸ゴシック・大きく中央に配置
-・サブコピーをクリーム色・中サイズで配置
-・装飾は最小限
-
-■ 全テンプレート共通の視認性ルール
-・文字は必ず1行に収める。折り返し禁止
-  ※長い場合はフォントサイズを下げて1行で表示すること
-・背景と文字のコントラスト比は最大化すること
-・スマホ画面（375px幅）でも全文字が読めるサイズにすること
-・画面全体を使い切ること。余白は最小限に
-・メインの文字要素は画面の60%以上を占めるサイズにすること
-
-■ 絶対禁止事項
-・HEADER・MAIN・SUB・FOOTERという文字を画像に表示しない
-・実在する企業・サービスの公式ロゴ・商標画像を使用しない
-  （CloudWorks・Lancers・noteなどのロゴ画像は使わない）
-・サービス名はテキストのみで表現すること
-・同じ単語を2箇所以上に使わない
-・文章を途中で切らない
-・テキストを重ねて読めなくしない`;
-
-  return { vars, kw, icons, jaPrompt, nb2Prompt };
+  renderImgPromptVault();
 }
 
-// ── 指示文を生成してtextareaに表示（編集できるように） ──
-async function buildImgPrompt() {
-  const n = S.notes.find(x => x.id === curId);
-  if (!n) { toast('記事が選択されていません'); return; }
-  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
-  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
-
-  const buildBtn = document.getElementById('btn-build-imgprompt');
-  buildBtn.disabled = true;
-  buildBtn.textContent = '⏳ 指示文を生成中...';
-  document.getElementById('mwimg-error').style.display = 'none';
-
-  try {
-    const { nb2Prompt } = await _buildImgVarsAndPrompt(n, apiKey);
-    document.getElementById('mwimg-prompt').value = nb2Prompt;
-    document.getElementById('mwimg-prompt-wrap').style.display = 'block';
-    toast('✅ 指示文を生成しました。編集後に「この内容で画像を生成」を押してください');
-  } catch(e) {
-    showMwImgError('⚠️ 指示文の生成に失敗しました: ' + e.message);
-  }
-  buildBtn.disabled = false;
-  buildBtn.textContent = '📝 指示文を再生成';
+function _updateImgPromptVaultTs() {
+  const el = document.getElementById('imgprompt-vault-ts');
+  if (!el) return;
+  const raw = localStorage.getItem('nabebase_imggen_prompt');
+  if (!raw) { el.textContent = ''; return; }
+  const now = new Date();
+  el.textContent = `最終更新：${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
 }
 
-// ── textareaのプロンプトで画像生成 ──
-async function runImgGenFromPrompt() {
-  const nb2Prompt = (document.getElementById('mwimg-prompt').value || '').trim();
-  if (!nb2Prompt) { toast('先に「指示文を生成・確認」を押してください'); return; }
-  const n = S.notes.find(x => x.id === curId);
-  if (!n) { toast('記事が選択されていません'); return; }
-  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
-  if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
-
-  document.getElementById('mwimg-result').style.display = 'none';
-  document.getElementById('mwimg-error').style.display = 'none';
-  const loadEl = document.getElementById('mwimg-loading');
-  const statusEl = document.getElementById('mwimg-status');
-  const pbar = document.getElementById('mwimg-pbar');
-  const btn = document.getElementById('btn-run-imggen');
-  loadEl.style.display = 'block';
-  if (btn) btn.disabled = true;
-  pbar.style.width = '20%';
-
-  const NB2_MODELS = ['gemini-3.1-flash-image-preview', 'imagen-3.0-fast-generate-001', 'imagen-3.0-generate-001'];
-  for (const model of NB2_MODELS) {
-    statusEl.textContent = `画像生成中 (${model === 'gemini-3.1-flash-image-preview' ? 'Nano Banana 2' : model})...`;
-    pbar.style.width = '55%';
-    try {
-      if (model === 'gemini-3.1-flash-image-preview') {
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: nb2Prompt }] }],
-            generationConfig: { responseModalities: ['image'], temperature: 1.0 }
-          })
-        });
-        const d = await r.json();
-        if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
-        const part = d.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
-        if (!part?.inlineData?.data) throw new Error('no image data');
-        pbar.style.width = '100%';
-        loadEl.style.display = 'none'; if (btn) btn.disabled = false;
-        displayMwImg(part.inlineData.mimeType || 'image/png', part.inlineData.data, nb2Prompt);
-        return;
-      } else {
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ instances:[{prompt: nb2Prompt}], parameters:{sampleCount:1,aspectRatio:'16:9'} })
-        });
-        const d = await r.json();
-        if (!r.ok) throw new Error(d.error?.message || r.status);
-        const pred = d.predictions?.[0];
-        if (!pred?.bytesBase64Encoded) throw new Error('no image data');
-        pbar.style.width = '100%';
-        loadEl.style.display = 'none'; if (btn) btn.disabled = false;
-        displayMwImg(pred.mimeType || 'image/png', pred.bytesBase64Encoded, nb2Prompt);
-        return;
-      }
-    } catch(e) { console.warn('[imggen]', model, e.message); }
-  }
-
-  // フォールバック: SVG
-  statusEl.textContent = 'サムネイル生成中 (SVG)...';
-  pbar.style.width = '80%';
-  try {
-    const TEXT_MODELS = ['gemini-3.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
-    const b64 = await runImgGenSVG(n, nb2Prompt, apiKey, TEXT_MODELS);
-    pbar.style.width = '100%';
-    loadEl.style.display = 'none'; if (btn) btn.disabled = false;
-    displayMwImg('image/png', b64, nb2Prompt);
-  } catch(e) {
-    console.warn('[imggen] svg fallback', e.message);
-    loadEl.style.display = 'none'; if (btn) btn.disabled = false;
-    showMwImgError('⚠️ 画像生成に失敗しました。APIキーを確認してください。');
-  }
+let _imgTextFieldTimer = null;
+function autoSaveImgTextField() {
+  clearTimeout(_imgTextFieldTimer);
+  _imgTextFieldTimer = setTimeout(() => {
+    const n = S.notes.find(x => x.id === curId);
+    if (!n) return;
+    n.mainTitle   = (document.getElementById('mw-main-title')?.value   || '').trim();
+    n.subTitle    = (document.getElementById('mw-sub-title')?.value    || '').trim();
+    n.bodySummary = (document.getElementById('mw-body-summary')?.value || '').trim();
+    save();
+  }, 800);
 }
 
-// ── フル自動（③タブの「④見出し画像を作成」ボタン用） ──
 async function runImgGen() {
   const n = S.notes.find(x => x.id === curId);
   if (!n) { toast('記事が選択されていません'); return; }
   const apiKey = localStorage.getItem('beyan_gemini_key') || '';
   if (!apiKey) { showMwImgError('⚠️ Gemini APIキーが設定されていません。①リサーチタブで設定してください。'); return; }
 
+  const vaultPrompt = (document.getElementById('imggen-prompt-vault')?.value || '').trim();
+  if (!vaultPrompt) { showMwImgError('⚠️ プロンプト保管庫にプロンプトを入力してください。'); return; }
+
+  const mainTitle   = n.mainTitle   || n.title || '';
+  const subTitle    = n.subTitle    || '';
+  const bodySummary = n.bodySummary || n.memo  || '';
+  const finalPrompt = vaultPrompt
+    .replace(/\{mainTitle\}/g,   mainTitle)
+    .replace(/\{subTitle\}/g,    subTitle)
+    .replace(/\{bodySummary\}/g, bodySummary)
+    .replace(/\{title\}/g,       mainTitle);
+
+  console.log('[ImgGen] prompt loaded');
+
   document.getElementById('mwimg-result').style.display = 'none';
-  document.getElementById('mwimg-error').style.display = 'none';
-  const loadEl = document.getElementById('mwimg-loading');
+  document.getElementById('mwimg-error').style.display  = 'none';
+  const loadEl   = document.getElementById('mwimg-loading');
   const statusEl = document.getElementById('mwimg-status');
-  const pbar = document.getElementById('mwimg-pbar');
+  const pbar     = document.getElementById('mwimg-pbar');
   loadEl.style.display = 'block';
+  pbar.style.width = '20%';
 
-  statusEl.textContent = 'デザイン生成中...';
-  pbar.style.width = '40%';
+  const MODELS = [
+    'gemini-2.0-flash-preview-image-generation',
+    'imagen-3.0-fast-generate-001',
+    'imagen-3.0-generate-001'
+  ];
 
-  try {
-    pbar.style.width = '70%';
-    const b64 = await runImgGenFromTemplate(n, apiKey);
-    pbar.style.width = '100%';
-    loadEl.style.display = 'none';
-    displayMwImg('image/png', b64, _applyImgTmplPlaceholders(n));
-  } catch(e) {
-    loadEl.style.display = 'none';
-    showMwImgError('⚠️ 画像生成に失敗しました: ' + e.message);
-  }
-}
-
-async function runImgGenSVG(n, jaPrompt, apiKey, models) {
-  // GeminiにデザインスペックをJSON形式で生成させる
-  const designReq = `以下の記事情報からnoteアイキャッチ画像のデザイン仕様をJSONで返してください。
-記事タイトル: ${n.title}
-カテゴリ: ${n.cat || 'ライティング'}
-メモ: ${n.memo || 'なし'}
-
-出力はJSONのみ（コードブロックなし）。形式：
-{"bg1":"#暗めの色","bg2":"#bg1と対比する色","accent":"#明るいアクセントカラー","badge":"【バッジ5文字以内】","mainText":"インパクトある見出し20字以内","subText":"サブタイトル25字以内","icon1":"絵文字","icon2":"絵文字"}`;
-
-  let design = null;
-  for (const model of models) {
+  for (const model of MODELS) {
+    statusEl.textContent = `画像生成中 (${model})...`;
+    pbar.style.width = '55%';
     try {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({
-          contents:[{role:'user',parts:[{text:designReq}]}],
-          generationConfig:{temperature:0.8,maxOutputTokens:200}
-        })
-      });
-      const d = await r.json();
-      if (!r.ok) continue;
-      const txt = d.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-      const m = txt.match(/\{[\s\S]*?\}/);
-      if (m) { design = JSON.parse(m[0]); break; }
-    } catch(e) { console.warn('[imggen] design json', model, e.message); }
+      console.log('[ImgGen] Gemini request sent');
+      if (model.startsWith('gemini')) {
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({
+              contents:[{role:'user',parts:[{text:finalPrompt}]}],
+              generationConfig:{responseModalities:['image'],temperature:1.0}
+            })
+          }
+        );
+        const d = await r.json();
+        if (!r.ok) { const st = d.error?.status||''; if(st==='NOT_FOUND'||st==='INVALID_ARGUMENT') continue; throw new Error(d.error?.message||r.status); }
+        const part = d.candidates?.[0]?.content?.parts?.find(p => p.inlineData);
+        if (!part?.inlineData?.data) throw new Error('no image data');
+        pbar.style.width = '100%'; loadEl.style.display = 'none';
+        displayMwImg(part.inlineData.mimeType || 'image/png', part.inlineData.data, finalPrompt);
+        console.log('[ImgGen] success');
+        return;
+      } else {
+        const r = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:predict?key=${apiKey}`,
+          { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({instances:[{prompt:finalPrompt}],parameters:{sampleCount:1,aspectRatio:'16:9'}})
+          }
+        );
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error?.message || r.status);
+        const pred = d.predictions?.[0];
+        if (!pred?.bytesBase64Encoded) throw new Error('no image data');
+        pbar.style.width = '100%'; loadEl.style.display = 'none';
+        displayMwImg(pred.mimeType || 'image/png', pred.bytesBase64Encoded, finalPrompt);
+        console.log('[ImgGen] success');
+        return;
+      }
+    } catch(e) {
+      console.log('[ImgGen] error:', e.message);
+    }
   }
-  // デフォルトデザイン（Gemini失敗時）
-  if (!design) design = {
-    bg1:'#1a1a1a', bg2:'#2a2a2a', accent:'#f5a623',
-    badge:'【体験談】', mainText: n.title.slice(0,20),
-    subText: n.memo ? n.memo.slice(0,25) : 'nabebase', icon1:'💡', icon2:'📝'
-  };
 
-  const svg = buildThumbnailSVG(design);
-  return svgToBase64PNG(svg);
+  loadEl.style.display = 'none';
+  showMwImgError('⚠️ 画像生成に失敗しました。APIキーとモデルを確認してください。');
 }
 
-function buildThumbnailSVG(d) {
-  const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  const bg1 = esc(d.bg1||'#1a2a4a'), bg2 = esc(d.bg2||'#2d4a6e'), acc = esc(d.accent||'#f5a623');
-  const badge = esc(d.badge||''), mainT = esc(d.mainText||''), subT = esc(d.subText||'');
-  const ic1 = esc(d.icon1||'📝'), ic2 = esc(d.icon2||'💡');
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="${bg1}"/>
-      <stop offset="100%" stop-color="${bg2}"/>
-    </linearGradient>
-    <linearGradient id="ac" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="${acc}" stop-opacity="0.9"/>
-      <stop offset="100%" stop-color="${acc}"/>
-    </linearGradient>
-  </defs>
-  <rect width="1280" height="720" fill="url(#bg)"/>
-  <rect x="0" y="0" width="1280" height="720" fill="rgba(0,0,0,0.15)"/>
-  <!-- accent bar left -->
-  <rect x="0" y="0" width="8" height="720" fill="url(#ac)"/>
-  <!-- badge -->
-  <rect x="50" y="55" width="${badge.length * 22 + 30}" height="48" rx="24" fill="url(#ac)"/>
-  <text x="${50 + badge.length * 11 + 15}" y="87" font-size="26" font-weight="700" font-family="Noto Sans JP,sans-serif" fill="#fff" text-anchor="middle">${badge}</text>
-  <!-- main text -->
-  <text x="100" y="310" font-size="68" font-weight="900" font-family="Noto Sans JP,sans-serif" fill="#fff" dominant-baseline="middle">${mainT}</text>
-  <!-- accent underline -->
-  <rect x="100" y="358" width="720" height="5" rx="2.5" fill="url(#ac)"/>
-  <!-- sub text -->
-  <text x="100" y="440" font-size="40" font-weight="700" font-family="Noto Sans JP,sans-serif" fill="${acc}" dominant-baseline="middle">${subT}</text>
-  <!-- icons right -->
-  <text x="1110" y="310" font-size="120" text-anchor="middle" dominant-baseline="middle">${ic1}</text>
-  <text x="1110" y="470" font-size="100" text-anchor="middle" dominant-baseline="middle">${ic2}</text>
-  <!-- bottom bar -->
-  <rect x="0" y="680" width="1280" height="40" fill="rgba(0,0,0,0.3)"/>
-  <text x="50" y="706" font-size="20" fill="rgba(255,255,255,0.6)" font-family="sans-serif">note.com/beyan51612</text>
-</svg>`;
-}
-
-async function svgToBase64PNG(svgStr) {
-  try {
-    await document.fonts.ready;
-    // Noto Sans JP の各ウェイトを明示的にロード（canvas描画前に確実に確保）
-    await Promise.all([
-      document.fonts.load('400 20px "Noto Sans JP"'),
-      document.fonts.load('700 20px "Noto Sans JP"'),
-      document.fonts.load('900 20px "Noto Sans JP"'),
-    ]).catch(() => {});
-    const blob = new Blob([svgStr], {type:'image/svg+xml'});
-    const url = URL.createObjectURL(blob);
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = 1280; canvas.height = 670;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) { reject(new Error('canvas ctx null')); return; }
-          ctx.drawImage(img, 0, 0);
-          URL.revokeObjectURL(url);
-          resolve(canvas.toDataURL('image/png').split(',')[1]);
-        } catch(e) { reject(e); }
-      };
-      img.onerror = reject;
-      img.src = url;
-    });
-  } catch(e) {
-    return btoa(unescape(encodeURIComponent(svgStr)));
-  }
-}
 
 function displayMwImg(mimeType, b64, prompt) {
   const imgEl = document.getElementById('mwimg-img');
   if (imgEl) { imgEl.src = `data:${mimeType};base64,${b64}`; imgEl.dataset.mime = mimeType; imgEl.dataset.b64 = b64; imgEl.dataset.url = ''; }
   const resultEl = document.getElementById('mwimg-result');
   if (resultEl) resultEl.style.display = 'block';
-  // promptはtextareaに既に表示中なので上書きしない（編集内容を保持）
-  const promptEl = document.getElementById('mwimg-prompt');
-  if (promptEl && prompt && !promptEl.value) promptEl.value = prompt;
-  const promptWrap = document.getElementById('mwimg-prompt-wrap');
-  if (promptWrap) promptWrap.style.display = 'block';
   updateCcheckImg(`data:${mimeType};base64,${b64}`);
   toast('🖼️ 画像生成完了！');
 }
@@ -6279,10 +5058,6 @@ function displayMwImgUrl(url, prompt) {
   if (imgEl) { imgEl.src = url; imgEl.dataset.mime = 'image/jpeg'; imgEl.dataset.b64 = ''; imgEl.dataset.url = url; }
   const resultEl = document.getElementById('mwimg-result');
   if (resultEl) resultEl.style.display = 'block';
-  const promptEl = document.getElementById('mwimg-prompt');
-  if (promptEl && prompt && !promptEl.value) promptEl.value = prompt;
-  const promptWrap = document.getElementById('mwimg-prompt-wrap');
-  if (promptWrap) promptWrap.style.display = 'block';
   updateCcheckImg(url);
   toast('🖼️ 画像生成完了！(pollinations.ai)');
 }
@@ -6368,7 +5143,7 @@ function buildCcheckPrompt() {
   if (!n) return '';
   const formatted = document.getElementById('mw-formatted')?.textContent?.trim() ||
                      document.getElementById('mw-draft')?.value?.trim() || '（まだ整形されていません）';
-  const imgPrompt = document.getElementById('mwimg-prompt')?.value?.trim() || '（まだ見出し画像が生成されていません）';
+  const imgPrompt = document.getElementById('imggen-prompt-vault')?.value?.trim() || '（まだ見出し画像が生成されていません）';
   return `以下の記事原稿と見出し画像プロンプトを確認してください。内容が一致しているかチェックし、矛盾や改善点を具体的に指摘してください。
 
 【記事タイトル】${n.title}
