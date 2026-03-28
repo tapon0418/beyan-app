@@ -5214,10 +5214,15 @@ function _buildSVG(t1, t2, t3, vars) {
     `layout:${ly}`);
   const W = 1280, H = 670;
 
+  const brightness = bg.brightness || 'dark';
   const acc  = bg.acc;
   const sub  = bg.sub;
   const txt  = '#ffffff';
-  const dark = '#080808';
+  // 確認③: brightness別の基底色切り替え
+  // dark → 純黒ベース, light → やや明るい暗色ベースでグラデ方向を反転
+  const dark = brightness === 'light' ? '#0d0d1a' : '#080808';
+  console.log('[ImgGen] buildSVG色確認',
+    `acc:${acc} sub:${sub} bg2:${bg.bg2} brightness:${brightness}`);
 
   const fs1 = t1.length <= 6 ? 38 : t1.length <= 10 ? 32 : 26;
   const fs2 = t2.length <= 6  ? 96
@@ -5254,6 +5259,22 @@ function _buildSVG(t1, t2, t3, vars) {
       x2:80,  a2:'start',  y2:360,
       x3:820, a3:'start',  y3:450,
     },
+    // 確認②: 追加レイアウト（edge_align / top_heavy / center_top）
+    edge_align: {
+      x1:80,  a1:'start',  y1:150,
+      x2:80,  a2:'start',  y2:360,
+      x3:1200,a3:'end',    y3:510,
+    },
+    top_heavy: {
+      x1:640, a1:'middle', y1:100,
+      x2:640, a2:'middle', y2:290,
+      x3:640, a3:'middle', y3:480,
+    },
+    center_top: {
+      x1:640, a1:'middle', y1:130,
+      x2:640, a2:'middle', y2:340,
+      x3:640, a3:'middle', y3:510,
+    },
   }[ly] || {x1:640,a1:'middle',y1:160,x2:640,a2:'middle',y2:370,x3:640,a3:'middle',y3:510};
 
   const isSplit = bg.name === 'split_compare';
@@ -5264,6 +5285,17 @@ function _buildSVG(t1, t2, t3, vars) {
       <rect x="${W*0.55}" width="${W*0.45}" height="${H}" fill="${bg.bg2}" opacity="0.9"/>
       <polygon points="${W*0.52},0 ${W*0.58},0 ${W*0.62},${H} ${W*0.56},${H}"
         fill="${acc}" opacity="0.25"/>`;
+  } else if (brightness === 'light') {
+    // light: グラデ方向反転（bg2から始まりdarkへ）で色味を前面に出す
+    bgEl = `
+      <defs>
+        <linearGradient id="bgG" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%"   stop-color="${bg.bg2}"/>
+          <stop offset="55%"  stop-color="${bg.bg2}" stop-opacity="0.7"/>
+          <stop offset="100%" stop-color="${dark}"/>
+        </linearGradient>
+      </defs>
+      <rect width="${W}" height="${H}" fill="url(#bgG)"/>`;
   } else {
     bgEl = `
       <defs>
