@@ -1679,8 +1679,13 @@ input:focus, textarea:focus, select:focus {
       </div>
     </div>
 
-    <!-- システム診断 -->
+    <!-- パターンリセット -->
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid #333;">
+      <button onclick="resetImggenPatterns()" style="width:100%;min-height:40px;background:#1a1a2e;border:1px solid #555;border-radius:10px;color:#f6ad55;font-size:.82rem;cursor:pointer;font-family:inherit;">🔄 パターンをリセット</button>
+    </div>
+
+    <!-- システム診断 -->
+    <div style="margin-top:10px;">
       <button onclick="runSystemDiagnosis()" style="width:100%;min-height:40px;background:#1a1a2e;border:1px solid #444;border-radius:10px;color:#aaa;font-size:.82rem;cursor:pointer;font-family:inherit;">🔍 システム診断</button>
     </div>
 
@@ -2530,6 +2535,15 @@ function renderAll() {
 
 
 // ── システム診断 ──
+async function resetImggenPatterns() {
+  if (typeof firebase === 'undefined' || !firebase.database) {
+    alert('Firebase未接続のため削除できません。');
+    return;
+  }
+  await firebase.database().ref('imggen_patterns').remove();
+  alert('パターンをリセットしました。次回の画像生成時にstep0が自動実行されます。');
+}
+
 async function runSystemDiagnosis() {
   const lines = [];
   lines.push(`APP_VERSION: ${APP_VERSION}`);
@@ -4951,49 +4965,69 @@ async function clickGenerateHeaderSVG() {
       console.log('[ImgGen] step0 generating patterns...');
       if (pbar) pbar.style.width = '15%';
 
-      const step0Prompt = `あなたは、note記事の見出し画像を専門に制作するプロのアートディレクターです。
-目的は、noteの一覧画面で即座に目を引き、スマホ表示でも内容が一瞬で伝わる、高品質な見出し画像テンプレートを20パターン作成することです。
+      const step0Prompt = `あなたはnote記事の見出し画像を専門に制作するプロのアートディレクターです。
+以下の条件で、バリエーション豊かな高品質テンプレートを20パターン生成してください。
 
 ## 絶対条件
-1. 可読性最優先：スマホで縮小されてもタイトルが読めるサイズ・コントラストを確保
-2. 文字が主役：背景や装飾は文字を引き立てる舞台として徹する
-3. 1枚の情報量は少なめ：2〜4要素に絞る
-4. note実用性：横長比率、一覧画面で埋もれない完成度
-5. プロ品質：AIっぽい派手さ・雑な文字装飾・崩れたフォントは禁止
+1. スマホ縮小時でもタイトルが読める（font-size最低96px）
+2. 文字が主役・背景は舞台
+3. 要素は2〜4個に絞る
+4. 20パターンは必ず全部「見た目が別物」にする（色違いの使い回し禁止）
+5. 参考にするクオリティ基準：雑誌・YouTube・プロのバナー広告レベル
 
-## 禁止事項
-- 文字が小さすぎる・読みにくい配置
-- 背景が文字と競合する強い主張
-- 過剰な光彩・エフェクト
-- 同じレイアウトの色違い（構成を明確に変える）
-- 情報過多・ごちゃごちゃ
+## 20パターンのバリエーション軸（すべて網羅）
 
-## 20パターンのバリエーション軸（必ず全部網羅）
-- レイアウト：左寄せ/中央/右寄せ/斜め分割/上下分割/カード型/帯型
-- 背景：単色/グラデ/テクスチャ/幾何学模様/分割背景/暗色/明色
-- 文字色：白/金/黒/オレンジ/青系
-- アイコン：なし/1つ大/複数小/透かし
-- 用途：比較/体験談/ノウハウ/解説/感情訴求
+レイアウト（各複数回使用可だが構成を変える）：
+- 左寄せ（テキスト左・右側に大アイコンや装飾）
+- 中央（上下帯・ライン・矩形で囲む）
+- 斜め分割（左右を斜めのpolygonで色分け）
+- 上下分割（上下をrectで完全に色分け）
+- カード型（中央に角丸rectを重ねてテキストを乗せる）
+- 帯型（上下にaccent色の太帯・中央にメインテキスト）
+- 左重心（左側に太い縦帯＋右にテキスト）
+
+背景（バリエーション必須）：
+- 暗色単色（#1a202c #1e3a8a #2d3748 #1a1a2e #0f172a など）
+- 明色単色（#f7fafc #fffbeb #f0fff4 など）
+- 2色グラデーション（対角線方向）
+- 3色グラデーション（リッチな奥行き感）
+- 幾何学模様（三角・六角・ひし形をopacity 0.08〜0.15で敷き詰め）
+- テクスチャ（細かいcircle/lineをopacity 0.05〜0.1で規則配置）
+- 斜め分割背景（polygon2つで左右を別色に）
+
+アクセント色（パターンごとに必ず変える）：
+#f59e0b #f6ad55 #f6e05e #ef4444 #e53e3e #48bb78 #38b2ac #4299e1 #9f7aea #ed64a6 #ff6b35 #c9a84c
+
+アイコン（具体的なSVGパスで描く）：
+- 電球・稲妻・チェック・矢印・星・本・ペン・グラフ・ターゲット・ロケット
+- 配置：1つ大（180〜220px）・複数小（40〜60px×3〜6個）・背景透かし（400px opacity 0.06）
+
+用途（記事ジャンルとデザインを対応させる）：
+- 比較記事：斜め分割・VSレイアウト・ゴールド×ネイビー
+- 体験談：暖色系・左寄せ・大アイコン
+- ノウハウ：明色背景・帯型・チェックアイコン
+- 感情訴求：暗色背景・中央・大文字
+- AI活用：青緑系・幾何学・稲妻アイコン
 
 ## 出力形式
-JSONのみ返す。説明文・マークダウン・コードブロック不要。
+JSONのみ。説明文・マークダウン・コードブロック不要。
 20要素の配列で返す。
 
 [
   {
     "id": 1,
-    "name": "レイアウト名",
-    "layout": "左寄せ/中央/右寄せ/斜め分割など",
-    "bg_type": "単色/グラデ/テクスチャなど",
+    "name": "パターン名（例：ネイビー斜め分割・ゴールドVS）",
+    "layout": "斜め分割",
+    "bg_type": "斜め分割背景",
     "bg_color": "#1e3a8a",
     "accent_color": "#f59e0b",
     "text_color": "#ffffff",
-    "font_weight": "極太/太め/中太",
-    "font_style": "ゴシック/丸ゴシック/セリフ",
-    "icon": "電球/チェック/矢印/なし",
-    "icon_placement": "右上/背景透かし/左下/なし",
-    "best_for": "比較記事/体験談/ノウハウ/エッセイ",
-    "design_note": "このパターンの特徴を15文字以内で"
+    "font_weight": "極太",
+    "font_style": "ゴシック",
+    "icon": "稲妻",
+    "icon_placement": "背景透かし",
+    "best_for": "比較記事",
+    "design_note": "ネイビー×ゴールドの対比で力強く"
   }
 ]`;
 
