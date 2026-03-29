@@ -5049,8 +5049,12 @@ JSONのみ。説明文・マークダウン・コードブロック不要。
       console.log('[ImgGen] step0 raw length:', step0Text.length);
       console.log('[ImgGen] step0 raw full:', JSON.stringify(step0Text));
 
-      const cleaned = step0Text.replace(/```json|```/g, '').trim();
-      const match = cleaned.match(/\[[\s\S]*\]/);
+      const cleanJson = step0Text
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim();
+      const match = cleanJson.match(/\[[\s\S]*\]/);
       if (!match) throw new Error('[step0] patterns JSON array not found');
       patterns = JSON.parse(match[0]);
 
