@@ -1695,6 +1695,30 @@ input:focus, textarea:focus, select:focus {
 
 <div class="main">
 
+  <!-- ===== スナップショット ===== -->
+  <div id="snapshot-area" style="margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-weight:700;font-size:.88rem;color:var(--accent);">📌 プロジェクト概況</span>
+      <span id="snapshot-updated-at" style="font-size:.7rem;color:var(--text3);"></span>
+    </div>
+    <div id="snapshot-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px;"></div>
+    <details id="snapshot-paste-details">
+      <summary style="list-style:none;cursor:pointer;">
+        <div style="display:flex;align-items:center;gap:7px;padding:7px 12px;background:var(--bg3);border:1px solid var(--bg5);border-radius:8px;font-size:.78rem;color:var(--text2);font-weight:700;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          JSONで更新
+        </div>
+      </summary>
+      <div style="padding:6px 2px 2px;">
+        <textarea id="snapshot-paste-input" rows="5" placeholder="{&quot;snapshot&quot;:{&quot;updatedAt&quot;:&quot;YYYY-MM-DD&quot;,&quot;projects&quot;:[...],&quot;pending&quot;:&quot;...&quot;}}" style="width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--bg5);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;box-sizing:border-box;resize:vertical;min-height:90px;line-height:1.5;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
+          <button onclick="updateSnapshot()" style="min-height:36px;padding:0 18px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;">更新</button>
+          <span id="snapshot-paste-msg" style="font-size:.78rem;color:var(--green);"></span>
+        </div>
+      </div>
+    </details>
+  </div>
+
   <!-- ===== 統計 ===== -->
   <div class="stats-row" style="margin-top:4px">
     <div class="stat-box">
@@ -2391,6 +2415,7 @@ input:focus, textarea:focus, select:focus {
 // STATE
 // ================================================================
 const KEY = 'beyan_v6';
+const SHARE_STATS_KEY = 'beyan_share_stats';
 let _fromLocalStorage = false; // Firebase移行済みフラグ
 let S = (() => {
   const s6 = JSON.parse(localStorage.getItem('beyan_v6') || 'null');
@@ -2470,6 +2495,7 @@ const save = () => {
 function _fbEnsureFields(data) {
   if (!data.weeklyReviews) data.weeklyReviews = [];
   if (!data.neta) data.neta = [];
+  if (!data.snapshot) data.snapshot = { updatedAt: '', projects: [], pending: '' };
   return data;
 }
 
@@ -2963,28 +2989,101 @@ function renderNotesSidebars() {
 
   // 右サイドバー：今月の進捗
   if (rEl) {
-    const all   = S.notes;
-    const done  = all.filter(n => n.status === 'done').length;
-    const noRes = all.filter(n => !n.researchDone && n.status !== 'done').length;
-    const recent = [...all].sort((a,b) => b.id - a.id).slice(0, 3);
+    const stats = JSON.parse(localStorage.getItem(SHARE_STATS_KEY) || '{}');
+    const pending = S.snapshot?.pending || '';
     rEl.innerHTML = `
-      <div class="nsb-head">📊 今月の進捗</div>
-      <div style="margin-bottom:12px">
-        <div class="nsb-stat-row">
-          <span style="font-size:12px">執筆完了</span>
-          <span class="nsb-stat-val">${done} / ${all.length}</span>
-        </div>
-        <div class="nsb-stat-row">
-          <span style="font-size:12px">リサーチ未完了</span>
-          <span class="nsb-stat-val" style="color:var(--orange)">${noRes}</span>
-        </div>
+      <div style="background:var(--bg2);border:1px solid var(--bg5);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+        <div class="nsb-head" style="margin-bottom:6px;">𝕏 パフォーマンス</div>
+        <div class="nsb-stat-row"><span style="font-size:11px;color:var(--text2)">フォロワー</span><span class="nsb-stat-val">${stats.followers||'—'}</span></div>
+        <div class="nsb-stat-row"><span style="font-size:11px;color:var(--text2)">週間IMP</span><span class="nsb-stat-val">${stats.impress||'—'}</span></div>
+        <button onclick="openShareModal()" style="width:100%;margin-top:6px;min-height:28px;background:transparent;border:1px solid var(--bg5);border-radius:6px;color:var(--text3);font-size:.72rem;cursor:pointer;font-family:inherit;">✏️ 編集</button>
       </div>
-      <span class="nsb-label">直近3件</span>
-      ${recent.map(n => `
-        <div class="nsb-recent-item" onclick="openWork(${n.id})" title="${_escHtml(n.title)}">
-          ${_escHtml(n.title)}
-        </div>`).join('') || '<div style="color:var(--text3);font-size:11px">なし</div>'}`;
+      <div style="background:var(--bg2);border:1px solid var(--bg5);border-radius:10px;padding:10px 12px;margin-bottom:8px;">
+        <div class="nsb-head" style="margin-bottom:6px;">📝 noteパフォーマンス</div>
+        <div class="nsb-stat-row"><span style="font-size:11px;color:var(--text2)">全体ビュー</span><span class="nsb-stat-val">${stats.nview||'—'}</span></div>
+        <div class="nsb-stat-row"><span style="font-size:11px;color:var(--text2)">全体スキ</span><span class="nsb-stat-val">${stats.nlikes||'—'}</span></div>
+        <button onclick="openShareModal()" style="width:100%;margin-top:6px;min-height:28px;background:transparent;border:1px solid var(--bg5);border-radius:6px;color:var(--text3);font-size:.72rem;cursor:pointer;font-family:inherit;">✏️ 編集</button>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--bg5);border-radius:10px;padding:10px 12px;">
+        <div class="nsb-head" style="margin-bottom:6px;">🗒 検討中メモ</div>
+        <textarea id="sidebar-pending-memo" rows="5" style="width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--bg5);border-radius:6px;padding:7px;font-size:11px;font-family:inherit;resize:vertical;box-sizing:border-box;line-height:1.6;" oninput="savePendingMemo(this.value)">${_escHtml(pending)}</textarea>
+      </div>`;
   }
+}
+
+// ================================================================
+// スナップショット
+// ================================================================
+const SNAPSHOT_IDS = ['strategy','nabebase','note','x','pillar2','other'];
+const SNAPSHOT_DEFAULT_NAMES = { strategy:'全体戦略', nabebase:'nabebase', note:'note', x:'X', pillar2:'第2の柱', other:'その他' };
+
+function renderSnapshot() {
+  if (!S.snapshot) S.snapshot = { updatedAt: '', projects: [], pending: '' };
+  const snap = S.snapshot;
+  const updEl = document.getElementById('snapshot-updated-at');
+  if (updEl) updEl.textContent = snap.updatedAt ? '更新：' + snap.updatedAt : '';
+
+  const container = document.getElementById('snapshot-cards');
+  if (!container) return;
+
+  const projectMap = {};
+  (snap.projects || []).forEach(p => { projectMap[p.id] = p; });
+
+  container.innerHTML = SNAPSHOT_IDS.map(id => {
+    const p = projectMap[id];
+    const name = p?.name || SNAPSHOT_DEFAULT_NAMES[id] || id;
+    if (!p) {
+      return `<div style="background:var(--bg2);border:1px dashed var(--bg5);border-radius:10px;padding:10px 12px;min-height:80px;display:flex;align-items:center;justify-content:center;">
+        <span style="font-size:.72rem;color:var(--text3);">${_escHtml(name)}</span>
+      </div>`;
+    }
+    return `<div style="background:var(--bg2);border:1px solid var(--bg5);border-radius:10px;padding:10px 12px;">
+      <div style="font-size:.78rem;font-weight:700;color:var(--accent);margin-bottom:3px;">${_escHtml(name)}</div>
+      <div style="font-size:.7rem;color:var(--text3);margin-bottom:6px;">${_escHtml(p.phase||'')}</div>
+      ${p.decided ? `<div style="display:flex;gap:5px;align-items:flex-start;margin-bottom:3px;">
+        <span style="color:#48bb78;font-size:8px;margin-top:4px;flex-shrink:0;">●</span>
+        <span style="font-size:.72rem;color:var(--text2);line-height:1.4;">${_escHtml(p.decided)}</span>
+      </div>` : ''}
+      ${p.nextAction ? `<div style="display:flex;gap:5px;align-items:flex-start;">
+        <span style="color:var(--orange);font-size:8px;margin-top:4px;flex-shrink:0;">●</span>
+        <span style="font-size:.72rem;color:var(--text2);line-height:1.4;">${_escHtml(p.nextAction)}</span>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function updateSnapshot() {
+  const input = document.getElementById('snapshot-paste-input');
+  const msgEl = document.getElementById('snapshot-paste-msg');
+  const raw = input?.value?.trim() || '';
+  if (!raw) { if (msgEl) msgEl.textContent = '入力が空です'; return; }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch(e) {
+    if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = 'JSONパースエラー: ' + e.message; }
+    return;
+  }
+  const snap = parsed.snapshot || parsed;
+  if (!snap.projects) { if (msgEl) { msgEl.style.color = '#f87171'; msgEl.textContent = 'projectsが見つかりません'; } return; }
+  if (!S.snapshot) S.snapshot = { updatedAt: '', projects: [], pending: '' };
+  if (snap.updatedAt) S.snapshot.updatedAt = snap.updatedAt;
+  if (snap.pending !== undefined) S.snapshot.pending = snap.pending;
+  const map = {};
+  (S.snapshot.projects || []).forEach(p => { map[p.id] = p; });
+  snap.projects.forEach(p => { map[p.id] = p; });
+  S.snapshot.projects = Object.values(map);
+  save();
+  renderSnapshot();
+  renderNotesSidebars();
+  if (msgEl) { msgEl.style.color = 'var(--green)'; msgEl.textContent = '✅ 更新しました'; }
+  if (input) input.value = '';
+  const details = document.getElementById('snapshot-paste-details');
+  if (details) details.removeAttribute('open');
+}
+
+function savePendingMemo(val) {
+  if (!S.snapshot) S.snapshot = { updatedAt: '', projects: [], pending: '' };
+  S.snapshot.pending = val;
+  save();
 }
 
 // ---- 削除（2タップ確認）----
@@ -4102,6 +4201,7 @@ async function runGemini() {
 // INIT
 // ================================================================
 initSec();
+renderSnapshot();
 renderNotes();
 renderXPosts();
 renderArchive();
@@ -4403,8 +4503,6 @@ function switchStab(tab) {
 // ================================================================
 // クロ共有
 // ================================================================
-const SHARE_STATS_KEY = 'beyan_share_stats';
-
 function openShareModal() {
   const stats = JSON.parse(localStorage.getItem(SHARE_STATS_KEY) || '{}');
   document.getElementById('share-followers').value = stats.followers || '';
