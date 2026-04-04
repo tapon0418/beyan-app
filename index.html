@@ -1557,6 +1557,31 @@ input:focus, textarea:focus, select:focus {
   </div>
 </div>
 
+<!-- ===== 執筆前チェックモーダル ===== -->
+<div id="writing-check-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
+  <div style="background:#1a1a2e;width:100%;max-width:480px;border-radius:16px;padding:22px;border:1px solid #3a6650;box-sizing:border-box;">
+    <div style="font-weight:800;font-size:1rem;color:var(--accent);margin-bottom:16px;">✍️ 執筆前チェック</div>
+    <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:.88rem;color:var(--text);line-height:1.5;">
+        <input type="checkbox" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);">
+        前回と同じ感情軸・展開軸を使っていないか
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:.88rem;color:var(--text);line-height:1.5;">
+        <input type="checkbox" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);">
+        この素材は副業×3交代勤務の読者と接点があるか
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:.88rem;color:var(--text);line-height:1.5;">
+        <input type="checkbox" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);">
+        読者が「また同じ話か」と感じる構造になっていないか
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="_writingCheckCancel()" style="flex:1;min-height:44px;background:var(--bg4);border:1px solid var(--bg5);border-radius:10px;color:var(--text2);font-size:.88rem;cursor:pointer;font-family:inherit;">戻る</button>
+      <button onclick="_writingCheckConfirm()" style="flex:2;min-height:44px;background:linear-gradient(135deg,#3a6650,#e8732a);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">確認した・執筆へ進む</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== 設定モーダル ===== -->
 <div id="settings-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:max(16px,env(safe-area-inset-top)) 12px max(16px,env(safe-area-inset-bottom));box-sizing:border-box;" onclick="if(event.target===this)closeSettings()">
   <div style="background:#1a1a2e;margin:0 auto;width:100%;max-width:640px;border-radius:16px;padding:20px;position:relative;box-sizing:border-box;">
@@ -3420,7 +3445,19 @@ function switchTabByName(name) {
 }
 function quickUpdateStatus() {
   const n = S.notes.find(x=>x.id===curId); if(!n) return;
-  n.status = document.getElementById('mw-status').value;
+  const newStatus = document.getElementById('mw-status').value;
+  if (newStatus === 'writing' && n.status !== 'writing') {
+    _showWritingCheck(() => {
+      n.status = 'writing';
+      save(); renderNotes(); renderToday();
+      toast('ステータスを更新しました');
+    }, () => {
+      // キャンセル：セレクトを元に戻す
+      document.getElementById('mw-status').value = n.status;
+    });
+    return;
+  }
+  n.status = newStatus;
   save(); renderNotes(); renderToday();
   toast('ステータスを更新しました');
 }
@@ -3683,20 +3720,28 @@ document.getElementById('me-save').addEventListener('click',()=>{
   const title = document.getElementById('me-title').value.trim();
   if(!title){toast('タイトルを入力してください');return;}
   const n = S.notes.find(x=>x.id===id); if(!n) return;
-  Object.assign(n,{
-    title, type:document.getElementById('me-type').value,
-    cat:document.getElementById('me-cat').value,
-    status:document.getElementById('me-status').value,
-    publishDate:document.getElementById('me-pubdate').value.trim(),
-    memo:document.getElementById('me-memo').value.trim(),
-    axis:document.getElementById('me-axis').value.trim(),
-    prevLink:document.getElementById('me-prevlink').value.trim(),
-    nextLink:document.getElementById('me-nextlink').value.trim(),
-    researchNote:document.getElementById('me-research').value.trim(),
-  });
-  save(); renderNotes(); renderToday(); closeOverlay('modal-edit');
-  if(curId===id) openWork(id);  // 作業モーダルも更新
-  toast('保存しました');
+  const newStatus = document.getElementById('me-status').value;
+  const doSave = () => {
+    Object.assign(n,{
+      title, type:document.getElementById('me-type').value,
+      cat:document.getElementById('me-cat').value,
+      status:newStatus,
+      publishDate:document.getElementById('me-pubdate').value.trim(),
+      memo:document.getElementById('me-memo').value.trim(),
+      axis:document.getElementById('me-axis').value.trim(),
+      prevLink:document.getElementById('me-prevlink').value.trim(),
+      nextLink:document.getElementById('me-nextlink').value.trim(),
+      researchNote:document.getElementById('me-research').value.trim(),
+    });
+    save(); renderNotes(); renderToday(); closeOverlay('modal-edit');
+    if(curId===id) openWork(id);
+    toast('保存しました');
+  };
+  if (newStatus === 'writing' && n.status !== 'writing') {
+    _showWritingCheck(doSave, null);
+    return;
+  }
+  doSave();
 });
 
 // ================================================================
@@ -4199,6 +4244,30 @@ async function runGemini() {
     document.getElementById('gemini-loading').style.display = 'none';
     document.getElementById('btn-run-gemini').disabled = false;
   }
+}
+
+// ================================================================
+// 執筆前チェックモーダル
+// ================================================================
+let _writingCheckConfirmCb = null;
+let _writingCheckCancelCb  = null;
+
+function _showWritingCheck(onConfirm, onCancel) {
+  _writingCheckConfirmCb = onConfirm;
+  _writingCheckCancelCb  = onCancel;
+  // チェックボックスをリセット
+  document.querySelectorAll('#writing-check-modal input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+  document.getElementById('writing-check-modal').style.display = 'flex';
+}
+function _writingCheckConfirm() {
+  document.getElementById('writing-check-modal').style.display = 'none';
+  if (_writingCheckConfirmCb) { _writingCheckConfirmCb(); _writingCheckConfirmCb = null; }
+  _writingCheckCancelCb = null;
+}
+function _writingCheckCancel() {
+  document.getElementById('writing-check-modal').style.display = 'none';
+  if (_writingCheckCancelCb) { _writingCheckCancelCb(); _writingCheckCancelCb = null; }
+  _writingCheckConfirmCb = null;
 }
 
 // ================================================================
