@@ -2327,6 +2327,7 @@ input:focus, textarea:focus, select:focus {
       <div><label class="input-label">公開日</label><input type="text" id="me-pubdate" placeholder="例: 3月5日"></div>
     </div>
     <div class="input-group"><label class="input-label">執筆メモ</label><textarea id="me-memo" rows="2"></textarea></div>
+    <div class="input-group"><label class="input-label">派生軸（感情軸／状況軸／展開軸）</label><input type="text" id="me-axis" placeholder="例）焦り／借金あり／落とし穴"></div>
     <div class="input-group"><label class="input-label">既存記事との接続</label><input type="text" id="me-prevlink"></div>
     <div class="input-group"><label class="input-label">次の記事への引き継ぎ</label><input type="text" id="me-nextlink"></div>
     <div class="input-group"><label class="input-label">リサーチ依頼</label><input type="text" id="me-research" placeholder="例: ジミー：腱鞘炎対策グッズ"></div>
@@ -3671,6 +3672,7 @@ function openEditModal() {
   document.getElementById('me-status').value=n.status||'idea';
   document.getElementById('me-pubdate').value=n.publishDate||'';
   document.getElementById('me-memo').value=n.memo||'';
+  document.getElementById('me-axis').value=n.axis||'';
   document.getElementById('me-prevlink').value=n.prevLink||'';
   document.getElementById('me-nextlink').value=n.nextLink||'';
   document.getElementById('me-research').value=n.researchNote||'';
@@ -3687,6 +3689,7 @@ document.getElementById('me-save').addEventListener('click',()=>{
     status:document.getElementById('me-status').value,
     publishDate:document.getElementById('me-pubdate').value.trim(),
     memo:document.getElementById('me-memo').value.trim(),
+    axis:document.getElementById('me-axis').value.trim(),
     prevLink:document.getElementById('me-prevlink').value.trim(),
     nextLink:document.getElementById('me-nextlink').value.trim(),
     researchNote:document.getElementById('me-research').value.trim(),
@@ -4351,6 +4354,7 @@ function validateAndImportJson() {
     item.cat = item.cat || '';
     item.publishDate = item.publishDate || '';
     item.memo = item.memo || '';
+    item.axis = item.axis || '';
     item.prevLink = item.prevLink || '';
     item.nextLink = item.nextLink || '';
     item.researchNote = item.researchNote || '';
