@@ -1786,6 +1786,18 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
+  <!-- ===== 展開軸・感情軸 使用状況 ===== -->
+  <div id="sec-axis">
+    <div class="sec-head" onclick="toggleSec('axis')">
+      <div class="sec-head-title">🔄 軸の使用状況</div>
+      <div class="sec-head-count" id="axis-warn-label"></div>
+      <svg class="sec-chevron" id="chev-axis" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-axis" style="max-height:0;overflow:hidden;padding:12px 14px 8px">
+      <div id="axis-stats-content"></div>
+    </div>
+  </div>
+
   <!-- ===== note進捗表 ===== -->
   <div id="sec-notes">
     <div class="sec-head" onclick="toggleSec('notes')">
@@ -2792,7 +2804,7 @@ const cp = id => navigator.clipboard.writeText(document.getElementById(id).textC
 // ================================================================
 // SECTION COLLAPSE
 // ================================================================
-const secState = {today:true, notes:true, xposts:true, xprompt:true, xwrite:true, archive:false};
+const secState = {today:true, axis:false, notes:true, xposts:true, xprompt:true, xwrite:true, archive:false};
 function toggleSec(name) {
   secState[name] = !secState[name];
   const body = document.getElementById('body-'+name);
@@ -2949,6 +2961,8 @@ function renderNotes() {
   if (secState.notes) { body.style.maxHeight = '99999px'; body.style.overflow = 'visible'; }
   // サイドバーを更新
   renderNotesSidebars();
+  // 軸集計を更新
+  renderAxisStats();
 }
 function buildNoteSteps(n) {
   const statusIdx = {idea:0,writing:1,review:2,xprep:3,done:4};
@@ -3188,6 +3202,80 @@ function saveNoteMonth(id) {
 // ================================================================
 // TODAY
 // ================================================================
+// ================================================================
+// 軸の使用状況
+// ================================================================
+function renderAxisStats() {
+  const TARGET_STATUSES = ['writing','review','xprep','done'];
+  const targets = S.notes.filter(n => TARGET_STATUSES.includes(n.status) && n.axis);
+
+  // 集計
+  const emotionCount = {};  // 感情軸（1つ目）
+  const devCount     = {};  // 展開軸（3つ目）
+
+  targets.forEach(n => {
+    const parts = n.axis.split('／');
+    const emotion = parts[0]?.trim();
+    const develop = parts[2]?.trim();
+    if (emotion) emotionCount[emotion] = (emotionCount[emotion] || 0) + 1;
+    if (develop) devCount[develop]     = (devCount[develop]     || 0) + 1;
+  });
+
+  // 直近3件連続チェック（publishDateあり・昇順）
+  const withDate = targets
+    .filter(n => n.publishDate)
+    .sort((a, b) => (a.publishDate > b.publishDate ? 1 : -1));
+  const consecutiveWarnings = new Set();
+  if (withDate.length >= 3) {
+    for (let i = 2; i < withDate.length; i++) {
+      const d0 = withDate[i-2].axis?.split('／')[2]?.trim();
+      const d1 = withDate[i-1].axis?.split('／')[2]?.trim();
+      const d2 = withDate[i  ].axis?.split('／')[2]?.trim();
+      if (d0 && d0 === d1 && d1 === d2) consecutiveWarnings.add(d2);
+    }
+  }
+
+  // 警告ラベル
+  const warnEl = document.getElementById('axis-warn-label');
+  if (warnEl) warnEl.textContent = consecutiveWarnings.size > 0 ? '⚠️ 連続使用あり' : '';
+
+  const container = document.getElementById('axis-stats-content');
+  if (!container) return;
+
+  const renderBar = (countMap, warnSet) => {
+    const sorted = Object.entries(countMap).sort((a,b) => b[1]-a[1]);
+    if (!sorted.length) return '<div style="color:var(--text3);font-size:12px">データなし</div>';
+    const max = sorted[0][1];
+    return sorted.map(([label, cnt]) => {
+      const warn = warnSet?.has(label)
+        ? `<span style="color:#f87171;font-size:.72rem;font-weight:700;margin-left:6px;">⚠️ 3回連続</span>`
+        : '';
+      const pct = Math.round((cnt / max) * 100);
+      return `<div style="margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">
+          <span style="font-size:.8rem;color:var(--text);">${_escHtml(label)}${warn}</span>
+          <span style="font-size:.75rem;color:var(--text3);">${cnt}件</span>
+        </div>
+        <div style="height:5px;background:var(--bg5);border-radius:3px;">
+          <div style="height:5px;width:${pct}%;background:var(--accent);border-radius:3px;transition:width .3s;"></div>
+        </div>
+      </div>`;
+    }).join('');
+  };
+
+  container.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div>
+        <div style="font-size:.75rem;color:var(--text3);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">展開軸</div>
+        ${renderBar(devCount, consecutiveWarnings)}
+      </div>
+      <div>
+        <div style="font-size:.75rem;color:var(--text3);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">感情軸</div>
+        ${renderBar(emotionCount, null)}
+      </div>
+    </div>`;
+}
+
 function renderToday() {
   const now = new Date();
   const dow = ['日','月','火','水','木','金','土'];
