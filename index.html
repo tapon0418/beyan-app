@@ -2864,7 +2864,7 @@ function renderNotes() {
 
   document.getElementById('note-list').innerHTML = list.length === 0
     ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">該当する記事がありません</div>`
-    : list.map(n => {
+    : list.map((n, idx) => {
       const monthEditRow = `
   <div class="month-edit-row" id="mer-${n.id}" style="display:none" onclick="event.stopPropagation()">
     <input class="month-edit-input" id="mei-${n.id}" type="text" placeholder="例: 3月" value="${n.publishDate||''}"
@@ -2877,6 +2877,7 @@ function renderNotes() {
         <!-- ヘッダー：常時表示 -->
         <div class="ni-header" onclick="toggleNoteCard(${n.id},event)">
           <div class="note-bar" style="width:3px;border-radius:2px;align-self:stretch;min-height:24px;flex-shrink:0"></div>
+          <div style="min-width:22px;text-align:right;font-size:11px;color:var(--text3);flex-shrink:0;line-height:1;">${idx+1}</div>
           <div class="ni-title-wrap">
             <div class="ni-title">${n.title}</div>
             <div class="ni-progress">${buildNoteSteps(n)}</div>
