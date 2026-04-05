@@ -1706,8 +1706,21 @@ input:focus, textarea:focus, select:focus {
       </div>
     </div>
 
-    <!-- パターンリセット -->
+    <!-- X投稿データ export/import -->
     <div style="margin-top:18px;padding-top:14px;border-top:1px solid #333;">
+      <div style="font-size:.75rem;color:var(--text3);font-weight:700;margin-bottom:8px;">── X投稿データ ──</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="exportXData()" style="flex:1;min-height:38px;background:#1a1a2e;border:1px solid #444;border-radius:8px;color:#aaa;font-size:.78rem;cursor:pointer;font-family:inherit;">⬇️ エクスポート（.json）</button>
+        <label style="flex:1;min-height:38px;display:flex;align-items:center;justify-content:center;background:#1a1a2e;border:1px solid #444;border-radius:8px;color:#aaa;font-size:.78rem;cursor:pointer;text-align:center;">
+          ⬆️ インポート（.json）
+          <input type="file" accept=".json" onchange="importXData(event)" style="display:none">
+        </label>
+      </div>
+      <div id="x-import-msg" style="display:none;margin-top:6px;font-size:.78rem;color:var(--green);"></div>
+    </div>
+
+    <!-- パターンリセット -->
+    <div style="margin-top:10px;padding-top:10px;border-top:1px solid #333;">
       <button onclick="resetImggenPatterns()" style="width:100%;min-height:40px;background:#1a1a2e;border:1px solid #555;border-radius:10px;color:#f6ad55;font-size:.82rem;cursor:pointer;font-family:inherit;">🔄 パターンをリセット</button>
     </div>
 
@@ -1845,69 +1858,51 @@ input:focus, textarea:focus, select:focus {
   <!-- ===== X投稿管理 ===== -->
   <div id="sec-xposts">
     <div class="sec-head" onclick="toggleSec('xposts')">
-      <div class="sec-head-title">𝕏 X投稿ストック</div>
+      <div class="sec-head-title">𝕏 X管理</div>
       <div class="sec-head-count" id="xposts-count-label"></div>
       <svg class="sec-chevron open" id="chev-xposts" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="sec-body" id="body-xposts" style="padding:12px 14px 8px">
-
-      <!-- ネタストック（折りたたみ） -->
-      <div id="neta-wrap" style="margin-bottom:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
-        <div style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none" onclick="toggleNetaSection()">
-          <div style="font-size:12px;font-weight:700;color:var(--text2);flex:1">📋 ネタストック</div>
-          <div id="neta-count-lbl" style="font-size:11px;color:var(--text3)"></div>
-          <svg id="neta-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .2s;color:var(--text3)"><polyline points="6 9 12 15 18 9"/></svg>
-        </div>
-        <div id="neta-body" style="max-height:0;overflow:hidden;transition:max-height .3s ease">
-          <div style="padding-top:10px">
-            <div style="display:flex;gap:6px;margin-bottom:8px">
-              <input type="text" id="neta-input" placeholder="ネタを1件入力" style="flex:1;font-size:16px" onkeydown="if(event.key==='Enter')addSingleNeta()">
-              <button class="btn btn-accent btn-sm" style="width:auto;min-width:56px;flex-shrink:0" onclick="addSingleNeta()">追加</button>
-            </div>
-            <details style="margin-bottom:10px">
-              <summary style="font-size:11px;color:var(--text3);cursor:pointer;padding:3px 0">一括入力（1行1ネタ）</summary>
-              <div style="margin-top:8px">
-                <textarea id="neta-bulk-input" rows="4" placeholder="ネタ1&#10;ネタ2&#10;ネタ3" style="font-size:15px"></textarea>
-                <button class="btn btn-ghost btn-sm" style="margin-top:6px;font-size:12px" onclick="addBulkNeta()">まとめて追加</button>
-              </div>
-            </details>
-            <div id="neta-list"></div>
-          </div>
-        </div>
+      <!-- タブ -->
+      <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <button class="chip active" id="xmt-stock"  onclick="setXManageTab('stock')">ストック</button>
+        <button class="chip"        id="xmt-posted" onclick="setXManageTab('posted')">投稿済み</button>
+        <button class="chip"        id="xmt-draft"  onclick="setXManageTab('draft')">🔄 見送り</button>
       </div>
-
-      <!-- クロへX投稿一覧コピー -->
-      <button onclick="copyXPostsForClaude()"
-        style="width:100%;min-height:38px;margin-bottom:8px;background:rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.18);border-radius:8px;color:var(--text2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
-        🤝 X投稿一覧をクロにコピー
-      </button>
-
-      <button class="btn btn-accent" style="margin-bottom:10px;font-size:14px;min-height:48px;font-weight:700" onclick="openAddXPost()">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        ＋ 投稿を追加
-      </button>
-      <div class="filter-bar">
-        <button class="chip active" data-xf="all" onclick="setXf(this,'all')">すべて</button>
-        <button class="chip" data-xf="A" onclick="setXf(this,'A')">タイプA（朝）</button>
-        <button class="chip" data-xf="B" onclick="setXf(this,'B')">タイプB（夜）</button>
+      <!-- フィルター -->
+      <div class="filter-bar" style="margin-bottom:10px;">
+        <button class="chip active" id="xmf-all" onclick="setXManageFilter('all')">すべて</button>
+        <button class="chip"        id="xmf-A"   onclick="setXManageFilter('A')">タイプA</button>
+        <button class="chip"        id="xmf-B"   onclick="setXManageFilter('B')">タイプB</button>
       </div>
-      <div id="xpost-list" style="padding:4px 3px;"></div>
+      <div id="xmanage-list"></div>
+      <!-- 旧データ互換（非表示） -->
+      <div id="xpost-list" style="display:none;"></div>
     </div>
   </div>
 
-  <!-- ===== X投稿プロンプト保管庫 ===== -->
+  <!-- ===== X投稿プロンプト管理 ===== -->
   <div id="sec-xprompt">
     <div class="sec-head" onclick="toggleSec('xprompt')">
-      <div class="sec-head-title">📋 X投稿プロンプト管理</div>
+      <div class="sec-head-title">📋 ジミーへの投稿文生成プロンプト</div>
       <div class="sec-head-count" id="xprompt-count-label"></div>
       <svg class="sec-chevron open" id="chev-xprompt" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="sec-body" id="body-xprompt" style="padding:12px 14px 8px">
-      <button class="btn btn-accent" style="margin-bottom:12px;font-size:13px;min-height:44px" onclick="openEditXPrompt(null)">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        ＋ プロンプトを追加
-      </button>
-      <div id="xprompt-list"></div>
+      <div style="font-size:.75rem;color:var(--text3);margin-bottom:8px;">Gemini APIへ送るプロンプトテンプレート。<code style="background:var(--bg5);padding:1px 4px;border-radius:3px">${materialText}</code> と <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">${type}</code> が自動置換されます。</div>
+      <textarea id="xPromptTextarea" rows="14" style="width:100%;height:300px;font-size:12px;line-height:1.6;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:monospace;resize:vertical;box-sizing:border-box;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+        <button onclick="saveXPromptText()" style="flex:1;min-height:40px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">💾 保存する</button>
+        <button onclick="resetXPromptText()" style="min-height:40px;padding:0 14px;background:var(--bg4);border:1px solid var(--bg5);border-radius:8px;color:var(--text2);font-size:.82rem;cursor:pointer;font-family:inherit;">🔄 デフォルトに戻す</button>
+      </div>
+      <div id="xprompt-save-msg" style="display:none;color:var(--green);font-size:.78rem;margin-top:6px;">✅ 保存しました</div>
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);">
+        <div style="font-size:.75rem;color:var(--text3);font-weight:700;margin-bottom:8px;">🔍 API送信チェック</div>
+        <button id="xprompt-test-btn" onclick="testXPromptApi()" style="width:100%;min-height:40px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text2);font-size:.82rem;cursor:pointer;font-family:inherit;">🔍 プロンプトをテスト送信する</button>
+        <div id="xprompt-test-result" style="display:none;margin-top:8px;font-size:.82rem;"></div>
+      </div>
+      <!-- 旧プロンプトリスト互換（非表示） -->
+      <div id="xprompt-list" style="display:none;"></div>
     </div>
   </div>
 
@@ -1920,56 +1915,27 @@ input:focus, textarea:focus, select:focus {
     </div>
     <div class="sec-body" id="body-xwrite" style="padding:12px 14px 8px">
 
-      <!-- STEP1: 素材を貼り付ける -->
-      <div class="xwrite-step-label">STEP 1 ── 素材を貼り付ける</div>
-      <textarea id="xwrite-material" placeholder="棚卸しログの断片やパペのリサーチ結果を貼り付ける" style="width:100%;height:120px;font-size:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Noto Sans JP',sans-serif;resize:none;box-sizing:border-box;margin-bottom:12px;line-height:1.6;"></textarea>
+      <!-- STEP1 -->
+      <div class="xwrite-step-label">STEP 1 ── パペリサーチ結果を貼り付ける</div>
+      <textarea id="xgen-material" placeholder="パペのリサーチ結果をそのまま貼り付ける" style="width:100%;height:150px;font-size:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Noto Sans JP',sans-serif;resize:none;box-sizing:border-box;margin-bottom:12px;line-height:1.6;"></textarea>
 
-      <!-- STEP2: 投稿タイプを選択 -->
+      <!-- STEP2 -->
       <div class="xwrite-step-label">STEP 2 ── 投稿タイプを選択</div>
-      <div class="xwrite-type-row">
-        <button class="xwrite-type-btn active" id="xwrite-btn-A" onclick="selectXWriteType('A')">
-          🌅 タイプA（朝7時・拡散）
-        </button>
-        <button class="xwrite-type-btn" id="xwrite-btn-B" onclick="selectXWriteType('B')">
-          🌙 タイプB（夜21時・note導線）
-        </button>
+      <div class="xwrite-type-row" style="margin-bottom:14px;">
+        <button class="xwrite-type-btn active" id="xgen-btn-A" onclick="selectXGenType('A')">🌅 タイプA（朝7時・拡散）</button>
+        <button class="xwrite-type-btn" id="xgen-btn-B" onclick="selectXGenType('B')">🌙 タイプB（夜21時・note誘導）</button>
+        <button class="xwrite-type-btn" id="xgen-btn-both" onclick="selectXGenType('both')">⚡ 両方</button>
       </div>
 
-      <!-- STEP3: Gemini APIで投稿文を生成 -->
+      <!-- STEP3 -->
       <div class="xwrite-step-label">STEP 3 ── 投稿文を生成する</div>
-      <button id="xwrite-gen-btn" class="btn btn-accent" style="width:100%;min-height:52px;font-size:15px;font-weight:700;margin-bottom:8px" onclick="generateXPost()">
-        ✨ 投稿文を生成する
-      </button>
-      <div id="xwrite-gen-error" style="display:none;color:#f87171;font-size:.82rem;margin-bottom:8px;"></div>
-      <div id="xwrite-gen-result-wrap" style="display:none;margin-bottom:12px;">
-        <textarea id="xwrite-gen-result" style="width:100%;height:120px;font-size:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Noto Sans JP',sans-serif;resize:vertical;box-sizing:border-box;line-height:1.6;" oninput="updateXPostCharCount()"></textarea>
-        <div style="text-align:right;margin-top:3px;font-size:11px;"><span id="xwrite-char-count" class="char-ok">0 / 140字</span></div>
-      </div>
+      <button id="xgen-gen-btn" class="btn btn-accent" style="width:100%;min-height:52px;font-size:15px;font-weight:700;margin-bottom:8px" onclick="generateXPosts()">✨ 投稿文を生成する</button>
+      <div id="xgen-error" style="display:none;color:#f87171;font-size:.82rem;margin-bottom:8px;"></div>
 
-      <!-- STEP4: タグを選択して保存 -->
-      <div id="xwrite-step4-wrap" style="display:none;">
-        <div class="xwrite-step-label">STEP 4 ── タグを選択して保存</div>
-        <div style="margin-bottom:8px;">
-          <div style="font-size:.75rem;color:var(--text3);font-weight:700;margin-bottom:5px;">感情軸</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="xwrite-emotion-tags">
-            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','焦り',this)">焦り</button>
-            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','報われなさ',this)">報われなさ</button>
-            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','停滞',this)">停滞</button>
-            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','時間ロス',this)">時間ロス</button>
-            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','安堵',this)">安堵</button>
-          </div>
-        </div>
-        <div style="margin-bottom:12px;">
-          <div style="font-size:.75rem;color:var(--text3);font-weight:700;margin-bottom:5px;">展開軸</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="xwrite-develop-tags">
-            <button class="xwrite-tag-btn" onclick="selectXTag('develop','落とし穴',this)">落とし穴</button>
-            <button class="xwrite-tag-btn" onclick="selectXTag('develop','原因追及',this)">原因追及</button>
-            <button class="xwrite-tag-btn" onclick="selectXTag('develop','比較',this)">比較</button>
-            <button class="xwrite-tag-btn" onclick="selectXTag('develop','再定義',this)">再定義</button>
-            <button class="xwrite-tag-btn" onclick="selectXTag('develop','タイムライン',this)">タイムライン</button>
-          </div>
-        </div>
-        <button onclick="saveXPostToStock()" style="width:100%;min-height:48px;background:linear-gradient(135deg,#3a6650,#e8732a);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">💾 ストックに保存</button>
+      <!-- STEP4 -->
+      <div id="xgen-results-wrap" style="display:none;">
+        <div class="xwrite-step-label" style="margin-top:4px;">STEP 4 ── 生成結果を確認して選ぶ</div>
+        <div id="xgen-cards"></div>
       </div>
 
     </div>
@@ -2474,6 +2440,71 @@ input:focus, textarea:focus, select:focus {
 // ================================================================
 const KEY = 'beyan_v6';
 const SHARE_STATS_KEY = 'beyan_share_stats';
+// X新データモデル（INIT前に必要なため先頭で宣言）
+const X_POSTS_KEY       = 'xPosts';
+const X_DRAFT_POSTS_KEY = 'xDraftPosts';
+const X_PROMPT_KEY      = 'xPrompt';
+let _xManageTab    = 'stock';
+let _xManageFilter = 'all';
+const DEFAULT_X_PROMPT =
+`あなたはX（Twitter）投稿文の専門家です。
+以下の素材をもとに、投稿文を作成できる限り多く生成してください。
+素材に含まれるネタを一つも無駄にせず、全て使い切ってください。
+
+【素材】
+\${materialText}
+
+【投稿タイプ】
+\${type}
+
+【発信者プロフィール】
+・39歳・女性ではなく男性
+・3交代勤務（日勤・準夜勤・夜勤）の会社員
+・スクールの残債あり・一軒家持ち
+・副業に取り組んでいる現在進行形
+※この情報は毎回そのまま使わない。伝え方を毎回変えること。同じ表現の繰り返し禁止。
+
+【読者層】
+3交代勤務や夜勤をこなしながら副業に取り組んでいる人。
+時間・体力・お金の制約がある。スキルよりリアルな体験談に反応する。
+
+【タイプ別構成ルール】
+タイプA（朝7時・拡散）：
+・冒頭1文目：失敗・停滞・時間ロスの具体的な事実
+・中盤：状況の描写（時間・数字・場面）
+・末尾：余韻・問いかけ・次への期待感
+・note誘導は入れない
+
+タイプB（夜21時・note誘導なし）：
+・冒頭：問題提起または意外な事実
+・中盤：なぜそうなるかの原因を1つだけ
+・末尾：余韻で締める（note誘導は入れない）
+
+【絵文字ルール】
+・本文中に最大4個まで使用可
+・冒頭に同じ絵文字を連続して使わない
+・絵文字は感情や状況を補強する位置に置く
+
+【文体ルール】
+・一人称は「私」
+・語尾は「〜でした」「〜してます」の淡々とした事実ベースと感情を乗せた表現のハイブリッド
+・煽り・教訓・抽象論で終わらない
+
+【絶対禁止】
+・「頑張ったら報われた」「諦めなければ大丈夫」系
+・「〇つのポイント」「〇ステップ」系の構成
+・ハッシュタグ
+・冒頭に同じ絵文字を使う投稿を複数生成する
+・数字をリサーチ結果からそのまま引用する
+・文章構造が似た投稿を複数生成する
+・言葉を入れ替えただけの投稿を複数生成する
+・存在しないnote記事への誘導
+
+【出力ルール】
+・140字以内
+・投稿文の本文のみ
+・各投稿文の前に「【タイプA】」または「【タイプB】」を明記
+・説明・補足・かっこ書きは不要`;
 let _fromLocalStorage = false; // Firebase移行済みフラグ
 let S = (() => {
   const s6 = JSON.parse(localStorage.getItem('beyan_v6') || 'null');
@@ -3339,11 +3370,13 @@ function setXf(el, v) {
 }
 function renderXPosts() {
   updateStats();
+  const xpostListEl = document.getElementById('xpost-list');
+  if (!xpostListEl) return; // 新UIに移行済みのため非表示要素
   // posted は常にアーカイブへ — メイン一覧には表示しない
   let list = [...S.xposts].filter(p => p.status !== 'posted');
   if (xfEl==='A') list = list.filter(p=>p.type==='A');
   if (xfEl==='B') list = list.filter(p=>p.type==='B');
-  document.getElementById('xpost-list').innerHTML = list.length === 0
+  xpostListEl.innerHTML = list.length === 0
     ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">投稿がありません</div>`
     : list.map(p => {
       const cc = p.content.replace(/\n/g,'').length;
@@ -4389,6 +4422,8 @@ renderArchive();
 renderToday();
 renderNetaList();
 renderXPromptList();
+renderXManage();
+_initXPromptTextarea();
 loadApiKey();
 // sec-bodyのoverflow修正（ホバーアニメーションで切れないよう）
 ['notes','xposts','today'].forEach(function(name){
@@ -5910,70 +5945,52 @@ function deleteXPrompt(id) {
 }
 
 // ================================================================
-// X投稿作成（ワンボタンフロー）
+// X投稿 データ操作
+
+function getNewXPosts()  { return JSON.parse(localStorage.getItem(X_POSTS_KEY) || '[]'); }
+function setNewXPosts(a) { localStorage.setItem(X_POSTS_KEY, JSON.stringify(a)); }
+function getXDrafts()    { return JSON.parse(localStorage.getItem(X_DRAFT_POSTS_KEY) || '[]'); }
+function setXDrafts(a)   { localStorage.setItem(X_DRAFT_POSTS_KEY, JSON.stringify(a)); }
+function getXPromptText(){ return localStorage.getItem(X_PROMPT_KEY) || DEFAULT_X_PROMPT; }
+
 // ================================================================
-let _xwriteType = 'A';
-let _xwriteEmotionTag = '';
-let _xwriteDevelopTag = '';
+// X作成フロー
+// ================================================================
+let _xgenType    = 'A';
+let _xgenResults = [];
+let _xgenEmotionTag  = {};
+let _xgenExpansionTag = {};
 
-function selectXWriteType(type) {
-  _xwriteType = type;
-  document.getElementById('xwrite-btn-A').classList.toggle('active', type === 'A');
-  document.getElementById('xwrite-btn-B').classList.toggle('active', type === 'B');
+function selectXGenType(type) {
+  _xgenType = type;
+  ['A','B','both'].forEach(t => {
+    const b = document.getElementById('xgen-btn-'+t);
+    if (b) b.classList.toggle('active', t === type);
+  });
 }
 
-function selectXTag(kind, value, btn) {
-  if (kind === 'emotion') {
-    _xwriteEmotionTag = _xwriteEmotionTag === value ? '' : value;
-    document.querySelectorAll('#xwrite-emotion-tags .xwrite-tag-btn').forEach(b => b.classList.remove('active'));
-    if (_xwriteEmotionTag) btn.classList.add('active');
-  } else {
-    _xwriteDevelopTag = _xwriteDevelopTag === value ? '' : value;
-    document.querySelectorAll('#xwrite-develop-tags .xwrite-tag-btn').forEach(b => b.classList.remove('active'));
-    if (_xwriteDevelopTag) btn.classList.add('active');
-  }
-}
-
-function updateXPostCharCount() {
-  const text = document.getElementById('xwrite-gen-result').value;
-  const len = text.replace(/\n/g, '').length;
-  const el = document.getElementById('xwrite-char-count');
-  el.textContent = `${len} / 140字`;
-  el.className = len > 140 ? 'char-over' : len > 120 ? 'char-warn' : 'char-ok';
-}
-
-async function generateXPost() {
-  const material = document.getElementById('xwrite-material').value.trim();
+async function generateXPosts() {
+  const material = (document.getElementById('xgen-material')?.value || '').trim();
   if (!material) { toast('素材を貼り付けてください'); return; }
-
   const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
-  if (!apiKey) {
-    document.getElementById('xwrite-gen-error').textContent = 'APIキーを確認してください';
-    document.getElementById('xwrite-gen-error').style.display = 'block';
-    return;
-  }
+  const errEl  = document.getElementById('xgen-error');
+  const btn    = document.getElementById('xgen-gen-btn');
+  if (!apiKey) { errEl.textContent = 'APIキーを確認してください'; errEl.style.display = 'block'; return; }
 
-  const btn = document.getElementById('xwrite-gen-btn');
-  const errEl = document.getElementById('xwrite-gen-error');
-  btn.textContent = '生成中...';
+  btn.textContent = '✨ ジミーが考えています...';
   btn.disabled = true;
   errEl.style.display = 'none';
 
-  const typeLabel = _xwriteType === 'A'
-    ? 'タイプA（朝7時・拡散狙い・noteリンクなし）'
-    : 'タイプB（夜21時・信頼構築・noteリンクあり）';
+  const typeLabel = _xgenType === 'A'
+    ? 'タイプA（朝7時・拡散）のみ'
+    : _xgenType === 'B'
+      ? 'タイプB（夜21時・note誘導）のみ'
+      : 'タイプA（朝7時・拡散）とタイプB（夜21時・note誘導）の両方';
 
-  const prompt = `あなたはX（旧Twitter）の投稿文を書く専門家です。
-以下の素材から、副業×3交代勤務の読者に刺さる投稿文を1件生成してください。
-
-投稿タイプ：${typeLabel}
-文字数：140字以内（厳守）
-トーン：生きた人間の語り口、感情が乗っている、AI臭さゼロ
-禁止：「効果的」「重要」「おすすめ」などAI的な言葉
-出力：投稿文のみ。説明・前置き不要。
-
-【素材】
-${material}`;
+  const promptTemplate = getXPromptText();
+  const prompt = promptTemplate
+    .replace('${materialText}', material)
+    .replace('${type}', typeLabel);
 
   try {
     const res = await fetch(
@@ -5983,21 +6000,30 @@ ${material}`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 300, temperature: 0.9 }
+          generationConfig: { maxOutputTokens: 4096, temperature: 0.9 }
         })
       }
     );
     const data = await res.json();
     if (!res.ok) throw new Error(data.error?.message || res.status);
     const parts = data.candidates?.[0]?.content?.parts || [];
-    const text = parts.filter(p => !p.thought).map(p => p.text || '').join('').trim();
-    document.getElementById('xwrite-gen-result').value = text;
-    document.getElementById('xwrite-gen-result-wrap').style.display = 'block';
-    document.getElementById('xwrite-step4-wrap').style.display = 'block';
-    updateXPostCharCount();
-    // タグをリセット
-    _xwriteEmotionTag = ''; _xwriteDevelopTag = '';
-    document.querySelectorAll('#xwrite-emotion-tags .xwrite-tag-btn, #xwrite-develop-tags .xwrite-tag-btn').forEach(b => b.classList.remove('active'));
+    const rawText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
+
+    // 【タイプA】【タイプB】で分割
+    const matches = [...rawText.matchAll(/【(タイプ[AB])】\s*([\s\S]*?)(?=【タイプ[AB]】|$)/g)];
+    _xgenResults = matches
+      .map(m => ({ type: m[1].includes('A') ? 'A' : 'B', content: m[2].trim() }))
+      .filter(r => r.content.length > 0);
+
+    if (_xgenResults.length === 0) {
+      // フォールバック：マーカーがない場合は全文を1件として扱う
+      const fallback = rawText.trim();
+      if (fallback) _xgenResults = [{ type: _xgenType === 'B' ? 'B' : 'A', content: fallback }];
+    }
+
+    _xgenEmotionTag = {}; _xgenExpansionTag = {};
+    _renderXGenCards();
+    document.getElementById('xgen-results-wrap').style.display = 'block';
   } catch(e) {
     errEl.textContent = 'APIキーを確認してください';
     errEl.style.display = 'block';
@@ -6007,28 +6033,384 @@ ${material}`;
   }
 }
 
-function saveXPostToStock() {
-  const content = document.getElementById('xwrite-gen-result').value.trim();
-  if (!content) { toast('投稿文がありません'); return; }
-  const newPost = {
-    id: Date.now(),
-    type: _xwriteType,
-    content,
-    status: 'stock',
-    createdAt: new Date().toISOString().slice(0, 10),
-    emotionTag: _xwriteEmotionTag,
-    developTag: _xwriteDevelopTag,
+function _renderXGenCards() {
+  const container = document.getElementById('xgen-cards');
+  if (!container) return;
+  if (_xgenResults.length === 0) {
+    container.innerHTML = '<div style="color:var(--text3);font-size:13px;padding:12px 0;">生成結果がありませんでした</div>';
+    return;
+  }
+  container.innerHTML = _xgenResults.map((r, idx) => {
+    const cc = r.content.replace(/\n/g,'').length;
+    const ccCls = cc > 140 ? 'char-over' : cc > 120 ? 'char-warn' : 'char-ok';
+    const tagSection = `
+      <div id="xgen-tag-${idx}" style="display:none;margin-top:10px;padding:10px;background:var(--bg3);border-radius:8px;">
+        <div style="font-size:.72rem;color:var(--text3);font-weight:700;margin-bottom:6px;">感情軸</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+          ${['不公平感','安心感','自己否定','焦燥感','時間ロス'].map(v =>
+            `<button class="xwrite-tag-btn" onclick="xgenSelectTag(${idx},'emotion','${v}',this)">${v}</button>`
+          ).join('')}
+        </div>
+        <div style="font-size:.72rem;color:var(--text3);font-weight:700;margin-bottom:6px;">展開軸</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+          ${['落とし穴','原因追及','比較','再定義','タイムライン'].map(v =>
+            `<button class="xwrite-tag-btn" onclick="xgenSelectTag(${idx},'expansion','${v}',this)">${v}</button>`
+          ).join('')}
+        </div>
+        <button onclick="xgenSave(${idx})" style="width:100%;min-height:40px;background:linear-gradient(135deg,#3a6650,#e8732a);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">💾 ストックに保存</button>
+      </div>`;
+    return `
+      <div id="xgen-card-${idx}" style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:10px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;${r.type==='A'?'background:rgba(59,130,246,.2);color:#60a5fa':'background:rgba(167,139,250,.2);color:#a78bfa'}">タイプ${r.type}</span>
+          <span class="${ccCls}" style="font-size:11px;margin-left:auto;">${cc} / 140字</span>
+        </div>
+        <div style="font-size:13px;color:var(--text);white-space:pre-wrap;line-height:1.7;margin-bottom:10px;">${_escHtml(r.content)}</div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="xgenChoose(${idx})" style="flex:1;min-height:36px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;">✅ 選ぶ</button>
+          <button onclick="xgenDiscard(${idx})" style="flex:1;min-height:36px;background:var(--bg4);border:1px solid var(--bg5);border-radius:8px;color:var(--text2);font-size:.82rem;cursor:pointer;font-family:inherit;">🗑️ 見送る</button>
+        </div>
+        ${tagSection}
+      </div>`;
+  }).join('');
+}
+
+function xgenChoose(idx) {
+  const tagEl = document.getElementById('xgen-tag-'+idx);
+  if (!tagEl) return;
+  tagEl.style.display = tagEl.style.display === 'none' ? 'block' : 'none';
+}
+
+function xgenDiscard(idx) {
+  const r = _xgenResults[idx];
+  if (!r) return;
+  const drafts = getXDrafts();
+  drafts.unshift({
+    id: Date.now().toString(),
+    type: r.type,
+    content: r.content,
+    status: 'draft',
+    createdAt: new Date().toISOString(),
+    brushUpCount: 0,
+    lastBrushUpAt: null
+  });
+  setXDrafts(drafts);
+  const card = document.getElementById('xgen-card-'+idx);
+  if (card) { card.style.opacity = '.4'; card.style.pointerEvents = 'none'; }
+  toast('見送りに保存しました');
+  renderXManage();
+}
+
+function xgenSelectTag(idx, kind, value, btn) {
+  const groupId = kind === 'emotion'
+    ? `#xgen-tag-${idx} .xwrite-tag-btn:nth-child(-n+5)`
+    : null;
+  const tagEl = document.getElementById('xgen-tag-'+idx);
+  if (!tagEl) return;
+  const btns = tagEl.querySelectorAll(kind === 'emotion'
+    ? 'div:nth-child(2) .xwrite-tag-btn'
+    : 'div:nth-child(4) .xwrite-tag-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  if (kind === 'emotion') {
+    _xgenEmotionTag[idx] = _xgenEmotionTag[idx] === value ? '' : value;
+    if (_xgenEmotionTag[idx]) btn.classList.add('active');
+  } else {
+    _xgenExpansionTag[idx] = _xgenExpansionTag[idx] === value ? '' : value;
+    if (_xgenExpansionTag[idx]) btn.classList.add('active');
+  }
+}
+
+function xgenSave(idx) {
+  const r = _xgenResults[idx];
+  if (!r) return;
+  const posts = getNewXPosts();
+  posts.unshift({
+    id: Date.now().toString(),
+    type: r.type,
+    content: r.content,
+    emotionAxis: _xgenEmotionTag[idx] || '',
+    expansionAxis: _xgenExpansionTag[idx] || '',
+    status: 'ストック',
+    createdAt: new Date().toISOString(),
+    postedAt: null,
+    usedCount: 0
+  });
+  setNewXPosts(posts);
+  const card = document.getElementById('xgen-card-'+idx);
+  if (card) { card.style.opacity = '.4'; card.style.pointerEvents = 'none'; }
+  toast('ストックに保存しました ✓');
+  renderXManage();
+}
+
+// ================================================================
+// X管理
+// ================================================================
+function setXManageTab(tab) {
+  _xManageTab = tab;
+  ['stock','posted','draft'].forEach(t => {
+    const b = document.getElementById('xmt-'+t);
+    if (b) b.classList.toggle('active', t === tab);
+  });
+  renderXManage();
+}
+
+function setXManageFilter(f) {
+  _xManageFilter = f;
+  ['all','A','B'].forEach(v => {
+    const b = document.getElementById('xmf-'+v);
+    if (b) b.classList.toggle('active', v === f);
+  });
+  renderXManage();
+}
+
+function renderXManage() {
+  if (typeof _xManageTab === 'undefined') return;
+  const container = document.getElementById('xmanage-list');
+  if (!container) return;
+
+  const countEl = document.getElementById('xposts-count-label');
+
+  if (_xManageTab === 'draft') {
+    let drafts = getXDrafts();
+    if (_xManageFilter !== 'all') drafts = drafts.filter(p => p.type === _xManageFilter);
+    if (countEl) countEl.textContent = `見送り ${drafts.length}件`;
+    container.innerHTML = drafts.length === 0
+      ? '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">見送り投稿はありません</div>'
+      : drafts.map(p => {
+        const dt = p.createdAt ? p.createdAt.slice(0,10) : '';
+        return `<div class="xpost-item">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+            <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;${p.type==='A'?'background:rgba(59,130,246,.2);color:#60a5fa':'background:rgba(167,139,250,.2);color:#a78bfa'}">タイプ${p.type}</span>
+            <span style="font-size:10px;color:var(--text3);padding:2px 7px;background:var(--bg5);border-radius:8px;">🔄 ブラッシュアップ候補</span>
+          </div>
+          <div class="xpost-content">${_escHtml(p.content)}</div>
+          <div class="xpost-footer">
+            <span class="xpost-date">${dt}</span>
+            <span style="font-size:11px;color:var(--text3)">ブラッシュアップ ${p.brushUpCount||0}回</span>
+            <div style="margin-left:auto;display:flex;gap:5px;">
+              <button class="btn btn-ghost btn-sm" style="width:auto" onclick="xDraftBrushUp('${p.id}')">🔄 ブラッシュアップ</button>
+              <button class="btn btn-red btn-sm" style="width:auto" onclick="xDraftDelete('${p.id}')">🗑️</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    return;
+  }
+
+  let posts = getNewXPosts();
+  const targetStatus = _xManageTab === 'stock' ? 'ストック' : '投稿済み';
+  posts = posts.filter(p => p.status === targetStatus);
+  if (_xManageFilter !== 'all') posts = posts.filter(p => p.type === _xManageFilter);
+  if (countEl) countEl.textContent = `ストック ${getNewXPosts().filter(p=>p.status==='ストック').length}件`;
+
+  container.innerHTML = posts.length === 0
+    ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">投稿はありません</div>`
+    : posts.map(p => {
+      const allPosts = getNewXPosts().filter(q => q.status === 'ストック');
+      const recent3 = allPosts.slice(0, 3);
+      const sameEmotion   = recent3.filter(q => q.emotionAxis   && q.emotionAxis   === p.emotionAxis).length;
+      const sameExpansion = recent3.filter(q => q.expansionAxis && q.expansionAxis === p.expansionAxis).length;
+      const warn = (sameEmotion >= 2 || sameExpansion >= 2)
+        ? `<div style="font-size:.72rem;color:#f87171;font-weight:700;margin-bottom:6px;">⚠️ 同じ軸が連続しています</div>`
+        : '';
+      const cc = p.content.replace(/\n/g,'').length;
+      const ccCls = cc > 140 ? 'char-over' : cc > 120 ? 'char-warn' : 'char-ok';
+      const dt = p.createdAt ? p.createdAt.slice(0,10) : '';
+      return `<div class="xpost-item">
+        ${warn}
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:6px;">
+          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;${p.type==='A'?'background:rgba(59,130,246,.2);color:#60a5fa':'background:rgba(167,139,250,.2);color:#a78bfa'}">タイプ${p.type}</span>
+          ${p.emotionAxis   ? `<span style="font-size:10px;padding:2px 7px;background:var(--bg5);border-radius:8px;color:var(--text2);">${_escHtml(p.emotionAxis)}</span>` : ''}
+          ${p.expansionAxis ? `<span style="font-size:10px;padding:2px 7px;background:var(--bg5);border-radius:8px;color:var(--text2);">${_escHtml(p.expansionAxis)}</span>` : ''}
+        </div>
+        <div class="xpost-content">${_escHtml(p.content)}</div>
+        <div class="xpost-footer">
+          <span class="xpost-date">${dt}</span>
+          <span class="${ccCls}" style="font-size:11px;">${cc}字</span>
+          <div style="margin-left:auto;display:flex;gap:5px;flex-wrap:wrap;">
+            <button class="btn btn-ghost btn-sm" style="width:auto;font-weight:700" onclick="xPostCopy('${p.id}')">📋 コピー</button>
+            ${p.status === 'ストック'
+              ? `<button class="btn btn-green btn-sm" style="width:auto" onclick="xPostMarkPosted('${p.id}')">✅ 投稿済み</button>`
+              : ''}
+            <button class="btn btn-red btn-sm" style="width:auto" onclick="xPostDelete('${p.id}')">🗑️</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+function xPostCopy(id) {
+  const p = getNewXPosts().find(x => x.id === id);
+  if (!p) return;
+  navigator.clipboard.writeText(p.content).then(() => toast('コピーしました ✓'));
+}
+
+function xPostMarkPosted(id) {
+  const posts = getNewXPosts();
+  const p = posts.find(x => x.id === id);
+  if (!p) return;
+  p.status = '投稿済み'; p.postedAt = new Date().toISOString();
+  setNewXPosts(posts); renderXManage(); toast('投稿済みにしました ✓');
+}
+
+function xPostDelete(id) {
+  setNewXPosts(getNewXPosts().filter(x => x.id !== id));
+  renderXManage(); toast('削除しました');
+}
+
+function xDraftDelete(id) {
+  setXDrafts(getXDrafts().filter(x => x.id !== id));
+  renderXManage(); toast('削除しました');
+}
+
+async function xDraftBrushUp(id) {
+  const drafts = getXDrafts();
+  const d = drafts.find(x => x.id === id);
+  if (!d) return;
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  if (!apiKey) { toast('APIキーを確認してください'); return; }
+
+  const prompt = `以下の投稿文をベースに改善版を1本生成してください。
+元の文の核心は残しつつ、表現・構成・冒頭・末尾を変えてください。
+各投稿文の前に「【タイプ${d.type}】」を明記してください。
+投稿文：${d.content}`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 500, temperature: 0.9 }
+        })
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || res.status);
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const rawText = parts.filter(p => !p.thought).map(p => p.text || '').join('').trim();
+    const matches = [...rawText.matchAll(/【(タイプ[AB])】\s*([\s\S]*?)(?=【タイプ[AB]】|$)/g)];
+    _xgenResults = matches
+      .map(m => ({ type: m[1].includes('A') ? 'A' : 'B', content: m[2].trim() }))
+      .filter(r => r.content.length > 0);
+    if (_xgenResults.length === 0) _xgenResults = [{ type: d.type, content: rawText }];
+    // brushUpCount++
+    d.brushUpCount = (d.brushUpCount || 0) + 1;
+    d.lastBrushUpAt = new Date().toISOString();
+    setXDrafts(drafts);
+    _xgenEmotionTag = {}; _xgenExpansionTag = {};
+    _renderXGenCards();
+    document.getElementById('xgen-results-wrap').style.display = 'block';
+    // X作成セクションへスクロール
+    const secEl = document.getElementById('sec-xwrite');
+    if (secEl) { if (!secState.xwrite) toggleSec('xwrite'); secEl.scrollIntoView({ behavior: 'smooth' }); }
+    toast('ブラッシュアップ版を生成しました');
+    renderXManage();
+  } catch(e) {
+    toast('APIキーを確認してください');
+  }
+}
+
+// ================================================================
+// プロンプト管理
+// ================================================================
+function _initXPromptTextarea() {
+  if (typeof X_PROMPT_KEY === 'undefined') return;
+  const ta = document.getElementById('xPromptTextarea');
+  if (ta) ta.value = getXPromptText();
+}
+
+function saveXPromptText() {
+  const ta = document.getElementById('xPromptTextarea');
+  if (!ta) return;
+  localStorage.setItem(X_PROMPT_KEY, ta.value);
+  const msg = document.getElementById('xprompt-save-msg');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => { msg.style.display = 'none'; }, 1500); }
+}
+
+function resetXPromptText() {
+  const ta = document.getElementById('xPromptTextarea');
+  if (ta) ta.value = DEFAULT_X_PROMPT;
+  localStorage.setItem(X_PROMPT_KEY, DEFAULT_X_PROMPT);
+  const msg = document.getElementById('xprompt-save-msg');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => { msg.style.display = 'none'; }, 1500); }
+}
+
+async function testXPromptApi() {
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  const btn    = document.getElementById('xprompt-test-btn');
+  const resEl  = document.getElementById('xprompt-test-result');
+  if (!btn || !resEl) return;
+  if (!apiKey) { resEl.style.display = 'block'; resEl.style.color = '#f87171'; resEl.textContent = '❌ 届いていません。APIキーを確認してください'; return; }
+  btn.textContent = '送信中...'; btn.disabled = true; resEl.style.display = 'none';
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: 'テスト' }] }],
+          generationConfig: { maxOutputTokens: 5 }
+        })
+      }
+    );
+    resEl.style.display = 'block';
+    if (res.ok) { resEl.style.color = 'var(--green)'; resEl.textContent = '✅ ジミーに届いています'; }
+    else        { resEl.style.color = '#f87171';       resEl.textContent = '❌ 届いていません。APIキーを確認してください'; }
+  } catch(e) {
+    resEl.style.display = 'block'; resEl.style.color = '#f87171';
+    resEl.textContent = '❌ 届いていません。APIキーを確認してください';
+  } finally {
+    btn.textContent = '🔍 プロンプトをテスト送信する'; btn.disabled = false;
+  }
+}
+
+// ================================================================
+// X投稿データ export/import
+// ================================================================
+function exportXData() {
+  const data = { xPosts: getNewXPosts(), xDraftPosts: getXDrafts() };
+  const json = JSON.stringify(data, null, 2);
+  const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+  _downloadFile(json, `xdata_${date}.json`, 'application/json');
+  toast('エクスポートしました');
+}
+
+function importXData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const msg = document.getElementById('x-import-msg');
+    try {
+      const data = JSON.parse(e.target.result);
+      let count = 0;
+      if (Array.isArray(data.xPosts)) {
+        const existing = getNewXPosts();
+        const existIds = new Set(existing.map(p => p.id));
+        const toAdd = data.xPosts.filter(p => !existIds.has(p.id));
+        setNewXPosts([...existing, ...toAdd]);
+        count += toAdd.length;
+      }
+      if (Array.isArray(data.xDraftPosts)) {
+        const existing = getXDrafts();
+        const existIds = new Set(existing.map(p => p.id));
+        const toAdd = data.xDraftPosts.filter(p => !existIds.has(p.id));
+        setXDrafts([...existing, ...toAdd]);
+        count += toAdd.length;
+      }
+      renderXManage();
+      if (msg) { msg.style.display = 'block'; msg.textContent = `✅ インポートしました（${count}件）`; }
+      toast(`インポートしました（${count}件）`);
+    } catch(err) {
+      if (msg) { msg.style.display = 'block'; msg.style.color = '#f87171'; msg.textContent = 'JSONの解析に失敗しました'; }
+    }
+    event.target.value = '';
   };
-  S.xposts.unshift(newPost);
-  save(); renderXPosts();
-  // リセット
-  document.getElementById('xwrite-material').value = '';
-  document.getElementById('xwrite-gen-result').value = '';
-  document.getElementById('xwrite-gen-result-wrap').style.display = 'none';
-  document.getElementById('xwrite-step4-wrap').style.display = 'none';
-  _xwriteEmotionTag = ''; _xwriteDevelopTag = '';
-  document.querySelectorAll('#xwrite-emotion-tags .xwrite-tag-btn, #xwrite-develop-tags .xwrite-tag-btn').forEach(b => b.classList.remove('active'));
-  toast('ストックに保存しました');
+  reader.readAsText(file);
 }
 
 
