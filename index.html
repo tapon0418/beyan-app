@@ -1391,6 +1391,8 @@ input:focus, textarea:focus, select:focus {
 .xwrite-type-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 .xwrite-step-label { font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.08em; margin-bottom:6px; }
 .xwrite-result-area { width:100%; min-height:160px; font-size:13px; line-height:1.7; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px; color:var(--text); font-family:'Noto Sans JP',sans-serif; resize:vertical; box-sizing:border-box; }
+.xwrite-tag-btn { padding:5px 12px; background:var(--bg3); border:1px solid var(--border); border-radius:20px; color:var(--text2); font-size:12px; cursor:pointer; font-family:inherit; transition:all .15s; }
+.xwrite-tag-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
 </style>
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1918,38 +1920,56 @@ input:focus, textarea:focus, select:focus {
     </div>
     <div class="sec-body" id="body-xwrite" style="padding:12px 14px 8px">
 
-      <!-- STEP1: 投稿タイプ選択 -->
-      <div class="xwrite-step-label">STEP 1 ── 投稿タイプを選択</div>
+      <!-- STEP1: 素材を貼り付ける -->
+      <div class="xwrite-step-label">STEP 1 ── 素材を貼り付ける</div>
+      <textarea id="xwrite-material" placeholder="棚卸しログの断片やパペのリサーチ結果を貼り付ける" style="width:100%;height:120px;font-size:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Noto Sans JP',sans-serif;resize:none;box-sizing:border-box;margin-bottom:12px;line-height:1.6;"></textarea>
+
+      <!-- STEP2: 投稿タイプを選択 -->
+      <div class="xwrite-step-label">STEP 2 ── 投稿タイプを選択</div>
       <div class="xwrite-type-row">
-        <button class="xwrite-type-btn active" id="xwrite-btn-original" onclick="selectXWriteType('original')">
-          📝 オリジナル投稿
+        <button class="xwrite-type-btn active" id="xwrite-btn-A" onclick="selectXWriteType('A')">
+          🌅 タイプA（朝7時・拡散）
         </button>
-        <button class="xwrite-type-btn" id="xwrite-btn-repost" onclick="selectXWriteType('repost')">
-          🔁 リポストコメント
+        <button class="xwrite-type-btn" id="xwrite-btn-B" onclick="selectXWriteType('B')">
+          🌙 タイプB（夜21時・note導線）
         </button>
       </div>
 
-      <!-- STEP2: 素材入力 -->
-      <div class="xwrite-step-label">STEP 2 ── 素材を貼り付け</div>
-      <div id="xwrite-repost-area" style="display:none;margin-bottom:8px">
-        <div style="font-size:12px;color:var(--text2);font-weight:600;margin-bottom:4px">引用するポストのテキスト</div>
-        <textarea id="xwrite-repost-text" rows="3" placeholder="引用したいポストのテキストをここに貼る" style="width:100%;font-size:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Noto Sans JP',sans-serif;resize:vertical;box-sizing:border-box"></textarea>
-      </div>
-      <textarea id="xwrite-material" rows="5" placeholder="ジミーの素材をここに貼る" style="width:100%;font-size:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Noto Sans JP',sans-serif;resize:vertical;box-sizing:border-box;margin-bottom:12px"></textarea>
-
-      <!-- STEP3: プロンプト生成 -->
-      <div class="xwrite-step-label">STEP 3 ── プロンプト生成</div>
-      <button class="btn btn-accent" style="width:100%;min-height:52px;font-size:15px;font-weight:700;margin-bottom:12px" onclick="generateXPromptText()">
-        🚀 プロンプトを生成する
+      <!-- STEP3: Gemini APIで投稿文を生成 -->
+      <div class="xwrite-step-label">STEP 3 ── 投稿文を生成する</div>
+      <button id="xwrite-gen-btn" class="btn btn-accent" style="width:100%;min-height:52px;font-size:15px;font-weight:700;margin-bottom:8px" onclick="generateXPost()">
+        ✨ 投稿文を生成する
       </button>
+      <div id="xwrite-gen-error" style="display:none;color:#f87171;font-size:.82rem;margin-bottom:8px;"></div>
+      <div id="xwrite-gen-result-wrap" style="display:none;margin-bottom:12px;">
+        <textarea id="xwrite-gen-result" style="width:100%;height:120px;font-size:14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-family:'Noto Sans JP',sans-serif;resize:vertical;box-sizing:border-box;line-height:1.6;" oninput="updateXPostCharCount()"></textarea>
+        <div style="text-align:right;margin-top:3px;font-size:11px;"><span id="xwrite-char-count" class="char-ok">0 / 140字</span></div>
+      </div>
 
-      <!-- STEP4: 結果表示・コピー -->
-      <div id="xwrite-result-wrap" style="display:none">
-        <div class="xwrite-step-label">STEP 4 ── コピーしてAIに貼り付け</div>
-        <textarea class="xwrite-result-area" id="xwrite-result" readonly></textarea>
-        <button class="btn btn-accent" id="xwrite-copy-btn" style="width:100%;min-height:48px;font-size:14px;font-weight:700;margin-top:8px" onclick="copyXWriteResult()">
-          📋 コピー
-        </button>
+      <!-- STEP4: タグを選択して保存 -->
+      <div id="xwrite-step4-wrap" style="display:none;">
+        <div class="xwrite-step-label">STEP 4 ── タグを選択して保存</div>
+        <div style="margin-bottom:8px;">
+          <div style="font-size:.75rem;color:var(--text3);font-weight:700;margin-bottom:5px;">感情軸</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="xwrite-emotion-tags">
+            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','焦り',this)">焦り</button>
+            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','報われなさ',this)">報われなさ</button>
+            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','停滞',this)">停滞</button>
+            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','時間ロス',this)">時間ロス</button>
+            <button class="xwrite-tag-btn" onclick="selectXTag('emotion','安堵',this)">安堵</button>
+          </div>
+        </div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:.75rem;color:var(--text3);font-weight:700;margin-bottom:5px;">展開軸</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;" id="xwrite-develop-tags">
+            <button class="xwrite-tag-btn" onclick="selectXTag('develop','落とし穴',this)">落とし穴</button>
+            <button class="xwrite-tag-btn" onclick="selectXTag('develop','原因追及',this)">原因追及</button>
+            <button class="xwrite-tag-btn" onclick="selectXTag('develop','比較',this)">比較</button>
+            <button class="xwrite-tag-btn" onclick="selectXTag('develop','再定義',this)">再定義</button>
+            <button class="xwrite-tag-btn" onclick="selectXTag('develop','タイムライン',this)">タイムライン</button>
+          </div>
+        </div>
+        <button onclick="saveXPostToStock()" style="width:100%;min-height:48px;background:linear-gradient(135deg,#3a6650,#e8732a);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">💾 ストックに保存</button>
       </div>
 
     </div>
@@ -5892,50 +5912,123 @@ function deleteXPrompt(id) {
 // ================================================================
 // X投稿作成（ワンボタンフロー）
 // ================================================================
-let _xwriteType = 'original';
+let _xwriteType = 'A';
+let _xwriteEmotionTag = '';
+let _xwriteDevelopTag = '';
 
 function selectXWriteType(type) {
   _xwriteType = type;
-  document.getElementById('xwrite-btn-original').classList.toggle('active', type === 'original');
-  document.getElementById('xwrite-btn-repost').classList.toggle('active', type === 'repost');
-  document.getElementById('xwrite-repost-area').style.display = type === 'repost' ? 'block' : 'none';
-  document.getElementById('xwrite-result-wrap').style.display = 'none';
+  document.getElementById('xwrite-btn-A').classList.toggle('active', type === 'A');
+  document.getElementById('xwrite-btn-B').classList.toggle('active', type === 'B');
 }
 
-function generateXPromptText() {
+function selectXTag(kind, value, btn) {
+  if (kind === 'emotion') {
+    _xwriteEmotionTag = _xwriteEmotionTag === value ? '' : value;
+    document.querySelectorAll('#xwrite-emotion-tags .xwrite-tag-btn').forEach(b => b.classList.remove('active'));
+    if (_xwriteEmotionTag) btn.classList.add('active');
+  } else {
+    _xwriteDevelopTag = _xwriteDevelopTag === value ? '' : value;
+    document.querySelectorAll('#xwrite-develop-tags .xwrite-tag-btn').forEach(b => b.classList.remove('active'));
+    if (_xwriteDevelopTag) btn.classList.add('active');
+  }
+}
+
+function updateXPostCharCount() {
+  const text = document.getElementById('xwrite-gen-result').value;
+  const len = text.replace(/\n/g, '').length;
+  const el = document.getElementById('xwrite-char-count');
+  el.textContent = `${len} / 140字`;
+  el.className = len > 140 ? 'char-over' : len > 120 ? 'char-warn' : 'char-ok';
+}
+
+async function generateXPost() {
   const material = document.getElementById('xwrite-material').value.trim();
-  if (!material) { toast('素材テキストを貼り付けてください'); return; }
+  if (!material) { toast('素材を貼り付けてください'); return; }
 
-  const list = getXPrompts();
-  const p = _xwriteType === 'original'
-    ? (list.find(x => x.type === 'original') || list[0])
-    : (list.find(x => x.type === 'repost') || list[1] || list[0]);
-
-  if (!p) { toast('プロンプトが見つかりません。保管庫に登録してください'); return; }
-
-  let result = p.body.replace('〇〇（ジミーが書き直した体験談テキストをここに貼る）', material);
-
-  if (_xwriteType === 'repost') {
-    const repostText = document.getElementById('xwrite-repost-text').value.trim();
-    result = result.replace('〇〇（引用したいポストのテキストをここに貼る）', repostText || '（未入力）');
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  if (!apiKey) {
+    document.getElementById('xwrite-gen-error').textContent = 'APIキーを確認してください';
+    document.getElementById('xwrite-gen-error').style.display = 'block';
+    return;
   }
 
-  document.getElementById('xwrite-result').value = result;
-  document.getElementById('xwrite-result-wrap').style.display = 'block';
-  document.getElementById('xwrite-copy-btn').textContent = '📋 コピー';
-  document.getElementById('xwrite-result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  toast('プロンプトを生成しました');
+  const btn = document.getElementById('xwrite-gen-btn');
+  const errEl = document.getElementById('xwrite-gen-error');
+  btn.textContent = '生成中...';
+  btn.disabled = true;
+  errEl.style.display = 'none';
+
+  const typeLabel = _xwriteType === 'A'
+    ? 'タイプA（朝7時・拡散狙い・noteリンクなし）'
+    : 'タイプB（夜21時・信頼構築・noteリンクあり）';
+
+  const prompt = `あなたはX（旧Twitter）の投稿文を書く専門家です。
+以下の素材から、副業×3交代勤務の読者に刺さる投稿文を1件生成してください。
+
+投稿タイプ：${typeLabel}
+文字数：140字以内（厳守）
+トーン：生きた人間の語り口、感情が乗っている、AI臭さゼロ
+禁止：「効果的」「重要」「おすすめ」などAI的な言葉
+出力：投稿文のみ。説明・前置き不要。
+
+【素材】
+${material}`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 300, temperature: 0.9 }
+        })
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || res.status);
+    const parts = data.candidates?.[0]?.content?.parts || [];
+    const text = parts.filter(p => !p.thought).map(p => p.text || '').join('').trim();
+    document.getElementById('xwrite-gen-result').value = text;
+    document.getElementById('xwrite-gen-result-wrap').style.display = 'block';
+    document.getElementById('xwrite-step4-wrap').style.display = 'block';
+    updateXPostCharCount();
+    // タグをリセット
+    _xwriteEmotionTag = ''; _xwriteDevelopTag = '';
+    document.querySelectorAll('#xwrite-emotion-tags .xwrite-tag-btn, #xwrite-develop-tags .xwrite-tag-btn').forEach(b => b.classList.remove('active'));
+  } catch(e) {
+    errEl.textContent = 'APIキーを確認してください';
+    errEl.style.display = 'block';
+  } finally {
+    btn.textContent = '✨ 投稿文を生成する';
+    btn.disabled = false;
+  }
 }
 
-function copyXWriteResult() {
-  const text = document.getElementById('xwrite-result').value;
-  if (!text) return;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('xwrite-copy-btn');
-    btn.textContent = 'コピーしました ✓';
-    toast('コピーしました');
-    setTimeout(() => { btn.textContent = '📋 コピー'; }, 2500);
-  });
+function saveXPostToStock() {
+  const content = document.getElementById('xwrite-gen-result').value.trim();
+  if (!content) { toast('投稿文がありません'); return; }
+  const newPost = {
+    id: Date.now(),
+    type: _xwriteType,
+    content,
+    status: 'stock',
+    createdAt: new Date().toISOString().slice(0, 10),
+    emotionTag: _xwriteEmotionTag,
+    developTag: _xwriteDevelopTag,
+  };
+  S.xposts.unshift(newPost);
+  save(); renderXPosts();
+  // リセット
+  document.getElementById('xwrite-material').value = '';
+  document.getElementById('xwrite-gen-result').value = '';
+  document.getElementById('xwrite-gen-result-wrap').style.display = 'none';
+  document.getElementById('xwrite-step4-wrap').style.display = 'none';
+  _xwriteEmotionTag = ''; _xwriteDevelopTag = '';
+  document.querySelectorAll('#xwrite-emotion-tags .xwrite-tag-btn, #xwrite-develop-tags .xwrite-tag-btn').forEach(b => b.classList.remove('active'));
+  toast('ストックに保存しました');
 }
 
 
