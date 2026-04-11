@@ -2272,6 +2272,35 @@ input:focus, textarea:focus, select:focus {
   </div>
 </div>
 
+<!-- ===== MODAL: 使い方 ===== -->
+<div class="overlay" id="modal-howto" onclick="if(event.target===this)closeOverlay('modal-howto')">
+  <div class="modal" style="max-width:420px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:0">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title">📖 執筆フローの使い方</div>
+      <button class="modal-close" onclick="closeOverlay('modal-howto')">✕</button>
+    </div>
+    <div style="padding:16px 20px 20px;line-height:2;font-size:13px;color:var(--text)">
+      <ol style="padding-left:18px;margin:0;display:flex;flex-direction:column;gap:12px">
+        <li>このプロジェクトのクロに記事候補JSONを貼り、STEP1・2・ジミー被りチェックを依頼する</li>
+        <li>クロが生成したパペへのリサーチ依頼文をパペ（Perplexity）に投げてリサーチ結果を受け取る</li>
+        <li>
+          以下をセットにしてジミー（Gemini API）に渡す
+          <div style="margin-top:6px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:12px;line-height:1.9;color:var(--text2)">
+            ・記事タイトル／展開軸／感情軸／前回との差分／思考の型／視点／崩すべき前提認識／読了後の変化<br>
+            ・パペのリサーチ結果（そのまま貼る）
+          </div>
+        </li>
+        <li>ジミーから引き渡し素材が返ってきたら、noteプロジェクトのクロに貼り付けて「執筆開始」と伝える</li>
+        <li>執筆完了後、publishedArticlesサマリーJSONをnabebaseに登録してステータスを「公開済み」に更新する</li>
+      </ol>
+    </div>
+    <div style="padding:0 20px 20px">
+      <button onclick="closeOverlay('modal-howto')" style="width:100%;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:12px;color:var(--text2);font-weight:700;font-size:14px;cursor:pointer;font-family:inherit">閉じる</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: 仕上げ ===== -->
 <div class="overlay" id="modal-finish">
   <div class="modal" style="max-width:420px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:0">
@@ -2923,6 +2952,7 @@ function renderNotes() {
             </div>
             <div class="ni-actions">
               <button class="ni-action-btn primary" onclick="event.stopPropagation();openWork(${n.id})">✍ 執筆開始</button>
+              <button class="ni-action-btn" onclick="event.stopPropagation();openOverlay('modal-howto')" style="background:var(--bg3);color:var(--text2)">📖 使い方</button>
               ${(n.status==='review'||n.status==='done')?`<button class="ni-action-btn finish" onclick="event.stopPropagation();openFinishModal(${n.id})">🎯 仕上げ</button>`:''}
             </div>
           </div>
