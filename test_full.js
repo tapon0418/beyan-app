@@ -43,11 +43,19 @@ async function run() {
   );
   secs === 4 ? ok('all 4 sections') : ng('sections', secs + '/4');
 
-  // Note click opens modal (collapsed card: expand then click action btn)
+  // Note click opens modal (inject a dummy note then click action btn)
   const clickResult = await page.evaluate(() => {
+    // inject a minimal note into app state so a card renders
+    try {
+      const dummy = { id:'test-001', title:'テスト記事', status:'research', createdAt: Date.now(), updatedAt: Date.now() };
+      if (window.S && Array.isArray(window.S.notes) && window.S.notes.length === 0) {
+        window.S.notes.push(dummy);
+        if (typeof window.renderNotes === 'function') window.renderNotes();
+      }
+    } catch(e) {}
     const ni = document.querySelector('.ni-header');
     if (!ni) return 'no ni-header';
-    ni.click(); // expand card
+    ni.click();
     const actionBtn = document.querySelector('.ni-action-btn.primary');
     if (!actionBtn) return 'no action btn';
     actionBtn.click();
@@ -56,15 +64,12 @@ async function run() {
   });
   clickResult === 'opened' ? ok('note click opens modal') : ng('note click', clickResult);
 
-  // Modal has all expected elements
+  // Modal has all expected elements (4-step flow: v3 layout)
   const missing = await page.evaluate(() => {
     const ids = ['mw-title','mw-status','mw-gemini','mw-chatgpt-wrap',
       'claude-result-section','mw-claude-output','claude-manual-panel',
-      'claude-manual-input','mw-draft','mw-formatted','mw-xedit',
-      'mwimg-loading','mwimg-result','mwimg-error',
-      'ccheck-prompt','ccheck-result',
-      'fp-gemini','fp-chatgpt','fp-format','fp-imggen',
-      'fp-imgcheck','fp-note','fp-rakuten','fp-xgen'];
+      'claude-manual-input','mw-xedit',
+      'fp-gemini','fp-chatgpt','fp-rakuten','fp-xgen'];
     return ids.filter(id => !document.getElementById(id));
   });
   missing.length === 0 ? ok('all modal elements exist') : ng('missing elements', missing.join(', '));

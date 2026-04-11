@@ -1561,25 +1561,37 @@ input:focus, textarea:focus, select:focus {
 
 <!-- ===== 執筆前チェックモーダル ===== -->
 <div id="writing-check-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;display:none;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
-  <div style="background:#1a1a2e;width:100%;max-width:480px;border-radius:16px;padding:22px;border:1px solid #3a6650;box-sizing:border-box;">
+  <div style="background:#1a1a2e;width:100%;max-width:480px;border-radius:16px;padding:22px;border:1px solid #3a6650;box-sizing:border-box;max-height:90vh;overflow-y:auto;">
     <div style="font-weight:800;font-size:1rem;color:var(--accent);margin-bottom:16px;">✍️ 執筆前チェック</div>
     <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:20px;">
       <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:.88rem;color:var(--text);line-height:1.5;">
-        <input type="checkbox" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);">
+        <input type="checkbox" onchange="_wcCheckState()" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);">
         前回と同じ感情軸・展開軸を使っていないか
       </label>
       <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:.88rem;color:var(--text);line-height:1.5;">
-        <input type="checkbox" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);">
+        <input type="checkbox" onchange="_wcCheckState()" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);">
         この素材は副業×3交代勤務の読者と接点があるか
       </label>
       <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:.88rem;color:var(--text);line-height:1.5;">
-        <input type="checkbox" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);">
+        <input type="checkbox" onchange="_wcCheckState()" style="margin-top:3px;flex-shrink:0;accent-color:var(--accent);">
         読者が「また同じ話か」と感じる構造になっていないか
       </label>
     </div>
+    <div style="margin-bottom:14px">
+      <button id="wc-gen-btn" onclick="_generateHandoffText()" disabled style="width:100%;min-height:40px;background:var(--bg5);border:1px solid var(--border);border-radius:10px;color:var(--text3);font-size:.82rem;font-family:inherit;cursor:not-allowed;opacity:.5;transition:all .2s;">✅ チェック完了 → 渡し用テキストを生成</button>
+      <div id="wc-handoff-wrap" style="display:none;margin-top:10px">
+        <button id="wc-copy-btn" onclick="_wcCopyHandoff(this)" style="width:100%;min-height:40px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;margin-bottom:8px">📋 記事制作チャット用テキストをコピー</button>
+        <div style="font-size:.72rem;color:var(--text3);line-height:2;background:rgba(58,102,80,.1);border-radius:8px;padding:8px 10px;margin-bottom:8px">
+          STEP 1：上のボタンを押してテキストをコピー<br>
+          STEP 2：記事制作用のクロのチャット画面を開く<br>
+          STEP 3：コピーしたテキストをそのまま貼り付けて執筆スタート
+        </div>
+        <textarea id="wc-handoff-out" rows="8" readonly style="width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:11px;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+    </div>
     <div style="display:flex;gap:8px;">
       <button onclick="_writingCheckCancel()" style="flex:1;min-height:44px;background:var(--bg4);border:1px solid var(--bg5);border-radius:10px;color:var(--text2);font-size:.88rem;cursor:pointer;font-family:inherit;">戻る</button>
-      <button onclick="_writingCheckConfirm()" style="flex:2;min-height:44px;background:linear-gradient(135deg,#3a6650,#e8732a);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">確認した・執筆へ進む</button>
+      <button onclick="_writingCheckConfirm()" style="flex:2;min-height:44px;background:linear-gradient(135deg,#3a6650,#e8732a);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">完了して閉じる</button>
     </div>
   </div>
 </div>
@@ -1789,6 +1801,38 @@ input:focus, textarea:focus, select:focus {
   <div class="sidebar-left" id="notes-sidebar-l"></div>
   <div class="main-content">
 
+  <!-- ===== ダッシュボードカード（機能②⑤） ===== -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+
+    <!-- 機能②：クロとのセッションカード -->
+    <div style="background:var(--bg3);border:1.5px solid rgba(58,102,80,.35);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:13px;font-weight:700;color:var(--accent)">🤖 クロとのセッションを始める</div>
+      <div style="font-size:11px;color:var(--text3);line-height:1.5">クロとのチャット開始時に、このテキストを貼り付けてください</div>
+      <button id="btn-copy-ctx" onclick="generateAndCopyClaudeCtx(this)" style="width:100%;min-height:40px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;">コンテキストを生成してコピー</button>
+      <div id="dash-ctx-steps" style="display:none;font-size:.72rem;color:var(--text3);line-height:2;background:var(--bg4);border-radius:8px;padding:8px 10px">
+        STEP 1：上のボタンを押してコンテキストをコピー<br>
+        STEP 2：クロのチャット画面を開く<br>
+        STEP 3：コピーしたテキストをそのまま貼り付けてセッション開始
+      </div>
+      <details id="dash-ctx-details" style="display:none">
+        <summary style="list-style:none;cursor:pointer;font-size:.72rem;color:var(--text3);padding:2px 0">▼ 内容を確認する</summary>
+        <textarea id="dash-ctx-out" rows="8" readonly style="width:100%;margin-top:6px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:10px;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
+      </details>
+    </div>
+
+    <!-- 機能⑤：記事候補ストックカード -->
+    <div id="dash-stock-card" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px">
+      <div style="font-size:13px;font-weight:700;color:var(--text)">📦 記事候補ストック</div>
+      <div style="text-align:center;padding:6px 0">
+        <div id="dash-stock-num" style="font-family:'Syne',sans-serif;font-size:44px;font-weight:800;line-height:1;color:var(--green)">0</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:4px">未使用候補</div>
+      </div>
+      <div id="dash-stock-warn" style="display:none;font-size:.72rem;color:var(--orange);font-weight:700;line-height:1.6"></div>
+      <div id="dash-stock-link" style="font-size:.75rem"></div>
+    </div>
+
+  </div><!-- /dashboard-cards -->
+
   <!-- ===== 今日の予定 ===== -->
   <div id="sec-today">
     <div class="sec-head" onclick="toggleSec('today')">
@@ -1817,7 +1861,11 @@ input:focus, textarea:focus, select:focus {
   <div id="sec-notes">
     <div class="sec-head" onclick="toggleSec('notes')">
       <div class="sec-head-title">📝 note進捗表</div>
-      <div class="sec-head-count" id="notes-count-label"></div>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <span id="notes-unused-label" style="font-size:11px;color:var(--text3)"></span>
+        <span id="notes-axis-warn" style="font-size:11px;color:var(--orange);font-weight:700;display:none">展開軸3連続!</span>
+        <span class="sec-head-count" id="notes-count-label"></span>
+      </div>
       <svg class="sec-chevron open" id="chev-notes" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
     <div class="sec-body" id="body-notes" style="padding:12px 14px 8px">
@@ -1953,8 +2001,81 @@ input:focus, textarea:focus, select:focus {
         <button class="chip active" id="arc-tab-notes" onclick="setArchiveTab('notes')">✅ 公開済みnote</button>
         <button class="chip" id="arc-tab-xposts" onclick="setArchiveTab('xposts')">𝕏 投稿済みX</button>
       </div>
+      <!-- 機能③：ジミー向けJSON出力 -->
+      <div id="arc-jimmy-wrap" style="margin-bottom:12px;background:var(--bg4);border-radius:12px;padding:14px">
+        <button id="arc-jimmy-btn" onclick="copyJimmyJSON(this)" style="width:100%;min-height:40px;background:var(--bg2);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;" data-orig="">ジミー用 全件JSONをコピー（全0件）</button>
+        <div style="font-size:.72rem;color:var(--text3);line-height:2;margin-top:8px">
+          STEP 1：上のボタンを押して全件JSONをコピー<br>
+          STEP 2：ジミー（Gemini API）のプロンプト欄を開く<br>
+          STEP 3：被りチェック依頼テンプレートの冒頭にコピーしたJSONを貼り付ける
+        </div>
+      </div>
       <div id="archive-notes-list"></div>
       <div id="archive-xposts-list" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ===== ツール（クロ向けコンテキスト / ジミー向けJSON） ===== -->
+  <div id="sec-tools">
+    <div class="sec-head" onclick="toggleSec('tools')">
+      <div class="sec-head-title">🛠 ツール</div>
+      <div class="sec-head-count"></div>
+      <svg class="sec-chevron" id="chev-tools" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-tools" style="max-height:0;overflow:hidden;padding:12px 14px 8px">
+      <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+        <button class="chip active" id="tool-tab-ctx"   onclick="setToolTab('ctx')">📋 クロ向けコンテキスト</button>
+        <button class="chip"        id="tool-tab-jimmy" onclick="setToolTab('jimmy')">📤 ジミー向けJSON</button>
+      </div>
+
+      <!-- クロ向けコンテキスト -->
+      <div id="tool-panel-ctx">
+        <button onclick="generateClaudeContext()" style="width:100%;min-height:44px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">📋 クロ向けコンテキストを出力</button>
+        <div id="tool-ctx-wrap" style="display:none;margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span id="tool-ctx-label" style="font-size:.75rem;color:var(--text3)"></span>
+            <button onclick="copyEl('tool-ctx-out')" style="background:var(--bg4);border:1px solid var(--bg5);border-radius:6px;color:var(--text2);font-size:.75rem;padding:3px 10px;cursor:pointer;font-family:inherit;">📋 コピー</button>
+          </div>
+          <textarea id="tool-ctx-out" rows="14" readonly style="width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11.5px;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+      </div>
+
+      <!-- ジミー向けJSON -->
+      <div id="tool-panel-jimmy" style="display:none">
+        <button onclick="generateJimmyJSON()" style="width:100%;min-height:44px;background:var(--bg4);border:1px solid var(--bg5);border-radius:10px;color:var(--text);font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">📤 ジミー向け全件JSONを出力</button>
+        <div id="tool-jimmy-wrap" style="display:none;margin-top:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span id="tool-jimmy-count" style="font-size:.75rem;color:var(--text3)">全0件</span>
+            <button onclick="copyEl('tool-jimmy-out')" style="background:var(--bg4);border:1px solid var(--bg5);border-radius:6px;color:var(--text2);font-size:.75rem;padding:3px 10px;cursor:pointer;font-family:inherit;">📋 コピー</button>
+          </div>
+          <textarea id="tool-jimmy-out" rows="14" readonly style="width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11.5px;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== JSONインポート ===== -->
+  <div id="sec-import">
+    <div class="sec-head" onclick="toggleSec('import')">
+      <div class="sec-head-title">📥 JSONインポート</div>
+      <div class="sec-head-count"></div>
+      <svg class="sec-chevron" id="chev-import" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-import" style="max-height:0;overflow:hidden;padding:12px 14px 8px">
+      <div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+        <button class="chip active" id="imp-tab-article"   onclick="setImportTab('article')">記事候補</button>
+        <button class="chip"        id="imp-tab-published" onclick="setImportTab('published')">publishedArticles</button>
+        <button class="chip"        id="imp-tab-posts"     onclick="setImportTab('posts')">publishedPosts</button>
+      </div>
+      <div id="import-schema-hint" style="font-size:.72rem;color:var(--text3);margin-bottom:8px;line-height:1.5"></div>
+      <textarea id="import-json-ta" rows="9"
+        placeholder="JSONを貼り付けてください（オブジェクト1件 or 配列で複数件）"
+        style="width:100%;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button onclick="importJSON()" style="flex:2;min-height:40px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;">✅ 登録する</button>
+        <button onclick="document.getElementById('import-json-ta').value='';document.getElementById('import-result').innerHTML=''" style="flex:1;min-height:40px;background:var(--bg4);border:1px solid var(--bg5);border-radius:8px;color:var(--text2);font-size:.82rem;cursor:pointer;font-family:inherit;">クリア</button>
+      </div>
+      <div id="import-result" style="margin-top:8px;font-size:.82rem;min-height:18px"></div>
     </div>
   </div>
 
@@ -2013,86 +2134,40 @@ input:focus, textarea:focus, select:focus {
 
     <!-- 作業フロータブ -->
     <div class="flow-tabs">
-      <button class="ftab active" data-tab="gemini"   onclick="switchTab(this,'gemini')">① リサーチ</button>
-      <button class="ftab" data-tab="chatgpt"  onclick="switchTab(this,'chatgpt')">② 執筆</button>
-      <button class="ftab" data-tab="format"   onclick="switchTab(this,'format')">③ 整形</button>
-      <button class="ftab" data-tab="imggen"   onclick="switchTab(this,'imggen');initImgPromptVault();refreshImggenTitle()">④ 見出し画像</button>
-      <button class="ftab" data-tab="imgcheck" onclick="switchTab(this,'imgcheck');refreshImgCheckTab()">⑤ 画像チェック</button>
-      <button class="ftab" data-tab="note"     onclick="switchTab(this,'note')">⑥ note執筆</button>
-      <button class="ftab" data-tab="rakuten"  onclick="switchTab(this,'rakuten')">⑦ 楽天アフィ</button>
-      <button class="ftab" data-tab="xgen"     onclick="switchTab(this,'xgen')">⑧ X投稿</button>
+      <button class="ftab active" data-tab="gemini"  onclick="switchTab(this,'gemini')">① リサーチ</button>
+      <button class="ftab" data-tab="chatgpt" onclick="switchTab(this,'chatgpt')">② 執筆</button>
+      <button class="ftab" data-tab="rakuten" onclick="switchTab(this,'rakuten')">③ 楽天アフィ</button>
+      <button class="ftab" data-tab="xgen"    onclick="switchTab(this,'xgen')">④ X投稿</button>
     </div>
 
-    <!-- ① Gemini (API連携) -->
+    <!-- ① リサーチ（ぺぺへ依頼文コピー） -->
     <div class="fpanel active" id="fp-gemini">
-
-      <!-- 結果エリア：最上部に常時配置（結果があるときのみ表示） -->
-      <div id="gemini-result-section" style="display:none;margin-bottom:12px">
-        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ リサーチ完了 → ②クロ執筆タブへ自動入力済み</div>
-        <button class="copy-btn" style="width:100%;margin-bottom:8px" onclick="cp('mw-gemini-output')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
-          結果をコピー
-        </button>
-        <div class="copy-box result-box" id="mw-gemini-output"></div>
-        <button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:12px;width:100%"
-          onclick="switchTabByName('chatgpt')">② クロ執筆 へ進む →</button>
-      </div>
-
-      <div id="gemini-key-section" style="margin-bottom:12px">
-        <div style="display:flex;gap:8px;align-items:center">
-          <input type="password" id="gemini-api-key" placeholder="Gemini APIキー（AIStudioで取得）"
-            style="flex:1;font-size:16px" oninput="onKeyInput()" onchange="saveApiKey()" onblur="saveApiKey()">
-          <button class="btn btn-ghost btn-sm" style="width:auto;min-width:56px;flex-shrink:0"
-            id="btn-save-key" onclick="saveApiKey()">保存</button>
-        </div>
-        <div id="key-status" style="font-size:11px;margin-top:5px;color:var(--text3)"></div>
-      </div>
-
-      <button class="btn btn-accent" id="btn-run-gemini" onclick="runGemini()"
-        style="margin-bottom:12px;min-height:48px;font-size:14px">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="flex-shrink:0"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        ジミーにリサーチを依頼する
+      <div class="hint">リサーチ依頼文を生成してコピーし、ぺぺ（Perplexity）に貼り付けてください。</div>
+      <div class="copy-box" id="mw-gemini" style="max-height:200px;overflow-y:auto;margin-bottom:12px"></div>
+      <button id="btn-copy-research" onclick="copyResearchPrompt(this)"
+        style="width:100%;min-height:48px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;margin-bottom:8px">
+        ぺぺへのリサーチ依頼文をコピー
       </button>
-
-      <div id="gemini-loading" style="display:none;text-align:center;padding:16px 0">
-        <div style="font-size:13px;color:var(--accent)">🔍 ジミーがリサーチ中...</div>
-        <div style="width:100%;height:3px;background:var(--bg5);border-radius:2px;margin-top:10px;overflow:hidden">
-          <div id="gemini-pbar" style="height:100%;width:0%;background:var(--accent);border-radius:2px;animation:pbar 8s linear forwards"></div>
-        </div>
+      <div id="research-copy-msg" style="display:none;text-align:center;font-size:13px;color:var(--green);font-weight:700;padding:8px;background:rgba(74,136,56,.1);border-radius:8px;margin-bottom:8px">
+        ✅ コピーしました！（ぺぺ）に貼り付けてください
       </div>
-
-      <details style="margin-top:12px">
-        <summary style="font-size:11px;color:var(--text3);cursor:pointer">APIキーなしで手動コピーする</summary>
-        <div style="margin-top:8px">
-          <div class="copy-box" id="mw-gemini"></div>
-          <div style="display:flex;gap:6px;margin-top:0">
-            <button class="copy-btn" style="flex:1" onclick="cp('mw-gemini')">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
-              指示文をコピー
-            </button>
-            <button class="copy-btn" style="flex:1;background:#e8f0fe;color:#1a73e8;border-color:#1a73e8" onclick="openInGemini(document.getElementById('mw-gemini').textContent)">
-              🔗 ジミーで開く
-            </button>
-          </div>
-        </div>
-      </details>
-
+      <button class="btn btn-ghost btn-sm" style="margin-top:8px;font-size:12px;width:100%" onclick="switchTabByName('chatgpt')">② 執筆へ進む →</button>
     </div>
 
-    <!-- ② クロ執筆 -->
+    <!-- ② 執筆 -->
     <div class="fpanel" id="fp-chatgpt">
 
       <!-- STEP 1 -->
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
         <div style="background:var(--accent);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">1</div>
-        <div style="font-size:12px;font-weight:700;color:var(--text2)">ジミーのリサーチ結果を確認・貼り付け</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text2)">ぺぺのリサーチ結果を確認・貼り付け</div>
       </div>
       <div class="input-group" style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-          <label class="input-label" style="margin-bottom:0;font-size:11px">Geminiのリサーチ結果</label>
+          <label class="input-label" style="margin-bottom:0;font-size:11px">ぺぺのリサーチ結果</label>
           <button onclick="navigator.clipboard.readText().then(t=>{document.getElementById('mw-gemini-result').value=t;genChatGPT()}).catch(()=>toast('貼り付け失敗'))" style="background:var(--bg3);border:1.5px solid var(--border2);border-radius:7px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--text2);font-family:inherit;min-height:32px">📋 貼り付け</button>
         </div>
-        <textarea id="mw-gemini-result" rows="5" placeholder="①Geminiタブのリサーチ結果、またはここに直接貼り付け…" oninput="_genChatGPTD()" style="min-height:100px;resize:vertical"></textarea>
+        <textarea id="mw-gemini-result" rows="5" placeholder="①ぺぺのリサーチ結果、またはここに直接貼り付け…" oninput="_genChatGPTD()" style="min-height:100px;resize:vertical"></textarea>
       </div>
 
       <!-- STEP 2 -->
@@ -2106,10 +2181,10 @@ input:focus, textarea:focus, select:focus {
 
       <!-- Claude result section (API or restored) -->
       <div id="claude-result-section" style="display:none;margin-top:14px">
-        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ 執筆完了 → ③整形タブへ自動入力済み</div>
+        <div style="font-size:11px;color:var(--green);font-weight:700;margin-bottom:6px">✅ 執筆完了 → 保存済み</div>
         <div class="copy-box result-box" id="mw-claude-output" style="max-height:160px;overflow-y:auto"></div>
-        <button class="copy-btn" onclick="(()=>{const t=document.getElementById('mw-claude-output').textContent;navigator.clipboard.writeText(t).then(()=>toast('コピーしました')).catch(()=>{});document.getElementById('mw-draft').value=t;})()" style="margin-bottom:6px">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <button class="copy-btn" onclick="(()=>{const t=document.getElementById('mw-claude-output').textContent;navigator.clipboard.writeText(t).then(()=>toast('コピーしました')).catch(()=>{})})()" style="margin-bottom:6px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2 2v1"/></svg>
           結果をコピー
         </button>
       </div>
@@ -2127,64 +2202,13 @@ input:focus, textarea:focus, select:focus {
             📋 貼り付け
           </button>
           <button onclick="saveManualClaudeResult()" style="flex:1;min-height:48px;background:#7c3aed;border:none;color:#fff;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">
-            ✅ 保存して③整形へ
+            ✅ 保存して③楽天アフィへ
           </button>
         </div>
       </div>
     </div>
 
-    <!-- ③ 整形 -->
-    <div class="fpanel" id="fp-format">
-      <div class="hint">クロの草稿を貼り付け → AI記号（# ※ **）を除去してnote入稿用に整形します。</div>
-      <div class="input-group">
-        <textarea id="mw-draft" rows="10" placeholder="クロの草稿をここに…" oninput="autoSaveDraft()" style="min-height:180px;resize:vertical"></textarea>
-        <div id="draft-autosave-status" style="font-size:10px;color:var(--text3);text-align:right;margin-top:3px;height:14px"></div>
-      </div>
-      <button class="btn btn-orange" style="min-height:44px;font-size:14px;margin-bottom:8px" onclick="doFormat()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/></svg>
-        AI記号を除去して整形
-      </button>
-      <div id="mw-formatted-wrap" style="display:none">
-        <div class="copy-box result-box" id="mw-formatted"></div>
-        <button class="copy-btn" onclick="cp('mw-formatted')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>コピー（note用）
-        </button>
-        <!-- 見出し画像用テキスト -->
-        <div style="margin-top:14px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:10px;padding:12px">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-            <div style="font-size:12px;font-weight:700;color:var(--text2)">🖼️ 見出し画像テキスト設定</div>
-            <button onclick="autoExtractImgText(document.getElementById('mw-formatted').textContent)"
-              style="font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:var(--bg4);color:var(--text2);cursor:pointer;font-family:inherit;min-height:28px">
-              🔄 再抽出
-            </button>
-          </div>
-          <div id="img-extract-status" style="display:none;font-size:11px;font-weight:600;margin-bottom:8px;padding:5px 8px;border-radius:6px;background:var(--bg4)"></div>
-          <div class="input-group" style="margin-bottom:8px">
-            <label class="input-label" style="font-size:11px">メインタイトル <span style="color:var(--text3);font-weight:400">（15字以内目安）</span></label>
-            <input id="mw-main-title" type="text" placeholder="記事のメインタイトル"
-              style="width:100%;font-size:16px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;box-sizing:border-box"
-              oninput="autoSaveImgTextField()">
-          </div>
-          <div class="input-group" style="margin-bottom:8px">
-            <label class="input-label" style="font-size:11px">サブタイトル <span style="color:var(--text3);font-weight:400">（20字以内目安）</span></label>
-            <input id="mw-sub-title" type="text" placeholder="サブタイトル・キャッチコピー"
-              style="width:100%;font-size:16px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;box-sizing:border-box"
-              oninput="autoSaveImgTextField()">
-          </div>
-          <div class="input-group" style="margin-bottom:0">
-            <label class="input-label" style="font-size:11px">本文要約 <span style="color:var(--text3);font-weight:400">（15字以内目安）</span></label>
-            <input id="mw-body-summary" type="text" placeholder="10〜15文字目安"
-              style="width:100%;font-size:16px;background:var(--bg4);border:1px solid var(--border2);border-radius:6px;padding:8px 10px;color:var(--text);font-family:inherit;box-sizing:border-box"
-              oninput="autoSaveImgTextField()">
-          </div>
-        </div>
-        <button class="btn btn-accent" style="margin-top:10px;width:100%;min-height:50px;font-size:15px;font-weight:700" onclick="switchTabByName('imggen');initImgPromptVault();refreshImggenTitle()">
-          🖼️ ④ 見出し画像を作成する →
-        </button>
-      </div>
-    </div>
-
-    <!-- ⑧ X投稿生成（最終工程） -->
+    <!-- ④ X投稿生成 -->
     <div class="fpanel" id="fp-xgen">
       <div class="hint">ベース案をタップすると編集欄にコピーされます。編集後にストックへ保存。</div>
       <div id="mw-xbases"></div>
@@ -2200,113 +2224,7 @@ input:focus, textarea:focus, select:focus {
       <button class="btn btn-accent" onclick="saveFromWork()">ストックに追加</button>
     </div>
 
-    <!-- ④ 見出し画像生成 -->
-    <div class="fpanel" id="fp-imggen">
-      <div id="mwimg-note-title" style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;padding:5px 10px;background:var(--bg4);border-radius:8px;display:none;text-align:center"></div>
-
-      <!-- プロンプト保管庫 -->
-      <div style="margin-bottom:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-          <div style="font-size:13px;font-weight:700;color:var(--text2)">📝 画像プロンプト保管庫</div>
-          <div id="imgprompt-vault-ts" style="font-size:11px;color:var(--text3)"></div>
-        </div>
-        <div style="font-size:11px;color:var(--text3);margin-bottom:6px;line-height:1.6">
-          <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{mainTitle}</code>
-          <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{subTitle}</code>
-          <code style="background:var(--bg5);padding:1px 4px;border-radius:3px">{bodySummary}</code>
-          はカードの値に自動置換されます。日本語テキスト精度向上のプロンプトが自動付加されます。
-        </div>
-        <textarea id="imggen-prompt-vault" rows="10"
-          style="width:100%;min-height:180px;font-size:16px;line-height:1.6;resize:vertical;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px;color:var(--text);font-family:inherit;box-sizing:border-box;word-break:break-all"
-          placeholder="例：&#10;note eyecatch image, 1280x720px, dark navy background with cyan accent.&#10;Large bold title text: {mainTitle}&#10;Subtitle: {subTitle}&#10;Style: professional, modern, high contrast. Japanese text must be rendered precisely."></textarea>
-      </div>
-
-      <!-- 画像生成ボタン -->
-      <button class="btn btn-accent" style="width:100%;min-height:52px;font-size:17px;font-weight:800;margin-bottom:12px" onclick="runImgGen()">
-        🖼️ 画像生成
-      </button>
-
-      <!-- loading -->
-      <div id="mwimg-loading" style="display:none;text-align:center;padding:16px 0">
-        <div id="mwimg-status" style="font-size:13px;color:var(--accent);font-weight:600">生成中...</div>
-        <div style="width:100%;height:3px;background:var(--bg5);border-radius:2px;margin-top:10px;overflow:hidden">
-          <div id="mwimg-pbar" style="height:100%;width:20%;background:var(--accent);border-radius:2px;animation:pbarAnim 1.2s ease-in-out infinite alternate;transition:width .4s"></div>
-        </div>
-      </div>
-
-      <!-- image result -->
-      <div id="mwimg-result" style="display:none;margin-bottom:12px">
-        <img id="mwimg-img" src="#" alt="生成された見出し画像"
-          style="width:100%;border-radius:10px;display:block;border:1px solid var(--border);margin-bottom:8px">
-        <div style="display:flex;gap:8px">
-          <button onclick="mwImgDownload()"
-            style="flex:1;min-height:44px;background:var(--green);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">
-            ⬇️ ダウンロード
-          </button>
-          <button onclick="runImgGen()"
-            style="flex:1;min-height:44px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;color:var(--text2);font-size:13px;cursor:pointer;font-family:inherit">
-            🔄 再生成
-          </button>
-        </div>
-      </div>
-
-      <!-- error -->
-      <div id="mwimg-error" style="display:none;color:var(--red);font-size:13px;padding:10px;background:rgba(204,68,68,.08);border-radius:8px;line-height:1.6;margin-bottom:10px"></div>
-
-
-      <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%;font-size:13px" onclick="switchTabByName('imgcheck');refreshImgCheckTab()">
-        ⑤ 画像チェックへ進む →
-      </button>
-    </div>
-
-    <!-- ⑤ 画像チェック（手動・クロ確認） -->
-    <div class="fpanel" id="fp-imgcheck">
-      <div class="hint" style="line-height:1.7">記事本文と見出し画像の内容に相違がないかクロに確認させます。<br>確認後、自分で判断して必要なら修正してください。</div>
-      <!-- image preview -->
-      <div style="margin-bottom:12px">
-        <img id="ccheck-img" src="#" alt="" style="display:none;width:100%;border-radius:8px;border:1px solid var(--border);margin-bottom:6px">
-        <div id="ccheck-no-img" style="font-size:12px;color:var(--text3);padding:10px;background:var(--bg3);border-radius:8px;text-align:center">④で見出し画像を生成すると、ここにサムネが表示されます</div>
-      </div>
-      <!-- check prompt -->
-      <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">クロへの確認依頼文（自動生成）</div>
-      <div class="copy-box result-box" id="ccheck-prompt" style="max-height:180px;overflow-y:auto;font-size:12px;line-height:1.6;white-space:pre-wrap"></div>
-      <button onclick="(()=>{const t=document.getElementById('ccheck-prompt').textContent;navigator.clipboard.writeText(t).then(()=>{toast('コピーしました！クロで開きます');setTimeout(()=>openInClaude(t),600)}).catch(()=>openInClaude(t))})()"
-        style="width:100%;min-height:52px;margin-top:8px;background:#7c3aed;border:none;border-radius:10px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit">
-        📋 クロで記事・画像チェック →
-      </button>
-      <!-- memo / result -->
-      <div style="margin-top:12px">
-        <div style="font-size:11px;color:var(--text3);margin-bottom:4px;font-weight:600">チェック結果・メモ（任意）</div>
-        <textarea id="ccheck-result" rows="4" placeholder="クロの指摘・自分のメモをここに…"
-          style="width:100%;font-size:14px;line-height:1.6;resize:vertical"></textarea>
-        <button onclick="navigator.clipboard.readText().then(t=>{document.getElementById('ccheck-result').value=t;toast('貼り付けました')}).catch(()=>toast('貼り付け失敗'))"
-          style="width:100%;min-height:40px;margin-top:6px;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;font-size:12px;cursor:pointer;font-family:inherit;color:var(--text2)">📋 貼り付け</button>
-      </div>
-      <button class="btn btn-ghost btn-sm" style="margin-top:12px;width:100%;font-size:13px" onclick="switchTabByName('note')">
-        ⑥ note執筆へ進む →
-      </button>
-    </div>
-
-    <!-- ⑥ note執筆 -->
-    <div class="fpanel" id="fp-note">
-      <div class="hint" style="line-height:1.7">③整形済みの記事をnoteエディタに貼り付けて投稿します。</div>
-      <div style="background:var(--bg3);border-radius:10px;padding:14px;margin-bottom:14px;font-size:13px;color:var(--text2);line-height:1.8">
-        <div style="font-weight:700;color:var(--text);margin-bottom:8px">📝 note投稿チェックリスト</div>
-        <div>✅ ③整形済みの本文をコピー済み</div>
-        <div>✅ ⑤で画像チェック完了</div>
-        <div>✅ 見出し画像（1280×720）を保存済み</div>
-        <div>✅ タイトル・カテゴリを確認済み</div>
-      </div>
-      <button onclick="window.open('https://editor.note.com/notes/n96474a002525/edit/','_blank')"
-        style="width:100%;min-height:56px;background:var(--accent);border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:10px">
-        📝 noteエディタを開く →
-      </button>
-      <button class="btn btn-ghost btn-sm" style="width:100%;font-size:13px" onclick="switchTabByName('rakuten')">
-        ⑦ 楽天アフィへ進む →
-      </button>
-    </div>
-
-    <!-- ⑦ 楽天アフィ登録 -->
+    <!-- ③ 楽天アフィ登録 -->
     <div class="fpanel" id="fp-rakuten">
       <div class="hint" style="line-height:1.7">記事に紹介する楽天商品のアフィリエイトリンクを生成します。</div>
       <button onclick="openRakutenModal(curId)"
@@ -2314,7 +2232,7 @@ input:focus, textarea:focus, select:focus {
         🛒 楽天アフィリエイトカード生成 →
       </button>
       <button class="btn btn-ghost btn-sm" style="width:100%;font-size:13px" onclick="switchTabByName('xgen')">
-        ⑧ X投稿へ進む →
+        ④ X投稿へ進む →
       </button>
     </div>
 
@@ -2337,23 +2255,52 @@ input:focus, textarea:focus, select:focus {
       記事を編集
     </div>
     <input type="hidden" id="me-id">
+    <!-- 基本情報 -->
     <div class="input-group"><label class="input-label">タイトル</label><input type="text" id="me-title"></div>
     <div class="input-2col">
       <div><label class="input-label">タイプ</label>
         <select id="me-type"><option>エッセイ(A)</option><option>ハウツー(B)</option><option>AI活用</option><option>有料note</option><option>振り返り</option></select></div>
       <div><label class="input-label">カテゴリ</label>
-        <select id="me-cat"><option>ライティング</option><option>副業</option><option>楽天</option><option>AI活用</option><option>振り返り</option><option>その他</option></select></div>
+        <select id="me-category"><option>ライティング</option><option>副業</option><option>楽天</option><option>AI活用</option><option>振り返り</option><option>その他</option></select></div>
     </div>
     <div class="input-2col">
       <div><label class="input-label">ステータス</label>
         <select id="me-status"><option value="idea">📝 アイデア</option><option value="writing">✍️ 執筆中</option><option value="review">🔍 確認中</option><option value="xprep">📣 X準備中</option><option value="done">✅ 公開済み</option></select></div>
       <div><label class="input-label">公開日</label><input type="text" id="me-pubdate" placeholder="例: 3月5日"></div>
     </div>
-    <div class="input-group"><label class="input-label">執筆メモ</label><textarea id="me-memo" rows="2"></textarea></div>
-    <div class="input-group"><label class="input-label">派生軸（感情軸／状況軸／展開軸）</label><input type="text" id="me-axis" placeholder="例）焦り／借金あり／落とし穴"></div>
-    <div class="input-group"><label class="input-label">既存記事との接続</label><input type="text" id="me-prevlink"></div>
-    <div class="input-group"><label class="input-label">次の記事への引き継ぎ</label><input type="text" id="me-nextlink"></div>
-    <div class="input-group"><label class="input-label">リサーチ依頼</label><input type="text" id="me-research" placeholder="例: ジミー：腱鞘炎対策グッズ"></div>
+    <!-- concept -->
+    <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:.04em;">CONCEPT</div>
+    <div class="input-group"><label class="input-label">読者の核心的な問題</label><input type="text" id="me-concept-coreProblem" placeholder="例: 副業を始めたいのに何から手を付ければいいか分からない"></div>
+    <div class="input-group"><label class="input-label">ターゲット読者</label><input type="text" id="me-concept-targetReader" placeholder="例: 3交代勤務で副業を始めて3ヶ月未満の人"></div>
+    <div class="input-group"><label class="input-label">読者の感情状態</label><input type="text" id="me-concept-readerEmotion" placeholder="例: 焦り・不安"></div>
+    <div class="input-group"><label class="input-label">壊す思い込み</label><input type="text" id="me-concept-readerBeliefToBreak" placeholder="例: 実績がないと案件は取れない"></div>
+    <div class="input-group"><label class="input-label">読後の変化</label><input type="text" id="me-concept-readerChangeAfterReading" placeholder="例: 実績より提案文の書き方が大事だと気づく"></div>
+    <div class="input-group"><label class="input-label">次へのフック</label><input type="text" id="me-concept-nextHook" placeholder="例: 提案文の具体的な書き方を知りたくなる"></div>
+    <!-- axis -->
+    <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:.04em;">AXIS</div>
+    <div class="input-2col">
+      <div><label class="input-label">展開軸</label><input type="text" id="me-axis-expansionAxis" placeholder="例: 落とし穴型"></div>
+      <div><label class="input-label">感情軸</label><input type="text" id="me-axis-emotionAxis" placeholder="例: 焦り"></div>
+    </div>
+    <div class="input-group"><label class="input-label">直近記事との差分</label><input type="text" id="me-axis-diffFromLast" placeholder="例: 前回は再定義型・今回は落とし穴型"></div>
+    <!-- research -->
+    <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:.04em;">RESEARCH</div>
+    <div class="input-group"><label class="input-label">リサーチプロンプト</label><textarea id="me-research-researchPrompt" rows="2" placeholder="例: ジミー：腱鞘炎対策グッズ一覧"></textarea></div>
+    <div class="input-group"><label class="input-label">空白地帯（競合が書いていない切り口）</label><input type="text" id="me-research-blankSpace" placeholder="例: 夜勤明け×腱鞘炎の組み合わせ"></div>
+    <div class="input-group"><label class="input-label">参考noteメモ</label><input type="text" id="me-research-sourceNote" placeholder="例: https://note.com/..."></div>
+    <!-- article -->
+    <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:.04em;">ARTICLE</div>
+    <div class="input-group"><label class="input-label">魂の一文</label><input type="text" id="me-article-soulSentence" placeholder="例: 副業は足し算より引き算の方が続く"></div>
+    <div class="input-2col">
+      <div><label class="input-label">思考パターン</label><input type="text" id="me-article-thinkingPattern" placeholder="例: 落とし穴型"></div>
+      <div><label class="input-label">読者視点</label><input type="text" id="me-article-readerPerspective" placeholder="例: 始めた直後"></div>
+    </div>
+    <div class="input-group"><label class="input-label">アフィ文脈</label><input type="text" id="me-article-affiliateContext" placeholder="例: 楽天で購入したグッズ紹介"></div>
+    <!-- management -->
+    <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:.04em;">MANAGEMENT</div>
+    <div class="input-group"><label class="input-label">使用状況</label><input type="text" id="me-management-usageStatus" placeholder="例: X投稿済み・note未公開"></div>
+    <div class="input-group"><label class="input-label">既存記事との接続</label><input type="text" id="me-management-connection" placeholder="例: 「提案文47件」の続編"></div>
+    <div class="input-group"><label class="input-label">次の記事への引き継ぎ</label><input type="text" id="me-management-next" placeholder="例: 2件目案件の話へつなぐ"></div>
     <div class="btn-row" style="margin-top:4px">
       <button class="btn btn-ghost" onclick="closeOverlay('modal-edit')">キャンセル</button>
       <button class="btn btn-accent" id="me-save">保存</button>
@@ -2395,19 +2342,47 @@ input:focus, textarea:focus, select:focus {
 
 <!-- ===== MODAL: 仕上げ ===== -->
 <div class="overlay" id="modal-finish">
-  <div class="modal" style="max-width:380px">
+  <div class="modal" style="max-width:420px;max-height:88vh;overflow-y:auto;display:flex;flex-direction:column;gap:0">
     <div class="modal-handle"></div>
     <div class="modal-header">
       <div class="modal-title" style="margin:0">🎯 仕上げ</div>
       <button class="modal-close" onclick="closeOverlay('modal-finish')">✕</button>
     </div>
     <div id="modal-finish-title" style="font-size:12px;color:var(--text2);background:var(--bg4);border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.5;word-break:break-word"></div>
-    <div style="display:flex;flex-direction:column;gap:10px">
-      <button class="btn btn-accent" style="min-height:52px;font-size:14px;font-weight:700" onclick="closeOverlay('modal-finish');openImgGenModal(_finishNoteId)">🖼️ 見出し画像を生成</button>
-      <button class="btn btn-ghost" style="min-height:52px;font-size:14px;font-weight:700" onclick="closeOverlay('modal-finish');openRakutenModal(_finishNoteId)">🛒 楽天カードを生成</button>
-      <button style="min-height:52px;font-size:14px;font-weight:700;background:var(--orange);border:none;border-radius:12px;color:#fff;cursor:pointer;font-family:inherit" onclick="window.open('https://editor.note.com/notes/n96474a002525/edit/','_blank')">📝 noteで書く</button>
+
+    <!-- 人間らしさ技法チェック -->
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:.82rem;font-weight:700;color:var(--text)">人間らしさ技法チェック</span>
+        <span id="finish-human-badge" style="font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:10px;background:var(--bg5);color:var(--text2)">0 / 10</span>
+      </div>
+      <div style="font-size:.7rem;color:var(--orange);margin-bottom:8px">4つ以上にチェックを入れてから次へ進む</div>
+      <div id="finish-human-list" style="display:flex;flex-direction:column;gap:5px"></div>
     </div>
-    <button class="btn btn-ghost" style="margin-top:14px;width:100%;min-height:44px" onclick="closeOverlay('modal-finish')">閉じる</button>
+
+    <div style="border-top:1px solid var(--border);margin:10px 0"></div>
+
+    <!-- AI書き癖チェック -->
+    <div style="margin-bottom:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <span style="font-size:.82rem;font-weight:700;color:var(--text)">AI書き癖チェック</span>
+        <span id="finish-ai-badge" style="font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:10px;background:var(--bg5);color:var(--text2)">0 / 5</span>
+      </div>
+      <div style="font-size:.7rem;color:var(--orange);margin-bottom:8px">全項目にチェックを入れてから公開へ進む</div>
+      <div id="finish-ai-list" style="display:flex;flex-direction:column;gap:5px"></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);margin:10px 0"></div>
+
+    <!-- アクションボタン -->
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-ghost" style="min-height:48px;font-size:13px;font-weight:700" onclick="closeOverlay('modal-finish');openRakutenModal(_finishNoteId)">🛒 楽天カードを生成</button>
+      <button style="min-height:48px;font-size:13px;font-weight:700;background:var(--orange);border:none;border-radius:12px;color:#fff;cursor:pointer;font-family:inherit" onclick="window.open('https://editor.note.com/notes/n96474a002525/edit/','_blank')">📝 noteで書く</button>
+      <button id="finish-publish-btn" onclick="finishAndPublish()" style="min-height:48px;font-size:13px;font-weight:700;border:none;border-radius:12px;cursor:not-allowed;font-family:inherit;background:var(--bg5);color:var(--text3);transition:background .2s,color .2s" disabled>✅ 公開済みに登録</button>
+    </div>
+    <div id="finish-publish-hint" style="font-size:.7rem;color:var(--text3);text-align:center;margin-top:6px;min-height:16px"></div>
+
+    <button class="btn btn-ghost" style="margin-top:10px;width:100%;min-height:40px" onclick="closeOverlay('modal-finish')">閉じる</button>
   </div>
 </div>
 
@@ -2441,9 +2416,11 @@ input:focus, textarea:focus, select:focus {
 const KEY = 'beyan_v6';
 const SHARE_STATS_KEY = 'beyan_share_stats';
 // X新データモデル（INIT前に必要なため先頭で宣言）
-const X_POSTS_KEY       = 'xPosts';
-const X_DRAFT_POSTS_KEY = 'xDraftPosts';
-const X_PROMPT_KEY      = 'xPrompt';
+const X_POSTS_KEY            = 'xPosts';
+const X_DRAFT_POSTS_KEY      = 'xDraftPosts';
+const X_PROMPT_KEY           = 'xPrompt';
+const PUBLISHED_ARTICLES_KEY = 'publishedArticles';
+const PUBLISHED_POSTS_KEY    = 'publishedPosts';
 let _xManageTab    = 'stock';
 let _xManageFilter = 'all';
 const DEFAULT_X_PROMPT =
@@ -2844,7 +2821,6 @@ const toast = msg => {
 const openOverlay = id => document.getElementById(id).classList.add('open');
 const closeOverlay = id => {
   document.getElementById(id).classList.remove('open');
-  if (id === 'modal-work') stopWorkAutoSave();
 };
 document.querySelectorAll('.overlay').forEach(o =>
   o.addEventListener('click', e => { if (e.target === o) closeOverlay(o.id); })
@@ -2855,9 +2831,13 @@ const cp = id => navigator.clipboard.writeText(document.getElementById(id).textC
 // ================================================================
 // SECTION COLLAPSE
 // ================================================================
-const secState = {today:true, axis:false, notes:true, xposts:true, xprompt:true, xwrite:true, archive:false};
-function toggleSec(name) {
-  secState[name] = !secState[name];
+const secState = {today:true, axis:false, notes:true, xposts:true, xprompt:true, xwrite:true, archive:false, tools:false, import:false};
+function toggleSec(name, forceOpen) {
+  if (forceOpen !== undefined) {
+    secState[name] = forceOpen;
+  } else {
+    secState[name] = !secState[name];
+  }
   const body = document.getElementById('body-'+name);
   const chev = document.getElementById('chev-'+name);
   if (secState[name]) {
@@ -2900,7 +2880,24 @@ function updateStats() {
   document.getElementById('st-wip').textContent   = S.notes.filter(n=>n.status==='writing').length;
   document.getElementById('st-xprep').textContent = S.notes.filter(n=>n.status==='xprep').length;
   document.getElementById('st-idea').textContent  = S.notes.filter(n=>n.status==='idea').length;
-  document.getElementById('notes-count-label').textContent = S.notes.length + '本';
+  // 未使用候補カウンター（機能⑤）
+  const unusedCnt = S.notes.filter(n =>
+    n.status !== 'done' &&
+    (!n.management?.usageStatus || n.management?.usageStatus === '未使用')
+  ).length;
+  const notesCntEl = document.getElementById('notes-count-label');
+  if (notesCntEl) {
+    notesCntEl.innerHTML = `全${S.notes.length}本`;
+  }
+  const unusedEl = document.getElementById('notes-unused-label');
+  if (unusedEl) {
+    const isLow = unusedCnt < 5;
+    unusedEl.style.color = isLow ? 'var(--orange)' : 'var(--text3)';
+    unusedEl.style.fontWeight = isLow ? '700' : '400';
+    unusedEl.textContent = `未使用候補 ${unusedCnt}本${unusedCnt === 0 ? '（ネタ切れ注意）' : ''}`;
+  }
+  // 機能⑤：ダッシュボードストックカード更新
+  _updateStockCard(unusedCnt);
   const stk = S.xposts.filter(p=>p.status==='stock').length;
   document.getElementById('xposts-count-label').textContent = `ストック${stk}本`;
   renderWipBanner();
@@ -2949,7 +2946,7 @@ function renderNotes() {
   if (q) list = list.filter(n => (n.title+' '+(n.memo||'')).toLowerCase().includes(q));
   // サイドバーフィルター
   if (nfMonth) list = list.filter(n => (n.publishDate||'').includes(nfMonth));
-  if (nfCat)   list = list.filter(n => n.cat === nfCat);
+  if (nfCat)   list = list.filter(n => (n.category || n.cat) === nfCat);
 
   document.getElementById('note-list').innerHTML = list.length === 0
     ? `<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">該当する記事がありません</div>`
@@ -2975,7 +2972,7 @@ function renderNotes() {
           <div class="ni-hover-btns" onclick="event.stopPropagation()">
             ${(n.status==='review'||n.status==='done')?`<button class="ni-hover-btn" onclick="event.stopPropagation();openFinishModal(${n.id})">🎯 仕上げ</button>`:''}
             <button class="ni-hover-btn" onclick="event.stopPropagation();window.open(CLAUDE_PROJECT_URL,'_blank')">✍ クロ</button>
-            <button class="ni-hover-btn" onclick="event.stopPropagation();openWork(${n.id})">⚙ 作業</button>
+            <button class="ni-hover-btn" onclick="event.stopPropagation();openWork(${n.id})">✍ 執筆開始</button>
           </div>
           <button class="note-del-btn" id="ndb-${n.id}" onclick="deleteNote(${n.id},event)" title="削除" style="position:static;margin-left:0;flex-shrink:0">🗑</button>
           <svg class="ni-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
@@ -2983,7 +2980,7 @@ function renderNotes() {
         <!-- 詳細：展開時に表示 -->
         <div class="ni-detail">
           <div class="ni-detail-inner">
-            ${n.memo?`<div class="note-memo" style="margin-bottom:8px">📌 ${n.memo}</div>`:''}
+            ${(n.concept?.coreProblem||n.memo)?`<div class="note-memo" style="margin-bottom:8px">📌 ${n.concept?.coreProblem||n.memo}</div>`:''}
             <div class="note-meta" style="margin-bottom:8px">
               <span class="badge" style="background:${SC[n.status]||'var(--text3)'};color:#fff;opacity:.9">${SL[n.status]||'アイデア'}</span>
               ${n.type?`<span class="badge badge-type">${n.type}</span>`:''}
@@ -2997,8 +2994,7 @@ function renderNotes() {
               ${n.status!=='done'?`<button class="research-btn done" style="margin-top:0;background:rgba(122,154,106,.18);color:var(--green);border:1px solid rgba(122,154,106,.35);font-size:10px;padding:3px 10px;border-radius:20px;cursor:pointer;font-family:inherit;font-weight:600" onclick="markNoteDone(${n.id},event)">✅ 執筆完了にする</button>`:`<span style="font-size:10px;color:var(--green);font-weight:700">✅ 公開済み</span>`}
             </div>
             <div class="ni-actions">
-              <button class="ni-action-btn primary" onclick="event.stopPropagation();openWork(${n.id})">⚙ 作業モーダル</button>
-              <button class="ni-action-btn claude" onclick="event.stopPropagation();window.open(CLAUDE_PROJECT_URL,'_blank')">✍ クロで執筆</button>
+              <button class="ni-action-btn primary" onclick="event.stopPropagation();openWork(${n.id})">✍ 執筆開始</button>
               ${(n.status==='review'||n.status==='done')?`<button class="ni-action-btn finish" onclick="event.stopPropagation();openFinishModal(${n.id})">🎯 仕上げ</button>`:''}
             </div>
           </div>
@@ -3032,13 +3028,155 @@ function toggleNoteCard(id, e) {
   el.classList.toggle('expanded');
 }
 
+const HUMAN_TECH_LIST = [
+  { key:'感情の矛盾',       desc:'相反する気持ちが同一文に共存しているか' },
+  { key:'自己ツッコミ',     desc:'自分の行動や感情に自分でツッコんでいるか' },
+  { key:'超短文',           desc:'5〜10文字の短文が意図的に入っているか' },
+  { key:'当時の心の声',     desc:'当時の頭の中の言葉を直接引用しているか' },
+  { key:'数字と固有名詞',   desc:'「ある時期」などの曖昧表現がゼロか' },
+  { key:'括弧補足',         desc:'本文の流れを切らずに補足が入っているか' },
+  { key:'未解決段落',       desc:'答えを出さずに終わる段落が1つあるか' },
+  { key:'問いを投げる',     desc:'読者に問いかけて答えを出さない箇所があるか' },
+  { key:'文末バラバラ',     desc:'段落末尾の3文の語尾が揃っていないか' },
+  { key:'言いかけて止める', desc:'「…」で終わる文が1〜2箇所あるか' },
+];
+const AI_CHECK_LIST = [
+  { key:'禁止ワードなし',     desc:'そして / また / さらに / つまり / 重要なのは / ぜひ〜してみてください 等が含まれていないか' },
+  { key:'均等段落構造なし',   desc:'均等段落構造・対称構造になっていないか' },
+  { key:'完璧解決オチなし',   desc:'完璧解決オチになっていないか' },
+  { key:'感情フラットなし',   desc:'感情がフラットになっていないか' },
+  { key:'抽象体験描写なし',   desc:'抽象的な体験描写になっていないか' },
+];
+
 let _finishNoteId = null;
+
 function openFinishModal(id) {
   _finishNoteId = id;
   const n = S.notes.find(x => x.id === id);
   const titleEl = document.getElementById('modal-finish-title');
   if (titleEl && n) titleEl.textContent = n.title;
+
+  // チェックリストを生成・復元
+  const savedHuman = n?.article?.humanTechUsed || [];
+  const savedAI    = n?.article?.aiChecks || [];
+
+  const humanList = document.getElementById('finish-human-list');
+  const aiList    = document.getElementById('finish-ai-list');
+  if (humanList) {
+    humanList.innerHTML = HUMAN_TECH_LIST.map((t, i) => `
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:5px 7px;border-radius:7px;background:var(--bg3);border:1px solid var(--border)">
+        <input type="checkbox" id="fh-${i}" onchange="_updateFinishChecks()"
+          ${savedHuman.includes(t.key) ? 'checked' : ''}
+          style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);width:15px;height:15px">
+        <span style="font-size:.78rem;line-height:1.45">
+          <span style="font-weight:700;color:var(--text)">技法${i+1}：${_escHtml(t.key)}</span>
+          <span style="color:var(--text3);font-size:.72rem;display:block;margin-top:1px">${_escHtml(t.desc)}</span>
+        </span>
+      </label>`).join('');
+  }
+  if (aiList) {
+    aiList.innerHTML = AI_CHECK_LIST.map((t, i) => `
+      <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:5px 7px;border-radius:7px;background:var(--bg3);border:1px solid var(--border)">
+        <input type="checkbox" id="fa-${i}" onchange="_updateFinishChecks()"
+          ${savedAI.includes(t.key) ? 'checked' : ''}
+          style="margin-top:2px;flex-shrink:0;accent-color:var(--accent);width:15px;height:15px">
+        <span style="font-size:.78rem;line-height:1.45">
+          <span style="font-weight:700;color:var(--text)">${_escHtml(t.key)}</span>
+          <span style="color:var(--text3);font-size:.72rem;display:block;margin-top:1px">${_escHtml(t.desc)}</span>
+        </span>
+      </label>`).join('');
+  }
+
+  _updateFinishChecks();
   openOverlay('modal-finish');
+}
+
+function _updateFinishChecks() {
+  const humanChecked = HUMAN_TECH_LIST.filter((_, i) => document.getElementById('fh-'+i)?.checked);
+  const aiChecked    = AI_CHECK_LIST.filter((_, i) => document.getElementById('fa-'+i)?.checked);
+  const hCount = humanChecked.length;
+  const aCount = aiChecked.length;
+  const hOk = hCount >= 4;
+  const aOk = aCount === AI_CHECK_LIST.length;
+
+  // バッジ更新
+  const hBadge = document.getElementById('finish-human-badge');
+  const aBadge = document.getElementById('finish-ai-badge');
+  if (hBadge) {
+    hBadge.textContent = `${hCount} / ${HUMAN_TECH_LIST.length}`;
+    hBadge.style.background = hOk ? 'rgba(122,154,106,.25)' : 'var(--bg5)';
+    hBadge.style.color = hOk ? 'var(--green)' : 'var(--text2)';
+  }
+  if (aBadge) {
+    aBadge.textContent = `${aCount} / ${AI_CHECK_LIST.length}`;
+    aBadge.style.background = aOk ? 'rgba(122,154,106,.25)' : 'var(--bg5)';
+    aBadge.style.color = aOk ? 'var(--green)' : 'var(--text2)';
+  }
+
+  // 公開ボタン
+  const btn = document.getElementById('finish-publish-btn');
+  const hint = document.getElementById('finish-publish-hint');
+  const allOk = hOk && aOk;
+  if (btn) {
+    btn.disabled = !allOk;
+    btn.style.background = allOk ? 'var(--green)' : 'var(--bg5)';
+    btn.style.color = allOk ? '#fff' : 'var(--text3)';
+    btn.style.cursor = allOk ? 'pointer' : 'not-allowed';
+  }
+  if (hint) {
+    if (allOk) {
+      hint.textContent = '';
+    } else {
+      const parts = [];
+      if (!hOk) parts.push(`人間らしさ技法 あと${4 - hCount}つ`);
+      if (!aOk) parts.push(`AI書き癖 あと${AI_CHECK_LIST.length - aCount}項目`);
+      hint.textContent = parts.join(' ／ ');
+    }
+  }
+
+  // チェック状態をノートに保存（自動）
+  _saveFinishProgress(humanChecked.map(t => t.key), aiChecked.map(t => t.key));
+}
+
+function _saveFinishProgress(humanKeys, aiKeys) {
+  const n = S.notes.find(x => x.id === _finishNoteId);
+  if (!n) return;
+  if (!n.article) n.article = {};
+  n.article.humanTechUsed = humanKeys;
+  n.article.aiChecks      = aiKeys;
+  save();
+}
+
+function finishAndPublish() {
+  const n = S.notes.find(x => x.id === _finishNoteId);
+  if (!n) return;
+  // publishedArticlesに登録（同タイトルが既にあれば更新）
+  const list = getPublishedArticles();
+  const existing = list.findIndex(a => a.publishedTitle === n.title);
+  const entry = {
+    publishedTitle:  n.title,
+    titleKeywords:   [],
+    expansionAxis:   n.axis?.expansionAxis || '',
+    emotionAxis:     n.axis?.emotionAxis   || '',
+    thinkingPattern: n.article?.thinkingPattern   || '',
+    readerPerspective: n.article?.readerPerspective || '',
+    coreLearning:    n.concept?.coreProblem || '',
+    publishedAt:     new Date().toISOString().slice(0, 10),
+    headlineKeywords: { catch: '', main: '', sub: '' },
+    humanTechUsed:   n.article?.humanTechUsed || [],
+  };
+  if (existing >= 0) list[existing] = { ...list[existing], ...entry };
+  else list.unshift(entry);
+  setPublishedArticles(list);
+  // ステータスをdoneに
+  if (n.status !== 'done') {
+    n.status = 'done';
+    save();
+    renderNotes();
+    renderToday();
+  }
+  closeOverlay('modal-finish');
+  toast('公開済みに登録しました');
 }
 
 function setNf(v) { nf = v; renderNotes(); }
@@ -3058,7 +3196,7 @@ function renderNotesSidebars() {
   if (lEl) {
     const activeNotes = S.notes.filter(n => n.status !== 'done');
     const months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
-    const cats   = [...new Set(activeNotes.map(n => n.cat||'').filter(Boolean))].sort();
+    const cats   = [...new Set(activeNotes.map(n => n.category||n.cat||'').filter(Boolean))].sort();
     lEl.innerHTML = `
       <div class="nsb-head">🔍 絞り込み</div>
       <div class="nsb-sec">
@@ -3260,35 +3398,62 @@ function renderAxisStats() {
   const TARGET_STATUSES = ['writing','review','xprep','done'];
   const targets = S.notes.filter(n => TARGET_STATUSES.includes(n.status) && n.axis);
 
+  // axis を新旧両形式から取得するヘルパー
+  function _axisEmotion(n) {
+    if (typeof n.axis === 'object' && n.axis !== null) return n.axis.emotionAxis || '';
+    if (typeof n.axis === 'string') return n.axis.split('／')[0]?.trim() || '';
+    return '';
+  }
+  function _axisExpansion(n) {
+    if (typeof n.axis === 'object' && n.axis !== null) return n.axis.expansionAxis || '';
+    if (typeof n.axis === 'string') return n.axis.split('／')[2]?.trim() || '';
+    return '';
+  }
+
   // 集計
-  const emotionCount = {};  // 感情軸（1つ目）
-  const devCount     = {};  // 展開軸（3つ目）
+  const emotionCount = {};
+  const devCount     = {};
 
   targets.forEach(n => {
-    const parts = n.axis.split('／');
-    const emotion = parts[0]?.trim();
-    const develop = parts[2]?.trim();
+    const emotion = _axisEmotion(n);
+    const develop = _axisExpansion(n);
     if (emotion) emotionCount[emotion] = (emotionCount[emotion] || 0) + 1;
     if (develop) devCount[develop]     = (devCount[develop]     || 0) + 1;
   });
 
-  // 直近3件連続チェック（publishDateあり・昇順）
-  const withDate = targets
-    .filter(n => n.publishDate)
-    .sort((a, b) => (a.publishDate > b.publishDate ? 1 : -1));
+  // 直近3本かつ過去60日以内の公開済み記事で被り警告
+  const sixtyDaysAgo = new Date();
+  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+  const recentPublished = getPublishedArticles()
+    .filter(a => a.publishedAt && new Date(a.publishedAt) >= sixtyDaysAgo)
+    .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+    .slice(0, 3);
   const consecutiveWarnings = new Set();
-  if (withDate.length >= 3) {
-    for (let i = 2; i < withDate.length; i++) {
-      const d0 = withDate[i-2].axis?.split('／')[2]?.trim();
-      const d1 = withDate[i-1].axis?.split('／')[2]?.trim();
-      const d2 = withDate[i  ].axis?.split('／')[2]?.trim();
-      if (d0 && d0 === d1 && d1 === d2) consecutiveWarnings.add(d2);
+  if (recentPublished.length >= 3) {
+    const axes = recentPublished.map(a => a.expansionAxis || '');
+    if (axes[0] && axes[0] === axes[1] && axes[1] === axes[2]) {
+      consecutiveWarnings.add(axes[0]);
     }
   }
+  // チェック対象件数（60日以内のみカウント）
+  const checkCount = recentPublished.length;
 
-  // 警告ラベル
+  // 警告ラベル（軸セクション）
   const warnEl = document.getElementById('axis-warn-label');
   if (warnEl) warnEl.textContent = consecutiveWarnings.size > 0 ? '⚠️ 連続使用あり' : '';
+  // 機能⑤：note進捗表ヘッダーの軸警告
+  const notesAxisWarn = document.getElementById('notes-axis-warn');
+  if (notesAxisWarn) notesAxisWarn.style.display = consecutiveWarnings.size > 0 ? 'inline' : 'none';
+  // 機能⑤：ダッシュボードストックカードの軸警告
+  const dashWarn = document.getElementById('dash-stock-warn');
+  if (dashWarn) {
+    if (consecutiveWarnings.size > 0) {
+      dashWarn.style.display = 'block';
+      dashWarn.textContent = `⚠️ 展開軸が3回連続しています。次の記事では別の軸を選んでください（${[...consecutiveWarnings].join('/')}）`;
+    } else {
+      dashWarn.style.display = 'none';
+    }
+  }
 
   const container = document.getElementById('axis-stats-content');
   if (!container) return;
@@ -3315,6 +3480,10 @@ function renderAxisStats() {
   };
 
   container.innerHTML = `
+    <div style="font-size:.72rem;color:var(--text3);margin-bottom:10px;">
+      被り警告チェック対象：直近3本 / 過去60日以内
+      <span style="margin-left:6px;color:${checkCount>=3?'var(--text2)':'var(--orange)'};">（該当${checkCount}本）</span>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div>
         <div style="font-size:.75rem;color:var(--text3);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">展開軸</div>
@@ -3415,6 +3584,8 @@ function setArchiveTab(tab) {
   document.getElementById('arc-tab-xposts').classList.toggle('active', tab==='xposts');
   document.getElementById('archive-notes-list').style.display = tab==='notes' ? 'block' : 'none';
   document.getElementById('archive-xposts-list').style.display = tab==='xposts' ? 'block' : 'none';
+  const jw = document.getElementById('arc-jimmy-wrap');
+  if (jw) jw.style.display = tab==='notes' ? 'block' : 'none';
 }
 function renderArchive() {
   const doneNotes  = S.notes.filter(n => n.status === 'done');
@@ -3450,6 +3621,14 @@ function renderArchive() {
 
   const body = document.getElementById('body-archive');
   if (body && secState.archive) { body.style.maxHeight = '99999px'; body.style.overflow = 'visible'; }
+  // 機能③：ジミーボタン件数を常に最新化
+  const jimmyBtn = document.getElementById('arc-jimmy-btn');
+  if (jimmyBtn) {
+    const pubCnt = getPublishedArticles().length;
+    const lbl = `ジミー用 全件JSONをコピー（全${pubCnt}件）`;
+    jimmyBtn.textContent = lbl;
+    jimmyBtn.setAttribute('data-orig', lbl);
+  }
 }
 function unarchiveNote(id) {
   const n = S.notes.find(x => x.id === id);
@@ -3497,30 +3676,27 @@ function openWork(id) {
   const n = S.notes.find(x=>x.id===id); if(!n) return;
   curId = id;
   document.getElementById('mw-title').textContent = n.title;
+  const _cat = n.category || n.cat || '';
+  const _memo = n.concept?.coreProblem || n.memo || '';
+  const _research = n.research?.researchPrompt || n.researchNote || '';
   document.getElementById('mw-badges').innerHTML = [
     n.type?`<span class="badge badge-type">${n.type}</span>`:'',
-    n.cat?`<span class="badge badge-cat">${n.cat}</span>`:'',
+    _cat?`<span class="badge badge-cat">${_cat}</span>`:'',
     n.publishDate?`<span class="badge badge-date">📅 ${n.publishDate}</span>`:'',
     n.rakuten?'<span class="badge badge-rakuten">楽天</span>':'',
   ].join('');
   document.getElementById('mw-sub').textContent = [
-    n.memo?`📌 ${n.memo}`:'',
-    n.researchNote?`🔬 ${n.researchNote}`:'',
+    _memo?`📌 ${_memo}`:'',
+    _research?`🔬 ${_research}`:'',
   ].filter(Boolean).join('\n');
   const sel = document.getElementById('mw-status');
   sel.innerHTML = Object.entries(SL).map(([v,l])=>`<option value="${v}"${n.status===v?' selected':''}>${l}</option>`).join('');
-  // Gemini指示文
+  // ①リサーチ：依頼文を生成してセット
   document.getElementById('mw-gemini').textContent = buildGemini(n);
-  // 保存済みGeminiリサーチ結果を復元（なければリセット）
+  // ②執筆：保存済みリサーチ結果を復元
   const savedResult = n.geminiResult || '';
   document.getElementById('mw-gemini-result').value = savedResult;
-  if (savedResult) {
-    document.getElementById('mw-gemini-output').textContent = savedResult;
-    document.getElementById('gemini-result-section').style.display = 'block';
-  } else {
-    document.getElementById('mw-gemini-output').textContent = '';
-    document.getElementById('gemini-result-section').style.display = 'none';
-  }
+  if (savedResult) genChatGPT();
   document.getElementById('mw-chatgpt').textContent='';
   document.getElementById('mw-chatgpt-wrap').style.display='none';
   // 保存済みClaudeResult復元
@@ -3528,52 +3704,18 @@ function openWork(id) {
   if (savedClaudeResult) {
     document.getElementById('mw-claude-output').textContent = savedClaudeResult;
     document.getElementById('claude-result-section').style.display = 'block';
-    document.getElementById('mw-draft').value = savedClaudeResult;
   } else {
     document.getElementById('mw-claude-output').textContent = '';
     document.getElementById('claude-result-section').style.display = 'none';
     document.getElementById('claude-manual-panel').style.display = 'block';
     document.getElementById('claude-manual-input').value = '';
-    document.getElementById('mw-draft').value = '';
   }
-  // 整形済みテキストを復元（なければリセット）
-  if (n.formattedText) {
-    document.getElementById('mw-formatted').textContent = n.formattedText;
-    document.getElementById('mw-formatted-wrap').style.display = 'block';
-  } else {
-    document.getElementById('mw-formatted').textContent = '';
-    document.getElementById('mw-formatted-wrap').style.display = 'none';
-  }
-  // ④タブの画像エリアをリセット（別記事の画像が残らないように）
-  ['mwimg-result','mwimg-error','mwimg-loading'].forEach(function(eid) {
-    const el = document.getElementById(eid); if (el) el.style.display = 'none';
-  });
-  const imgEl = document.getElementById('mwimg-img');
-  if (imgEl) imgEl.src = '#';
-  // 見出し画像テキストフィールドを復元
-  const mainTitleEl = document.getElementById('mw-main-title');
-  const subTitleEl  = document.getElementById('mw-sub-title');
-  const bodySummaryEl = document.getElementById('mw-body-summary');
-  if (mainTitleEl)    mainTitleEl.value    = n.mainTitle    || '';
-  if (subTitleEl)     subTitleEl.value     = n.subTitle     || '';
-  if (bodySummaryEl)  bodySummaryEl.value  = n.bodySummary  || '';
   document.getElementById('mw-xedit').value='';
   document.getElementById('mw-xbases').innerHTML = buildXBases(n);
   setWorkType('A'); updateXcc();
-  loadApiKey();
   loadClaudeApiKey();
-  // 保存済み草稿を復元
-  if (n.draftText) {
-    document.getElementById('mw-draft').value = n.draftText;
-    const st = document.getElementById('draft-autosave-status');
-    if (st && n.draftSavedAt) {
-      const d = new Date(n.draftSavedAt);
-      st.textContent = `💾 ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')} 保存済み`;
-    }
-  }
   switchTabByName('gemini');
   openOverlay('modal-work');
-  startWorkAutoSave();
 }
 
 function switchTab(el, name) {
@@ -3608,14 +3750,16 @@ function getDefaultGeminiTmpl() {
 }
 function buildGemini(n) {
   const tmpl = (_geminiTmpl !== null && _geminiTmpl !== undefined) ? _geminiTmpl : getDefaultGeminiTmpl();
-  // ${n.xxx} プレースホルダーを置換
+  const cat  = n.category || n.cat || '未設定';
+  const memo = n.concept?.coreProblem || n.memo || 'なし';
+  const research = n.research?.researchPrompt || n.researchNote || '';
   return tmpl
     .replace(/\$\{n\.title\}/g, n.title || '')
     .replace(/\$\{n\.type\|\|'エッセイ'\}/g, n.type || 'エッセイ')
-    .replace(/\$\{n\.cat\|\|'未設定'\}/g, n.cat || '未設定')
-    .replace(/\$\{n\.memo\|\|'なし'\}/g, n.memo || 'なし')
+    .replace(/\$\{n\.cat\|\|'未設定'\}/g, cat)
+    .replace(/\$\{n\.memo\|\|'なし'\}/g, memo)
     .replace(/\$\{n\.researchNote\?'\\n特記事項：'\+n\.researchNote:''\}/g,
-      n.researchNote ? '\n特記事項：' + n.researchNote : '');
+      research ? '\n特記事項：' + research : '');
 }
 
 // ユーティリティ: debounce
@@ -3641,14 +3785,14 @@ function genChatGPT() {
   if (claudeSaved !== null) {
     claudePrompt = claudeSaved
       .replace(/\$\{n\.title\}/g, n.title || '')
-      .replace(/\$\{n\.memo\|\|'このテーマに関心がある人'\}/g, n.memo || 'このテーマに関心がある人')
+      .replace(/\$\{n\.memo\|\|'このテーマに関心がある人'\}/g, n.concept?.coreProblem || n.memo || 'このテーマに関心がある人')
       .replace(/\$\{isYuryou\?'有料記事（1,980円）：具体的ノウハウと再現手順を網羅':'無料記事（X導線用）：共感→気づき→有料記事への自然な導線'\}/g,
         isYuryou ? '有料記事（1,980円）：具体的ノウハウと再現手順を網羅' : '無料記事（X導線用）：共感→気づき→有料記事への自然な導線')
       .replace(/\$\{isYuryou\?'3,000〜4,000':'2,000〜2,500'\}/g,
         isYuryou ? '3,000〜4,000' : '2,000〜2,500')
       .replace(/\$\{result\}/g, result)
       .replace(/\$\{n\.nextLink\?`\n   →「\$\{n\.nextLink\}」につながるひと言を最後に入れる`:''}/g,
-        n.nextLink ? '\n   →「' + n.nextLink + '」につながるひと言を最後に入れる' : '');
+        (n.management?.next||n.nextLink) ? '\n   →「' + (n.management?.next||n.nextLink) + '」につながるひと言を最後に入れる' : '');
   } else {
     claudePrompt = `あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。
 
@@ -3657,7 +3801,7 @@ function genChatGPT() {
 
 ■ 読者設定
 ・副業ライターとして活動中、または始めたい人
-・${n.memo||'このテーマに関心がある人'}
+・${n.concept?.coreProblem||n.memo||'このテーマに関心がある人'}
 
 ■ 記事の方向性
 ・${isYuryou?'有料記事（1,980円）：具体的ノウハウと再現手順を網羅':'無料記事（X導線用）：共感→気づき→有料記事への自然な導線'}
@@ -3672,7 +3816,7 @@ ${result}
 2. 失敗・壁（具体的なエピソード）
 3. 転機・気づき（何がどう変わったか）
 4. 再現可能な学び（明日から使えること）
-5. まとめ＋次の記事への導線${n.nextLink?`\n   →「${n.nextLink}」につながるひと言を最後に入れる`:''}
+5. まとめ＋次の記事への導線${(n.management?.next||n.nextLink)?`\n   →「${n.management?.next||n.nextLink}」につながるひと言を最後に入れる`:''}
 
 ■ 文体の絶対ルール
 ・ですます調。親しみやすいが馴れ馴れしすぎない
@@ -3685,124 +3829,6 @@ ${result}
   const _kwInstruction = '\n\n【必須・最終出力】\n本文の執筆が完了したら、必ず以下のブロックを本文の直後に出力すること。省略・省略不可。\n\n【見出し画像キーワード】\nキャッチ：（12文字以内・読者の悩みや状況を一言で）\nメイン：（15文字以内・記事の核心を圧縮）\nサブ：（20文字以内・読者へのベネフィット）';
   document.getElementById('mw-chatgpt').textContent = claudePrompt + _kwInstruction;
   wrap.style.display='block';
-}
-
-function doFormat() {
-  const raw = document.getElementById('mw-draft').value;
-  if (!raw.trim()) { toast('草稿を貼り付けてください'); return; }
-
-  // STEP 1: AI記号・マークダウン除去
-  let text = raw
-    .replace(/#{1,6}\s*/g, '')
-    .replace(/\*\*/g, '').replace(/\*/g, '')
-    .replace(/※/g, '')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  let removedIntro = false, removedOutro = false;
-
-  // STEP 2: まえがき除去
-  // パターンA: 「以下、本文（プレーンテキスト）です」などの区切り行を見つけてその前を全削除
-  const bsMatch = text.match(/^以下[、，]?\s*本文[（(（\s（][^\n]*$/m);
-  if (bsMatch) {
-    const cutAt = text.indexOf(bsMatch[0]) + bsMatch[0].length;
-    // 区切り行の直後にある `-` `--` `---` の行も除去
-    text = text.slice(cutAt).replace(/^\s*[-─━=＝]{1,}\s*\n/, '').trim();
-    removedIntro = true;
-  } else {
-    // パターンB: 先頭段落が既知のまえがきパターンに一致→除去（段落の長さ問わず）
-    const INTRO_STRONG = [
-      /^プロジェクトファイル.*確認しました/,
-      /STEP\d+\s*(抽出メモ|内部確認)/,
-      /^以下の分析をもとに記事を執筆/,
-      /^リサーチデータ.*確認しました/,
-    ];
-    const INTRO_WEAK = [   // 短い段落（3行以内）のみ
-      /^以下[にはがを]/,
-      /^ご依頼/,
-      /^承りました/,
-      /^(執筆|作成|記事を).*(しました|します)/,
-      /^記事の?草稿/,
-      /^下記[のに]/,
-      /^(はい[。、]|わかりました|承知しました)/,
-      /^[-=─━＝]{2,}$/,
-    ];
-    const paras = text.split(/\n\n+/);
-    let start = 0;
-    while (start < Math.min(5, paras.length - 1)) {
-      const p = paras[start].trim();
-      const lines = p.split('\n').filter(l => l.trim());
-      const strong = INTRO_STRONG.some(r => r.test(p));
-      const weak   = lines.length <= 3 && INTRO_WEAK.some(r => r.test(p));
-      if (strong || weak) { start++; removedIntro = true; } else break;
-    }
-    if (removedIntro) text = paras.slice(start).join('\n\n').trim();
-  }
-
-  // STEP 3: あとがき除去
-  // 強パターン: 段落の長さ問わず一致したら除去
-  const OUTRO_STRONG = [
-    /申し送り/,
-    /ポイント整理/,
-    /文字数は約\d+字/,
-    /AI臭い表現の除去は済み/,
-    /確認項目と状態をまとめ/,
-    /執筆時の[ポ注確]/,
-    /べーやんへの/,
-  ];
-  // 弱パターン: 3行以内の短い段落のみ
-  const OUTRO_WEAK = [
-    /いかがでしょうか[。！？]?$/,
-    /ご確認(ください|よろしくお願い)[。！]?$/,
-    /お役に立て[れ幸].*[。！]?$/,
-    /修正.*ご連絡[。！]?$/,
-    /以上.*でした[。！]?$/,
-    /以上です[。！]?$/,
-    /以上.*なります[。！]?$/,
-    /よろしくお願い(します|いたします)[。！]?$/,
-    /ご活用ください[。！]?$/,
-    /お読みいただき.*ありがとう/,
-    /^[-=─━＝]{2,}$/,
-  ];
-  const paras2 = text.split(/\n\n+/);
-  let end = paras2.length - 1;
-  while (end > 0) {
-    const p = paras2[end].trim();
-    const lines = p.split('\n').filter(l => l.trim());
-    const strong = OUTRO_STRONG.some(r => r.test(p));
-    const weak   = lines.length <= 3 && OUTRO_WEAK.some(r => r.test(p));
-    if (strong || weak) { end--; removedOutro = true; } else break;
-  }
-  text = paras2.slice(0, end + 1).join('\n\n').trim();
-
-  // ── キーワードブロック抽出・保存・本文から除去 ──
-  const KW_HEADER = /【見出し画像キーワード】|##\s*見出し画像キーワード|見出し画像キーワード：/;
-  const kwIdx = text.search(KW_HEADER);
-  if (kwIdx !== -1) {
-    const kwBlock = text.slice(kwIdx);
-    const catchM = kwBlock.match(/キャッチ[：:]\s*(.+)/);
-    const mainM  = kwBlock.match(/メイン[：:]\s*(.+)/);
-    const subM   = kwBlock.match(/サブ[：:]\s*(.+)/);
-    localStorage.setItem('beyan_img_keywords', JSON.stringify({
-      catch: catchM ? catchM[1].trim() : '',
-      main:  mainM  ? mainM[1].trim()  : '',
-      sub:   subM   ? subM[1].trim()   : ''
-    }));
-    text = text.slice(0, kwIdx).trim();
-  }
-
-  const box = document.getElementById('mw-formatted');
-  box.textContent = text;
-  document.getElementById('mw-formatted-wrap').style.display = 'block';
-  // 整形済みテキストをlocalStorageに保存
-  const nf = S.notes.find(x => x.id === curId);
-  if (nf) { nf.formattedText = text; save(); }
-  const msgs = [];
-  if (removedIntro) msgs.push('まえがき');
-  if (removedOutro) msgs.push('あとがき');
-  if (kwIdx !== -1) msgs.push('見出し画像キーワード');
-  toast(msgs.length ? `整形しました（${msgs.join('・')}を除去）` : '整形しました');
-  autoExtractImgText(text);
 }
 
 function buildXBases(n) {
@@ -3846,14 +3872,39 @@ function openEditModal() {
   document.getElementById('me-id').value=n.id;
   document.getElementById('me-title').value=n.title||'';
   document.getElementById('me-type').value=n.type||'エッセイ(A)';
-  document.getElementById('me-cat').value=n.cat||'ライティング';
+  document.getElementById('me-category').value=n.category||n.cat||'ライティング';
   document.getElementById('me-status').value=n.status||'idea';
   document.getElementById('me-pubdate').value=n.publishDate||'';
-  document.getElementById('me-memo').value=n.memo||'';
-  document.getElementById('me-axis').value=n.axis||'';
-  document.getElementById('me-prevlink').value=n.prevLink||'';
-  document.getElementById('me-nextlink').value=n.nextLink||'';
-  document.getElementById('me-research').value=n.researchNote||'';
+  // concept
+  const c=n.concept||{};
+  document.getElementById('me-concept-coreProblem').value=c.coreProblem||n.memo||'';
+  document.getElementById('me-concept-targetReader').value=c.targetReader||'';
+  document.getElementById('me-concept-readerEmotion').value=c.readerEmotion||'';
+  document.getElementById('me-concept-readerBeliefToBreak').value=c.readerBeliefToBreak||'';
+  document.getElementById('me-concept-readerChangeAfterReading').value=c.readerChangeAfterReading||'';
+  document.getElementById('me-concept-nextHook').value=c.nextHook||'';
+  // axis（旧string形式からの移行対応）
+  const ax=typeof n.axis==='object'&&n.axis!==null?n.axis:{};
+  const oldAxisStr=typeof n.axis==='string'?n.axis:'';
+  document.getElementById('me-axis-expansionAxis').value=ax.expansionAxis||oldAxisStr.split('／')[2]?.trim()||'';
+  document.getElementById('me-axis-emotionAxis').value=ax.emotionAxis||oldAxisStr.split('／')[0]?.trim()||'';
+  document.getElementById('me-axis-diffFromLast').value=ax.diffFromLast||'';
+  // research
+  const r=n.research||{};
+  document.getElementById('me-research-researchPrompt').value=r.researchPrompt||n.researchNote||'';
+  document.getElementById('me-research-blankSpace').value=r.blankSpace||'';
+  document.getElementById('me-research-sourceNote').value=r.sourceNote||'';
+  // article
+  const ar=n.article||{};
+  document.getElementById('me-article-soulSentence').value=ar.soulSentence||'';
+  document.getElementById('me-article-thinkingPattern').value=ar.thinkingPattern||'';
+  document.getElementById('me-article-readerPerspective').value=ar.readerPerspective||'';
+  document.getElementById('me-article-affiliateContext').value=ar.affiliateContext||'';
+  // management
+  const m=n.management||{};
+  document.getElementById('me-management-usageStatus').value=m.usageStatus||'';
+  document.getElementById('me-management-connection').value=m.connection||n.prevLink||'';
+  document.getElementById('me-management-next').value=m.next||n.nextLink||'';
   openOverlay('modal-edit');
 }
 document.getElementById('me-save').addEventListener('click',()=>{
@@ -3864,22 +3915,47 @@ document.getElementById('me-save').addEventListener('click',()=>{
   const newStatus = document.getElementById('me-status').value;
   const doSave = () => {
     Object.assign(n,{
-      title, type:document.getElementById('me-type').value,
-      cat:document.getElementById('me-cat').value,
-      status:newStatus,
-      publishDate:document.getElementById('me-pubdate').value.trim(),
-      memo:document.getElementById('me-memo').value.trim(),
-      axis:document.getElementById('me-axis').value.trim(),
-      prevLink:document.getElementById('me-prevlink').value.trim(),
-      nextLink:document.getElementById('me-nextlink').value.trim(),
-      researchNote:document.getElementById('me-research').value.trim(),
+      title,
+      type: document.getElementById('me-type').value,
+      category: document.getElementById('me-category').value,
+      status: newStatus,
+      publishDate: document.getElementById('me-pubdate').value.trim(),
+      concept: {
+        coreProblem:              document.getElementById('me-concept-coreProblem').value.trim(),
+        targetReader:             document.getElementById('me-concept-targetReader').value.trim(),
+        readerEmotion:            document.getElementById('me-concept-readerEmotion').value.trim(),
+        readerBeliefToBreak:      document.getElementById('me-concept-readerBeliefToBreak').value.trim(),
+        readerChangeAfterReading: document.getElementById('me-concept-readerChangeAfterReading').value.trim(),
+        nextHook:                 document.getElementById('me-concept-nextHook').value.trim(),
+      },
+      axis: {
+        expansionAxis: document.getElementById('me-axis-expansionAxis').value.trim(),
+        emotionAxis:   document.getElementById('me-axis-emotionAxis').value.trim(),
+        diffFromLast:  document.getElementById('me-axis-diffFromLast').value.trim(),
+      },
+      research: {
+        researchPrompt: document.getElementById('me-research-researchPrompt').value.trim(),
+        blankSpace:     document.getElementById('me-research-blankSpace').value.trim(),
+        sourceNote:     document.getElementById('me-research-sourceNote').value.trim(),
+      },
+      article: {
+        soulSentence:      document.getElementById('me-article-soulSentence').value.trim(),
+        thinkingPattern:   document.getElementById('me-article-thinkingPattern').value.trim(),
+        readerPerspective: document.getElementById('me-article-readerPerspective').value.trim(),
+        affiliateContext:  document.getElementById('me-article-affiliateContext').value.trim(),
+      },
+      management: {
+        usageStatus: document.getElementById('me-management-usageStatus').value.trim(),
+        connection:  document.getElementById('me-management-connection').value.trim(),
+        next:        document.getElementById('me-management-next').value.trim(),
+      },
     });
     save(); renderNotes(); renderToday(); closeOverlay('modal-edit');
     if(curId===id) openWork(id);
     toast('保存しました');
   };
   if (newStatus === 'writing' && n.status !== 'writing') {
-    _showWritingCheck(doSave, null);
+    _showWritingCheck(doSave, null, id);
     return;
   }
   doSave();
@@ -3902,10 +3978,43 @@ document.getElementById('btn-paste-themes').addEventListener('click',()=>{
   }
   if(!themes.length){toast('データが空です');return;}
   [...themes].reverse().forEach(t=>{
-    S.notes.unshift({id:Date.now()+Math.random(),
-      title:t.title||'（未設定）',type:t.type||'エッセイ(A)',cat:t.cat||'その他',
-      status:t.status||'idea',publishDate:t.publishDate||'',memo:t.memo||'',
-      prevLink:t.prevLink||'',nextLink:t.nextLink||'',researchNote:t.researchNote||''});
+    const ax=t.axis||{};
+    S.notes.unshift({
+      id: Date.now()+Math.random(),
+      title:    t.title    || '（未設定）',
+      type:     t.type     || 'エッセイ(A)',
+      category: t.category || t.cat || 'その他',
+      status:   t.status   || 'idea',
+      publishDate: t.publishDate || '',
+      concept: {
+        coreProblem:              t.concept?.coreProblem              || t.memo || '',
+        targetReader:             t.concept?.targetReader             || '',
+        readerEmotion:            t.concept?.readerEmotion            || '',
+        readerBeliefToBreak:      t.concept?.readerBeliefToBreak      || '',
+        readerChangeAfterReading: t.concept?.readerChangeAfterReading || '',
+        nextHook:                 t.concept?.nextHook                 || '',
+      },
+      axis: {
+        expansionAxis: t.axis?.expansionAxis || '',
+        emotionAxis:   t.axis?.emotionAxis   || '',
+        diffFromLast:  t.axis?.diffFromLast  || '',
+      },
+      research: {
+        researchPrompt: t.research?.researchPrompt || t.researchNote || '',
+        blankSpace:     t.research?.blankSpace     || '',
+        sourceNote:     t.research?.sourceNote     || '',
+      },
+      article: {
+        soulSentence:     t.article?.soulSentence     || '',
+        structure:        t.article?.structure        || '',
+        affiliateContext: t.article?.affiliateContext || '',
+      },
+      management: {
+        usageStatus: t.management?.usageStatus || '',
+        connection:  t.management?.connection  || t.prevLink || '',
+        next:        t.management?.next        || t.nextLink || '',
+      },
+    });
   });
   save(); renderNotes();
   document.getElementById('theme-paste-input').value='';
@@ -4120,7 +4229,7 @@ async function runClaude() {
     document.getElementById('mw-claude-output').textContent = text;
     document.getElementById('claude-result-section').style.display = 'block';
     document.getElementById('claude-key-status').innerHTML = '<span style="color:var(--green)">✅ 執筆完了</span>';
-    document.getElementById('mw-draft').value = text;
+
     const n = S.notes.find(x => x.id === curId);
     if (n) { n.claudeResult = text; save(); }
     toast('✅ クロの執筆完了！');
@@ -4145,46 +4254,6 @@ async function runClaude() {
 // ================================================================
 // 自動保存（執筆中草稿）
 // ================================================================
-let _draftSaveTimer = null;
-let _workAutoSaveInterval = null;
-
-function autoSaveDraft() {
-  clearTimeout(_draftSaveTimer);
-  _draftSaveTimer = setTimeout(() => {
-    const n = S.notes.find(x => x.id === curId);
-    if (!n) return;
-    const text = document.getElementById('mw-draft').value;
-    n.draftText = text;
-    n.draftSavedAt = new Date().toISOString();
-    save();
-    const st = document.getElementById('draft-autosave-status');
-    if (st) {
-      const t = new Date();
-      st.textContent = `💾 ${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')} 自動保存済み`;
-      st.style.color = 'var(--green)';
-      setTimeout(() => { if(st) st.style.color = 'var(--text3)'; }, 3000);
-    }
-    renderWipBanner();
-  }, 1200);
-}
-
-function startWorkAutoSave() {
-  stopWorkAutoSave();
-  _workAutoSaveInterval = setInterval(() => {
-    const n = S.notes.find(x => x.id === curId);
-    if (!n) return;
-    const draft = document.getElementById('mw-draft');
-    if (draft && draft.value) {
-      n.draftText = draft.value;
-      n.draftSavedAt = new Date().toISOString();
-      save();
-      renderWipBanner();
-    }
-  }, 30000); // 30秒ごと
-}
-function stopWorkAutoSave() {
-  if (_workAutoSaveInterval) { clearInterval(_workAutoSaveInterval); _workAutoSaveInterval = null; }
-}
 
 // ================================================================
 // ダッシュボード：執筆中バナー
@@ -4225,17 +4294,13 @@ function pasteFromClipboardToManual() {
 function saveManualClaudeResult() {
   const text = document.getElementById('claude-manual-input').value.trim();
   if (!text) { toast('Claudeの回答を貼り付けてください'); return; }
-  // 結果表示エリアにも反映
   document.getElementById('mw-claude-output').textContent = text;
   document.getElementById('claude-result-section').style.display = 'block';
   document.getElementById('claude-manual-panel').style.display = 'none';
-  // ③整形タブに自動入力
-  document.getElementById('mw-draft').value = text;
-  // S.notesに保存
   const n = S.notes.find(x => x.id === curId);
   if (n) { n.claudeResult = text; save(); }
-  switchTabByName('format');
-  toast('✅ 保存して③整形タブへ移動しました');
+  switchTabByName('rakuten');
+  toast('✅ 保存して③楽天アフィへ移動しました');
 }
 
 // ================================================================
@@ -4251,153 +4316,23 @@ function getDefaultClaudeTmpl() {
   return 'あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。\n\n■ タイトル\n「${n.title}」\n\n■ 読者設定\n・副業ライターとして活動中、または始めたい人\n・${n.memo}\n\n■ 記事の方向性\n・文字数：2,000〜4,000文字\n・体験談ベース。具体的な数字・固有名詞を必ず入れる\n\n■ リサーチ結果（ジミー調べ）\n${result}\n\n■ 構成\n1. 共感リード（「これ自分だ」と思わせる状況描写）\n2. 失敗・壁（具体的なエピソード）\n3. 転機・気づき（何がどう変わったか）\n4. 再現可能な学び（明日から使えること）\n5. まとめ＋次の記事への導線\n\n■ 文体の絶対ルール\n・ですます調。親しみやすいが馴れ馴れしすぎない\n・「しみじみ思う。」「笑」など口語表現OK\n・AI的な説教口調は禁止\n・# ※ ** などの記号は一切使わない\n・抽象論・精神論で終わらない。必ず具体で締める';
 }
 
-function loadApiKey() {
-  const k = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
-  if (k) {
-    document.getElementById('gemini-api-key').value = k;
-    document.getElementById('key-status').innerHTML =
-      '<span style="color:var(--green)">✅ APIキー保存済み</span>';
-  }
-}
-function onKeyInput() {
-  const k = document.getElementById('gemini-api-key').value.trim();
-  if (k) {
-    localStorage.setItem(GEMINI_KEY_STORAGE, k);
-    document.getElementById('key-status').innerHTML =
-      '<span style="color:var(--green)">✅ 自動保存済み</span>';
-  } else {
-    document.getElementById('key-status').textContent = '';
-  }
-}
-function saveApiKey() {
-  const k = document.getElementById('gemini-api-key').value.trim();
-  if (!k) { toast('APIキーを入力してください'); return; }
-  localStorage.setItem(GEMINI_KEY_STORAGE, k);
-  document.getElementById('key-status').innerHTML =
-    '<span style="color:var(--green)">✅ 保存しました</span>';
-  toast('APIキーを保存しました');
-}
-
-async function runGemini() {
-  const typed = document.getElementById('gemini-api-key').value.trim();
-  if (typed) localStorage.setItem(GEMINI_KEY_STORAGE, typed); // 入力済みなら即保存
-  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
-  if (!apiKey) {
-    toast('先にAPIキーを入力して保存してください');
-    document.getElementById('gemini-api-key').focus();
-    return;
-  }
-  document.getElementById('key-status').innerHTML =
-    '<span style="color:var(--green)">✅ APIキー保存済み</span>';
-  const n = S.notes.find(x => x.id === curId);
-  if (!n) return;
-
-  const prompt = buildGemini(n);
-
-  // UI: ローディング開始
-  document.getElementById('btn-run-gemini').disabled = true;
-  document.getElementById('gemini-loading').style.display = 'block';
-  document.getElementById('gemini-result-section').style.display = 'none';
-  const pbar = document.getElementById('gemini-pbar');
-  pbar.style.width = '0%';
-  let pct = 0;
-  const pTimer = setInterval(() => {
-    pct = Math.min(pct + (pct < 70 ? 3 : 0.5), 92);
-    pbar.style.width = pct + '%';
-  }, 300);
-
-  // 利用可能なモデルを順番に試す（フォールバック）
-  const GEMINI_MODELS = [
-    'gemini-3.0-flash',
-    'gemini-2.5-flash',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-  ];
-  const body = JSON.stringify({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.7, maxOutputTokens: 65536 }
-  });
-
-  try {
-    let res = null, usedModel = '', lastErr = null;
-    for (const model of GEMINI_MODELS) {
-      try {
-        const ep = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-        res = await fetch(ep, { method:'POST', headers:{'Content-Type':'application/json'}, body });
-        usedModel = model;
-        if (res.ok) break;
-        // HTTP error: check if it's model-not-found, then try next
-        const errBody = await res.clone().json().catch(() => ({}));
-        const status = errBody?.error?.status || '';
-        if (res.status === 404 || status === 'NOT_FOUND' || status === 'INVALID_ARGUMENT') {
-          lastErr = new Error(errBody?.error?.message || `${model}: HTTP ${res.status}`);
-          res = null; continue;
-        }
-        break; // other errors (auth etc.) — don't retry
-      } catch(fetchErr) {
-        lastErr = fetchErr; res = null; continue; // network error, try next model
-      }
-    }
-    if (!res) throw lastErr || new Error('すべてのモデルで接続できませんでした');
-
-    clearInterval(pTimer);
-    pbar.style.width = '100%';
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      const msg = err?.error?.message || `HTTP ${res.status}`;
-      throw new Error(msg);
-    }
-
-    const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    if (!text) throw new Error('レスポンスが空でした');
-    document.getElementById('key-status').innerHTML =
-      `<span style="color:var(--green)">✅ ${usedModel} で完了</span>`;
-
-    // 結果を表示
-    document.getElementById('mw-gemini-output').textContent = text;
-    document.getElementById('gemini-result-section').style.display = 'block';
-
-    // ②クロ執筆タブに自動入力
-    document.getElementById('mw-gemini-result').value = text;
-    genChatGPT();
-
-    // ③結果をS.notesに保存（モーダルを閉じても消えないように）
-    const n2 = S.notes.find(x => x.id === curId);
-    if (n2) { n2.geminiResult = text; save(); }
-
-    toast('✅ ジミーのリサーチ完了！');
-  } catch (e) {
-    clearInterval(pTimer);
-    let errMsg;
-    if (e.message.includes('API_KEY') || e.message.toLowerCase().includes('invalid') && e.message.toLowerCase().includes('key')) {
-      errMsg = 'APIキーが無効です。AI StudioでAPIキーを確認してください。';
-    } else if (e.message.includes('fetch') || e.message.includes('network') || e.message.includes('接続')) {
-      errMsg = 'ネットワーク接続エラー。インターネット接続を確認してください。';
-    } else {
-      errMsg = `エラー: ${e.message}`;
-    }
-    document.getElementById('key-status').innerHTML =
-      `<span style="color:var(--red)">⚠️ ${errMsg}</span>`;
-    toast('⚠️ エラーが発生しました');
-  } finally {
-    document.getElementById('gemini-loading').style.display = 'none';
-    document.getElementById('btn-run-gemini').disabled = false;
-  }
-}
-
 // ================================================================
 // 執筆前チェックモーダル
 // ================================================================
 let _writingCheckConfirmCb = null;
 let _writingCheckCancelCb  = null;
+let _writingCheckNoteId    = null;
 
-function _showWritingCheck(onConfirm, onCancel) {
+function _showWritingCheck(onConfirm, onCancel, noteId) {
   _writingCheckConfirmCb = onConfirm;
   _writingCheckCancelCb  = onCancel;
+  _writingCheckNoteId    = noteId || curId || null;
   // チェックボックスをリセット
   document.querySelectorAll('#writing-check-modal input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+  // 渡し用テキストをリセット
+  const hw = document.getElementById('wc-handoff-wrap');
+  if (hw) hw.style.display = 'none';
+  _wcCheckState();
   document.getElementById('writing-check-modal').style.display = 'flex';
 }
 function _writingCheckConfirm() {
@@ -4409,6 +4344,451 @@ function _writingCheckCancel() {
   document.getElementById('writing-check-modal').style.display = 'none';
   if (_writingCheckCancelCb) { _writingCheckCancelCb(); _writingCheckCancelCb = null; }
   _writingCheckConfirmCb = null;
+}
+
+// ================================================================
+// ユーティリティ：テキストエリアをコピー
+// ================================================================
+function copyEl(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.select();
+  try { document.execCommand('copy'); } catch(e) { navigator.clipboard?.writeText(el.value); }
+  toast('コピーしました');
+}
+
+// ================================================================
+// 機能④：渡し用テキスト生成
+// ================================================================
+function _generateHandoffText() {
+  const n = S.notes.find(x => x.id === _writingCheckNoteId);
+  if (!n) { toast('記事データが見つかりません'); return; }
+  const checks = [...document.querySelectorAll('#writing-check-modal input[type="checkbox"]')];
+  const q = (i) => checks[i]?.checked ? 'チェック済み' : '未チェック';
+  const ax = n.axis || {};
+  const co = n.concept || {};
+  const re = n.research || {};
+  const ar = n.article || {};
+  const ma = n.management || {};
+  const text = `【記事制作チャット向け渡し用テキスト】
+
+■ 記事基本情報
+タイトル：${n.title || ''}
+タイプ：${n.type || ''}
+カテゴリ：${n.category || n.cat || ''}
+
+■ コンセプト
+解決する問題：${co.coreProblem || ''}
+ターゲット読者：${co.targetReader || ''}
+読者の感情状態：${co.readerEmotion || ''}
+崩すべき前提認識：${co.readerBeliefToBreak || ''}
+読了後の変化：${co.readerChangeAfterReading || ''}
+次回への伏線：${co.nextHook || ''}
+
+■ 軸
+展開軸：${ax.expansionAxis || ''}
+感情軸：${ax.emotionAxis || ''}
+前回との差分：${ax.diffFromLast || ''}
+
+■ リサーチ
+リサーチプロンプト：${re.researchPrompt || ''}
+空白地帯：${re.blankSpace || ''}
+ソースメモ：${re.sourceNote || ''}
+
+■ 記事設計
+魂の一文：${ar.soulSentence || ''}
+思考パターン：${ar.thinkingPattern || ''}
+読者視点：${ar.readerPerspective || ''}
+アフィリエイト文脈：${ar.affiliateContext || ''}
+
+■ マネジメント
+次の記事への引き継ぎ：${ma.next || ''}
+
+■ 派生チェック回答（3問）
+Q1回答：${q(0)}
+Q2回答：${q(1)}
+Q3回答：${q(2)}`;
+  const out = document.getElementById('wc-handoff-out');
+  const wrap = document.getElementById('wc-handoff-wrap');
+  if (out) out.value = text;
+  if (wrap) wrap.style.display = 'block';
+}
+
+// ================================================================
+// 機能①②③：ツールタブ / JSONインポート / コンテキスト出力
+// ================================================================
+let _toolTab   = 'ctx';
+let _importTab = 'article';
+
+function setToolTab(tab) {
+  _toolTab = tab;
+  ['ctx','jimmy'].forEach(t => {
+    document.getElementById('tool-tab-'+t)?.classList.toggle('active', t === tab);
+    const p = document.getElementById('tool-panel-'+t);
+    if (p) p.style.display = t === tab ? 'block' : 'none';
+  });
+}
+
+const _importHints = {
+  article:   'スキーマ: title / type / category / status / concept{} / axis{} / research{} / article{} / management{}',
+  published: 'スキーマ: publishedTitle / titleKeywords[] / expansionAxis / emotionAxis / thinkingPattern / readerPerspective / coreLearning / publishedAt',
+  posts:     'スキーマ: postSummary / keywords[] / emotionAxis / angle / publishedAt',
+};
+
+function setImportTab(tab) {
+  _importTab = tab;
+  ['article','published','posts'].forEach(t => {
+    document.getElementById('imp-tab-'+t)?.classList.toggle('active', t === tab);
+  });
+  const hint = document.getElementById('import-schema-hint');
+  if (hint) hint.textContent = _importHints[tab] || '';
+}
+
+function importJSON() {
+  const ta = document.getElementById('import-json-ta');
+  const raw = (ta?.value || '').trim();
+  const resEl = document.getElementById('import-result');
+  if (ta) ta.style.border = '1px solid var(--border)';
+  if (!raw) { resEl.innerHTML = '<span style="color:var(--orange)">JSONを入力してください</span>'; return; }
+  let items;
+  try {
+    const parsed = JSON.parse(raw.replace(/^```json|```$/gm, '').trim());
+    items = Array.isArray(parsed) ? parsed : [parsed];
+  } catch(e) {
+    if (ta) ta.style.border = '2px solid var(--red)';
+    resEl.innerHTML = '<span style="color:var(--red)">⚠️ JSON形式が正しくありません。クロ/ジミーが出力したJSONをそのまま貼り付けてください。<br><small style="opacity:.7">' + _escHtml(e.message) + '</small></span>';
+    return;
+  }
+  if (!items.length) { resEl.innerHTML = '<span style="color:var(--orange)">データが空です</span>'; return; }
+
+  if (_importTab === 'article') {
+    [...items].reverse().forEach(t => {
+      S.notes.unshift({
+        id: Date.now() + Math.random(),
+        title:    t.title    || '（未設定）',
+        type:     t.type     || 'エッセイ(A)',
+        category: t.category || t.cat || 'その他',
+        status:   t.status   || 'idea',
+        publishDate: t.publishDate || '',
+        concept: {
+          coreProblem:              t.concept?.coreProblem              || t.memo || '',
+          targetReader:             t.concept?.targetReader             || '',
+          readerEmotion:            t.concept?.readerEmotion            || '',
+          readerBeliefToBreak:      t.concept?.readerBeliefToBreak      || '',
+          readerChangeAfterReading: t.concept?.readerChangeAfterReading || '',
+          nextHook:                 t.concept?.nextHook                 || '',
+        },
+        axis: {
+          expansionAxis: t.axis?.expansionAxis || '',
+          emotionAxis:   t.axis?.emotionAxis   || '',
+          diffFromLast:  t.axis?.diffFromLast  || '',
+        },
+        research: {
+          researchPrompt: t.research?.researchPrompt || t.researchNote || '',
+          blankSpace:     t.research?.blankSpace     || '',
+          sourceNote:     t.research?.sourceNote     || '',
+        },
+        article: {
+          soulSentence:      t.article?.soulSentence      || '',
+          thinkingPattern:   t.article?.thinkingPattern   || '',
+          readerPerspective: t.article?.readerPerspective || '',
+          affiliateContext:  t.article?.affiliateContext  || '',
+        },
+        management: {
+          usageStatus: t.management?.usageStatus || '',
+          connection:  t.management?.connection  || t.prevLink || '',
+          next:        t.management?.next        || t.nextLink || '',
+        },
+      });
+    });
+    save(); renderNotes();
+    if (ta) ta.style.border = '1px solid var(--border)';
+    resEl.innerHTML = `<div style="background:rgba(74,136,56,.12);border:1px solid rgba(74,136,56,.3);border-radius:8px;padding:8px 12px">
+      <div style="color:var(--green);font-weight:700;margin-bottom:4px">✅ 登録しました（${items.length}件）</div>
+      <a href="#" onclick="event.preventDefault();toggleSec('notes',true);setTimeout(()=>document.getElementById('sec-notes')?.scrollIntoView({behavior:'smooth'}),80)" style="color:var(--accent);text-decoration:underline;font-size:.82rem">👉 記事候補一覧を確認する</a>
+    </div>`;
+  } else if (_importTab === 'published') {
+    const list = getPublishedArticles();
+    items.forEach(a => {
+      const entry = {
+        publishedTitle:    a.publishedTitle    || '',
+        titleKeywords:     Array.isArray(a.titleKeywords) ? a.titleKeywords : [],
+        expansionAxis:     a.expansionAxis     || '',
+        emotionAxis:       a.emotionAxis       || '',
+        thinkingPattern:   a.thinkingPattern   || '',
+        readerPerspective: a.readerPerspective || '',
+        coreLearning:      a.coreLearning      || '',
+        publishedAt:       a.publishedAt       || '',
+        headlineKeywords:  Object.assign({catch:'',main:'',sub:''}, a.headlineKeywords||{}),
+        humanTechUsed:     Array.isArray(a.humanTechUsed) ? a.humanTechUsed : [],
+      };
+      const idx = list.findIndex(x => x.publishedTitle === entry.publishedTitle);
+      if (idx >= 0) list[idx] = { ...list[idx], ...entry };
+      else list.unshift(entry);
+    });
+    setPublishedArticles(list);
+    if (ta) ta.style.border = '1px solid var(--border)';
+    resEl.innerHTML = `<div style="background:rgba(74,136,56,.12);border:1px solid rgba(74,136,56,.3);border-radius:8px;padding:8px 12px">
+      <div style="color:var(--green);font-weight:700">✅ 登録しました（${items.length}件）</div>
+      <div style="font-size:.78rem;color:var(--text3);margin-top:2px">publishedArticles に登録しました</div>
+    </div>`;
+  } else if (_importTab === 'posts') {
+    const list = getPublishedPosts();
+    items.forEach(p => {
+      list.unshift({
+        postSummary: p.postSummary || '',
+        keywords:    Array.isArray(p.keywords) ? p.keywords : [],
+        emotionAxis: p.emotionAxis || '',
+        angle:       p.angle       || '',
+        publishedAt: p.publishedAt || '',
+      });
+    });
+    setPublishedPosts(list);
+    if (ta) ta.style.border = '1px solid var(--border)';
+    resEl.innerHTML = `<div style="background:rgba(74,136,56,.12);border:1px solid rgba(74,136,56,.3);border-radius:8px;padding:8px 12px">
+      <div style="color:var(--green);font-weight:700">✅ 登録しました（${items.length}件）</div>
+      <div style="font-size:.78rem;color:var(--text3);margin-top:2px">publishedPosts に登録しました</div>
+    </div>`;
+  }
+}
+
+// ================================================================
+// 機能②：クロ向けコンテキスト出力
+// ================================================================
+// 機能②：コンテキストテキスト生成（共通ヘルパー）
+// ================================================================
+function _buildClaudeCtxText() {
+  const now = new Date();
+  const dt = `${now.getFullYear()}/${String(now.getMonth()+1).padStart(2,'0')}/${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const pub3 = getPublishedArticles()
+    .filter(a => a.publishedAt)
+    .sort((a,b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+    .slice(0, 3);
+
+  const pub3lines = pub3.length
+    ? pub3.map((a,i) => `${i+1}. タイトル：${a.publishedTitle} | 展開軸：${a.expansionAxis} | 感情軸：${a.emotionAxis} | 思考の型：${a.thinkingPattern} | 読者視点：${a.readerPerspective} | タイトルキーワード：${(a.titleKeywords||[]).join('・')} | 公開日：${a.publishedAt}`).join('\n')
+    : '（データなし）';
+
+  const unused = S.notes.filter(n =>
+    n.status !== 'done' &&
+    (!n.management?.usageStatus || n.management?.usageStatus === '未使用')
+  );
+  const unusedLines = unused.length
+    ? unused.map(n => `- タイトル：${n.title} | 展開軸：${n.axis?.expansionAxis||''} | 感情軸：${n.axis?.emotionAxis||''}`).join('\n')
+    : '（なし）';
+
+  const hookLines = pub3.map(a => {
+    const matched = S.notes.find(n => n.title === a.publishedTitle);
+    const hook = matched?.concept?.nextHook || '記録なし';
+    return `- ${a.publishedTitle}：${hook}`;
+  }).join('\n') || '（データなし）';
+
+  const usedExpansion   = pub3.map(a => a.expansionAxis     || '（未設定）').join(' / ');
+  const usedEmotion     = pub3.map(a => a.emotionAxis        || '（未設定）').join(' / ');
+  const usedThinking    = pub3.map(a => a.thinkingPattern    || '（未設定）').join(' / ');
+  const usedPerspective = pub3.map(a => a.readerPerspective  || '（未設定）').join(' / ');
+
+  return { text: `【nabebaseコンテキスト】生成日時：${dt}
+
+■ 直近3本の公開記事
+${pub3lines}
+
+■ 未使用記事候補一覧（usageStatusが空または"未使用"のもの全件）
+${unusedLines}
+
+■ 未使用候補残数：${unused.length}本
+
+■ nextHook（直近3本の公開記事に対応する記事候補カードのconcept.nextHookを参照）
+${hookLines}
+
+■ 直近3本で使用済みの組み合わせ（被り防止用）
+展開軸：${usedExpansion}
+感情軸：${usedEmotion}
+思考の型：${usedThinking}
+読者視点：${usedPerspective}`, unusedCount: unused.length };
+}
+
+// ================================================================
+// 機能②：ダッシュボードカードからワンクリックコピー
+// ================================================================
+function generateAndCopyClaudeCtx(btn) {
+  const { text, unusedCount } = _buildClaudeCtxText();
+  const out = document.getElementById('dash-ctx-out');
+  if (out) out.value = text;
+  const details = document.getElementById('dash-ctx-details');
+  if (details) details.style.display = 'block';
+  const steps = document.getElementById('dash-ctx-steps');
+  if (steps) steps.style.display = 'block';
+
+  const copy = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).catch(copy);
+  } else { copy(); }
+
+  const orig = btn.textContent;
+  btn.textContent = '✅ コピーしました！';
+  setTimeout(() => { btn.textContent = orig; }, 2000);
+}
+
+// ================================================================
+function generateClaudeContext() {
+  const { text, unusedCount } = _buildClaudeCtxText();
+
+  // 使用済み組み合わせ
+  const usedExpansion  = pub3.map(a => a.expansionAxis     || '（未設定）').join(' / ');
+  const usedEmotion    = pub3.map(a => a.emotionAxis        || '（未設定）').join(' / ');
+  const out = document.getElementById('tool-ctx-out');
+  const wrap = document.getElementById('tool-ctx-wrap');
+  const lbl = document.getElementById('tool-ctx-label');
+  if (out) out.value = text;
+  if (wrap) wrap.style.display = 'block';
+  if (lbl) lbl.textContent = `生成済み（未使用候補${unusedCount}本）`;
+}
+
+// ================================================================
+// 機能③：ジミー向け全件JSON出力
+// ================================================================
+function generateJimmyJSON() {
+  const list = getPublishedArticles().map(a => ({
+    publishedTitle:    a.publishedTitle,
+    titleKeywords:     a.titleKeywords || [],
+    expansionAxis:     a.expansionAxis,
+    emotionAxis:       a.emotionAxis,
+    thinkingPattern:   a.thinkingPattern,
+    readerPerspective: a.readerPerspective,
+    coreLearning:      a.coreLearning,
+    publishedAt:       a.publishedAt,
+  }));
+  const out = document.getElementById('tool-jimmy-out');
+  const wrap = document.getElementById('tool-jimmy-wrap');
+  const cnt = document.getElementById('tool-jimmy-count');
+  if (out) out.value = JSON.stringify(list, null, 2);
+  if (wrap) wrap.style.display = 'block';
+  if (cnt) cnt.textContent = `全${list.length}件`;
+}
+
+// ================================================================
+// リサーチ依頼文コピー（ぺぺ向け）
+// ================================================================
+function copyResearchPrompt(btn) {
+  const text = document.getElementById('mw-gemini').textContent.trim();
+  if (!text) { toast('依頼文が生成されていません'); return; }
+  const copy = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(copy);
+  } else { copy(); }
+  const msg = document.getElementById('research-copy-msg');
+  if (msg) { msg.style.display = 'block'; setTimeout(() => { msg.style.display = 'none'; }, 2000); }
+}
+
+// ================================================================
+// 機能③：ジミー向け全件JSONをワンクリックコピー
+// ================================================================
+function copyJimmyJSON(btn) {
+  const list = getPublishedArticles().map(a => ({
+    publishedTitle:    a.publishedTitle,
+    titleKeywords:     a.titleKeywords || [],
+    expansionAxis:     a.expansionAxis,
+    emotionAxis:       a.emotionAxis,
+    thinkingPattern:   a.thinkingPattern,
+    readerPerspective: a.readerPerspective,
+    coreLearning:      a.coreLearning,
+    publishedAt:       a.publishedAt,
+  }));
+  const json = JSON.stringify(list, null, 2);
+  const copy = () => {
+    const ta = document.createElement('textarea');
+    ta.value = json; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(json).catch(copy);
+  } else { copy(); }
+  // sec-toolsのtextareaも更新（開いている場合）
+  const out = document.getElementById('tool-jimmy-out');
+  const wrap = document.getElementById('tool-jimmy-wrap');
+  const cntEl = document.getElementById('tool-jimmy-count');
+  if (out) out.value = json;
+  if (wrap) wrap.style.display = 'block';
+  if (cntEl) cntEl.textContent = `全${list.length}件`;
+  const lbl = `ジミー用 全件JSONをコピー（全${list.length}件）`;
+  btn.textContent = `✅ コピーしました！（全${list.length}件）`;
+  btn.setAttribute('data-orig', lbl);
+  setTimeout(() => { btn.textContent = lbl; }, 2000);
+}
+
+// ================================================================
+// ================================================================
+// 機能⑤：ダッシュボードストックカード更新
+// ================================================================
+function _updateStockCard(cnt) {
+  const numEl  = document.getElementById('dash-stock-num');
+  const card   = document.getElementById('dash-stock-card');
+  const linkEl = document.getElementById('dash-stock-link');
+  if (!numEl) return;
+  numEl.textContent = cnt;
+  const isLow = cnt < 5;
+  numEl.style.color = isLow ? 'var(--orange)' : 'var(--green)';
+  if (card) {
+    card.style.border = isLow
+      ? '1.5px solid rgba(192,112,48,.5)'
+      : '1.5px solid var(--border)';
+  }
+  if (linkEl) {
+    if (cnt === 0) {
+      linkEl.innerHTML = `<span style="color:var(--orange);font-size:.72rem">⚠️ ネタ切れ注意！クロにネタ出しを依頼してください</span>`;
+    } else if (cnt >= 5) {
+      linkEl.innerHTML = `<a href="#" onclick="event.preventDefault();toggleSec('notes',true);setTimeout(()=>document.getElementById('sec-notes')?.scrollIntoView({behavior:'smooth'}),80)" style="color:var(--accent);text-decoration:underline">📝 記事候補一覧を見る</a>`;
+    } else {
+      linkEl.innerHTML = `<a href="#" onclick="event.preventDefault();toggleSec('import',true);setTimeout(()=>document.getElementById('sec-import')?.scrollIntoView({behavior:'smooth'}),80)" style="color:var(--orange);text-decoration:underline">🔍 クロにネタ出しを依頼（JSONインポートから追加）</a>`;
+    }
+  }
+  // ジミー用ボタンの件数も更新
+  const jimmyBtn = document.getElementById('arc-jimmy-btn');
+  if (jimmyBtn) {
+    const pubCnt = getPublishedArticles().length;
+    const lbl = `ジミー用 全件JSONをコピー（全${pubCnt}件）`;
+    jimmyBtn.textContent = lbl;
+    jimmyBtn.setAttribute('data-orig', lbl);
+  }
+}
+
+// ================================================================
+// 機能④：執筆前チェックモーダル — チェック状態管理
+// ================================================================
+function _wcCheckState() {
+  const checks = [...document.querySelectorAll('#writing-check-modal input[type="checkbox"]')];
+  const allChecked = checks.every(c => c.checked);
+  const btn = document.getElementById('wc-gen-btn');
+  if (!btn) return;
+  btn.disabled = !allChecked;
+  btn.style.opacity     = allChecked ? '1'          : '0.5';
+  btn.style.cursor      = allChecked ? 'pointer'     : 'not-allowed';
+  btn.style.background  = allChecked ? 'var(--accent)' : 'var(--bg5)';
+  btn.style.color       = allChecked ? '#fff'        : 'var(--text3)';
+  btn.style.border      = allChecked ? 'none'        : '1px solid var(--border)';
+}
+function _wcCopyHandoff(btn) {
+  const out = document.getElementById('wc-handoff-out');
+  if (!out || !out.value) { toast('先に渡し用テキストを生成してください'); return; }
+  const copy = () => {
+    out.select(); try { document.execCommand('copy'); } catch(e) { navigator.clipboard?.writeText(out.value); }
+  };
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(out.value).catch(copy);
+  } else { copy(); }
+  const orig = btn.textContent;
+  btn.textContent = '✅ コピーしました！';
+  setTimeout(() => { btn.textContent = orig; }, 2000);
 }
 
 // ================================================================
@@ -4424,7 +4804,7 @@ renderNetaList();
 renderXPromptList();
 renderXManage();
 _initXPromptTextarea();
-loadApiKey();
+_initPublishedCollections();
 // sec-bodyのoverflow修正（ホバーアニメーションで切れないよう）
 ['notes','xposts','today'].forEach(function(name){
   var b = document.getElementById('body-'+name);
@@ -5099,45 +5479,11 @@ function renderNetaList() {
 // ================================================================
 let imggenNoteId = null;
 
-function refreshImggenTitle() {
-  const titleEl = document.getElementById('mwimg-note-title');
-  if (!titleEl) return;
-  const n = S.notes.find(x => x.id === curId);
-  if (n) {
-    titleEl.textContent = '📝 ' + n.title;
-    titleEl.style.display = 'block';
-  } else {
-    titleEl.style.display = 'none';
-  }
-}
-
-function openImgGenModal(id) {
-  openWork(id);
-  switchTabByName('imggen');
-  initImgPromptVault();
-  refreshImggenTitle();
-}
-
 // ================================================================
 // 見出し画像生成（新実装）
 // ================================================================
 
 let _imgPromptVaultTimer = null;
-
-function initImgPromptVault() {
-  const ta = document.getElementById('imggen-prompt-vault');
-  if (!ta) return;
-  const saved = localStorage.getItem('nabebase_imggen_prompt') || '';
-  if (saved) ta.value = saved;
-  _updateImgPromptVaultTs();
-  ta.oninput = () => {
-    clearTimeout(_imgPromptVaultTimer);
-    _imgPromptVaultTimer = setTimeout(() => {
-      localStorage.setItem('nabebase_imggen_prompt', ta.value);
-      _updateImgPromptVaultTs();
-    }, 800);
-  };
-}
 
 function _updateImgPromptVaultTs() {
   const el = document.getElementById('imgprompt-vault-ts');
@@ -5149,101 +5495,7 @@ function _updateImgPromptVaultTs() {
 }
 
 
-async function autoExtractImgText(formattedText) {
-  if (!formattedText || formattedText.trim().length < 50) return;
-  const apiKey = localStorage.getItem('beyan_gemini_key') || '';
-  if (!apiKey) return;
-
-  const statusEl = document.getElementById('img-extract-status');
-  const setStatus = (color, msg) => {
-    if (!statusEl) return;
-    statusEl.style.display = 'block';
-    statusEl.style.color = color;
-    statusEl.textContent = msg;
-  };
-  setStatus('var(--accent)', '🤖 AIが見出し画像テキストを抽出中...');
-
-  const excerpt = formattedText.trim().slice(0, 200);
-  const prompt = `次の記事本文から見出し画像用のテキストを3つ抽出してください。
-
-制約：
-- 必ずJSON形式のみで返す。マークダウン・コードブロック・説明文は一切不要
-- mainTitleは絶対に10文字以内で終わらせる（途中で切らない）
-- subTitleは絶対に15文字以内で終わらせる
-- bodySummaryは15文字以内で、文の途中で切らず、名詞か動詞で完結させる
-
-返すのは以下のJSONのみ：
-{"mainTitle":"10文字以内","subTitle":"15文字以内","bodySummary":"15字以内・必ず意味が完結する形で終わらせること"}
-
----
-${excerpt}`;
-
-  try {
-    console.log('[ImgText] gemini-2.5-flash request sent');
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 800, temperature: 0 }
-        })
-      }
-    );
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error?.message || String(res.status));
-
-    const parts        = data.candidates?.[0]?.content?.parts || [];
-    const responseText = parts.filter(p => !p.thought).map(p => p.text || '').join('');
-    console.log('[ImgText] raw:', responseText);
-
-    const extract = (key, limit) => {
-      const m = responseText.match(new RegExp('"' + key + '"\\s*:\\s*"([^"]*)'));
-      return m ? m[1].slice(0, limit) : '';
-    };
-
-    const mainTitle   = extract('mainTitle', 10);
-    const subTitle    = extract('subTitle', 15);
-    const bodySummary = extract('bodySummary', 15);
-
-    if (!mainTitle) throw new Error('抽出失敗: ' + responseText.slice(0, 80));
-
-    console.log(`[ImgText] mainTitle: ${mainTitle} / subTitle: ${subTitle} / bodySummary: ${bodySummary}`);
-
-    ['mw-main-title','mw-sub-title','mw-body-summary'].forEach((id, i) => {
-      const el = document.getElementById(id);
-      if (el) el.value = [mainTitle, subTitle, bodySummary][i];
-    });
-
-    const nf = S.notes.find(x => x.id === curId);
-    if (nf) { nf.mainTitle = mainTitle; nf.subTitle = subTitle; nf.bodySummary = bodySummary; save(); }
-
-    setStatus('var(--green)', `✅ AI抽出完了 — ${mainTitle}`);
-    console.log('[ImgText] fields filled');
-    await clickGenerateHeaderSVG();
-  } catch(e) {
-    console.log('[ImgText] error: ' + e.message);
-    setStatus('var(--red)', `⚠️ AI抽出失敗: ${e.message.slice(0, 60)}`);
-  }
-}
-
 let _imgTextFieldTimer = null;
-function autoSaveImgTextField() {
-  clearTimeout(_imgTextFieldTimer);
-  _imgTextFieldTimer = setTimeout(() => {
-    const n = S.notes.find(x => x.id === curId);
-    if (!n) return;
-    n.mainTitle   = (document.getElementById('mw-main-title')?.value   || '').trim();
-    n.subTitle    = (document.getElementById('mw-sub-title')?.value    || '').trim();
-    n.bodySummary = (document.getElementById('mw-body-summary')?.value || '').trim();
-    save();
-  }, 800);
-}
-
-async function runImgGen() {
-  await clickGenerateHeaderSVG();
-}
 
 async function clickGenerateHeaderSVG() {
   const n = S.notes.find(x => x.id === curId);
@@ -5570,65 +5822,7 @@ function showMwImgError(msg) {
   el.style.display = 'block'; el.textContent = msg;
 }
 
-function mwImgDownload() {
-  const img = document.getElementById('mwimg-img');
-  const b64 = img.dataset.b64; const url = img.dataset.url;
-  const mime = img.dataset.mime || 'image/png';
-  const n = S.notes.find(x => x.id === curId);
-  const d = new Date();
-  const dateStr = d.getFullYear().toString()
-    + String(d.getMonth()+1).padStart(2,'0')
-    + String(d.getDate()).padStart(2,'0');
-  const fname = (n?.title || 'eyecatch').slice(0, 30).replace(/[\\/:*?"<>|]/g, '_') + '_' + dateStr + '.png';
-  if (b64) {
-    const a = document.createElement('a'); a.href = `data:${mime};base64,${b64}`;
-    a.download = fname; a.click(); toast('画像を保存しました');
-  } else if (url) {
-    window.open(url, '_blank');
-    toast('画像を新しいタブで開きました。長押しor右クリックで保存してください');
-  }
-}
 
-
-// ----- クロチェックタブ -----
-function updateCcheckImg(src) {
-  const cimg = document.getElementById('ccheck-img');
-  const noimg = document.getElementById('ccheck-no-img');
-  if (!cimg || !noimg) return;
-  cimg.src = src; cimg.style.display = 'block'; noimg.style.display = 'none';
-}
-
-function buildCcheckPrompt() {
-  const n = S.notes.find(x => x.id === curId);
-  if (!n) return '';
-  const formatted = document.getElementById('mw-formatted')?.textContent?.trim() ||
-                     document.getElementById('mw-draft')?.value?.trim() || '（まだ整形されていません）';
-  const imgPrompt = document.getElementById('imggen-prompt-vault')?.value?.trim() || '（まだ見出し画像が生成されていません）';
-  return `以下の記事原稿と見出し画像プロンプトを確認してください。内容が一致しているかチェックし、矛盾や改善点を具体的に指摘してください。
-
-【記事タイトル】${n.title}
-
-【整形済み記事原稿】
-${formatted.slice(0, 2000)}${formatted.length > 2000 ? '\n…（以下省略）' : ''}
-
-【見出し画像プロンプト（Imagen API用）】
-${imgPrompt}
-
-チェック項目：
-1. 記事の内容と見出し画像の雰囲気・テーマが一致しているか
-2. 読者が「読みたい」と思えるアイキャッチになっているか
-3. 修正が必要な場合は修正案を提示してください`;
-}
-
-function refreshImgCheckTab() {
-  const promptEl = document.getElementById('ccheck-prompt');
-  if (promptEl) promptEl.textContent = buildCcheckPrompt();
-  // 画像がすでに生成されていれば表示を同期
-  const mwImg = document.getElementById('mwimg-img');
-  if (mwImg && mwImg.src && mwImg.src !== window.location.href + '#' && mwImg.src !== '#') {
-    updateCcheckImg(mwImg.src);
-  }
-}
 
 // ================================================================
 // 楽天カード生成
@@ -5953,6 +6147,67 @@ function getXDrafts()    { return JSON.parse(localStorage.getItem(X_DRAFT_POSTS_
 function setXDrafts(a)   { localStorage.setItem(X_DRAFT_POSTS_KEY, JSON.stringify(a)); }
 function getXPromptText(){ return localStorage.getItem(X_PROMPT_KEY) || DEFAULT_X_PROMPT; }
 
+function getPublishedArticles() {
+  const list = JSON.parse(localStorage.getItem(PUBLISHED_ARTICLES_KEY) || '[]');
+  // 新フィールドが欠けている既存レコードにデフォルト補完
+  return list.map(a => {
+    const rec = { humanTechUsed: [], ...a };
+    rec.headlineKeywords = Object.assign({ catch: '', main: '', sub: '' }, a.headlineKeywords || {});
+    return rec;
+  });
+}
+function setPublishedArticles(a) { localStorage.setItem(PUBLISHED_ARTICLES_KEY, JSON.stringify(a)); }
+function getPublishedPosts()     { return JSON.parse(localStorage.getItem(PUBLISHED_POSTS_KEY) || '[]'); }
+function setPublishedPosts(a)    { localStorage.setItem(PUBLISHED_POSTS_KEY, JSON.stringify(a)); }
+
+function _initPublishedCollections() {
+  if (localStorage.getItem(PUBLISHED_ARTICLES_KEY) === null) {
+    setPublishedArticles([
+      {"publishedTitle":"AIで副業が加速するどころか案件を断った。3交代勤務者が知るべきAI活用の現実","titleKeywords":["AI","副業","3交代勤務","案件","AI活用"],"expansionAxis":"落とし穴","emotionAxis":"焦り","thinkingPattern":"落とし穴型","readerPerspective":"始めた直後","coreLearning":"AIを使えば副業が加速すると思っていたが、現実は逆だったという気づき","publishedAt":"2025-04-08"},
+      {"publishedTitle":"夜勤明けに気づいた。副業が続く人は完璧を目指していなかった","titleKeywords":["夜勤明け","副業","完璧主義","継続"],"expansionAxis":"再定義","emotionAxis":"安堵","thinkingPattern":"再定義型","readerPerspective":"続かなくなった時","coreLearning":"副業を続けられる人は完璧を目指さない、という逆説的な気づき","publishedAt":"2025-04-08"},
+      {"publishedTitle":"副業スクール50万払って1円も稼げなかった話と3つの教訓","titleKeywords":["副業スクール","失敗","お金","教訓"],"expansionAxis":"原因追及","emotionAxis":"悔しさ","thinkingPattern":"落とし穴型","readerPerspective":"始める前","coreLearning":"高額スクールに投資しても稼げない構造的な理由と、そこから得た教訓","publishedAt":"2025-04-08"},
+      {"publishedTitle":"連続不採用でも諦めなかった私が、提案失敗から学んだ『次への一歩』","titleKeywords":["不採用","提案","失敗","継続"],"expansionAxis":"タイムライン","emotionAxis":"悔しさ","thinkingPattern":"タイムライン型","readerPerspective":"途中で諦めた人の目線","coreLearning":"不採用が続いても諦めなかった理由と、失敗から学んだ具体的な次の動き","publishedAt":"2025-04-05"},
+      {"publishedTitle":"やめたら続いた。3交代勤務×副業、引き算の法則","titleKeywords":["3交代勤務","副業","継続","引き算","やめる"],"expansionAxis":"再定義","emotionAxis":"安堵","thinkingPattern":"再定義型","readerPerspective":"続かなくなった時","coreLearning":"足し算ではなく引き算することで副業が続くようになった法則","publishedAt":"2025-04-02"},
+      {"publishedTitle":"夜勤明け3時間睡眠が6時間になった。私がやめた3つの習慣","titleKeywords":["夜勤明け","睡眠","習慣","やめる"],"expansionAxis":"手順","emotionAxis":"安堵","thinkingPattern":"手順型","readerPerspective":"続けられている人の目線","coreLearning":"夜勤明けの睡眠改善のためにやめた具体的な3つの習慣","publishedAt":"2025-04-01"},
+      {"publishedTitle":"夜勤明け3年の不眠が消えた、やめた4つの習慣","titleKeywords":["夜勤明け","不眠","睡眠","習慣","やめる"],"expansionAxis":"手順","emotionAxis":"安堵","thinkingPattern":"手順型","readerPerspective":"続けられている人の目線","coreLearning":"3年続いた不眠が改善した、やめた4つの習慣","publishedAt":"2025-03-30"},
+      {"publishedTitle":"夜勤明けに副業した話。正直しんどかった","titleKeywords":["夜勤明け","副業","しんどい","体験談"],"expansionAxis":"原因追及","emotionAxis":"焦り","thinkingPattern":"原因追及型","readerPerspective":"始めた直後","coreLearning":"夜勤明けに副業することのリアルなしんどさと、それでも続けた理由","publishedAt":"2025-03-30"},
+      {"publishedTitle":"副業1年目で体調を崩した私が「辞めない」を選んだ、たった一つの考え方","titleKeywords":["副業","体調","継続","1年目"],"expansionAxis":"再定義","emotionAxis":"諦め","thinkingPattern":"再定義型","readerPerspective":"途中で諦めた人の目線","coreLearning":"体調を崩しても副業を辞めなかった理由となった、たった一つの考え方","publishedAt":"2025-03-30"},
+      {"publishedTitle":"実績ゼロでも案件が取れた。クライアントが本当に求めていた「たった一つのこと」","titleKeywords":["実績ゼロ","案件","クライアント","提案"],"expansionAxis":"再定義","emotionAxis":"焦り","thinkingPattern":"再定義型","readerPerspective":"始める前","coreLearning":"実績なしでも案件が取れた理由、クライアントが本当に求めていたもの","publishedAt":"2025-03-27"},
+      {"publishedTitle":"「3ヶ月で挫折」はもう嫌だ。3交代勤務ライターが教えるCW・ランサーズ攻略法","titleKeywords":["3交代勤務","挫折","クラウドワークス","ランサーズ","攻略"],"expansionAxis":"手順","emotionAxis":"悔しさ","thinkingPattern":"手順型","readerPerspective":"途中で諦めた人の目線","coreLearning":"3交代勤務のライターが挫折を乗り越えるためのCW・ランサーズ攻略の具体策","publishedAt":"2025-03-27"},
+      {"publishedTitle":"note記事、公開1週間の数字を公開！予想外の3つの発見から見えた「伸びる記事」","titleKeywords":["note","数字","PV","伸びる記事","分析"],"expansionAxis":"比較","emotionAxis":"焦り","thinkingPattern":"比較型","readerPerspective":"始めた直後","coreLearning":"note公開1週間の数字から見えた、伸びる記事の条件","publishedAt":"2025-03-26"},
+      {"publishedTitle":"note記事、公開1週間の数字を公開！予想外の3つの発見から見えた「伸びる記事」の秘密","titleKeywords":["note","数字","PV","伸びる記事","秘密"],"expansionAxis":"原因追及","emotionAxis":"焦り","thinkingPattern":"原因追及型","readerPerspective":"始めた直後","coreLearning":"伸びる記事の裏側にある構造的な秘密","publishedAt":"2025-03-26"},
+      {"publishedTitle":"期待500PVが80だった。1週間で学んだ、数字の正しい読み方","titleKeywords":["PV","数字","note","分析","現実"],"expansionAxis":"再定義","emotionAxis":"悔しさ","thinkingPattern":"再定義型","readerPerspective":"始めた直後","coreLearning":"期待を大きく下回る数字に直面して学んだ、数字の正しい読み方と向き合い方","publishedAt":"2025-03-26"},
+      {"publishedTitle":"AIに投げて失敗した記事、5本振り返ってみる","titleKeywords":["AI","失敗","記事","振り返り"],"expansionAxis":"落とし穴","emotionAxis":"悔しさ","thinkingPattern":"落とし穴型","readerPerspective":"途中で諦めた人の目線","coreLearning":"AIに任せすぎて失敗した記事5本の共通点と反省","publishedAt":"2025-03-26"},
+      {"publishedTitle":"AIっぽさを卒業したい。ChatGPTとClaudeを1週間使い分けて気づいた3つの違い","titleKeywords":["AI","ChatGPT","Claude","使い分け","AIっぽさ"],"expansionAxis":"比較","emotionAxis":"焦り","thinkingPattern":"比較型","readerPerspective":"始めた直後","coreLearning":"ChatGPTとClaudeを使い分けることでAIっぽさから抜け出せる3つの理由","publishedAt":"2025-03-12"},
+      {"publishedTitle":"完璧じゃなくていい。週10時間しか確保できない私の泥臭い副業スケジュール","titleKeywords":["完璧主義","副業","時間","スケジュール","3交代勤務"],"expansionAxis":"手順","emotionAxis":"焦り","thinkingPattern":"手順型","readerPerspective":"始める前","coreLearning":"週10時間という限られた時間で副業を動かすための泥臭いスケジュール設計","publishedAt":"2025-03-12"},
+      {"publishedTitle":"完璧主義を捨てたら少しだけ進めた。1週間の泥臭い振り返り","titleKeywords":["完璧主義","副業","継続","振り返り"],"expansionAxis":"タイムライン","emotionAxis":"安堵","thinkingPattern":"タイムライン型","readerPerspective":"続かなくなった時","coreLearning":"完璧主義を手放したことで少しだけ前進できた1週間のリアルな記録","publishedAt":"2025-03-12"},
+      {"publishedTitle":"「正解」を書くのをやめたら、少し楽になった話","titleKeywords":["正解","ライティング","完璧主義","楽になる"],"expansionAxis":"再定義","emotionAxis":"安堵","thinkingPattern":"再定義型","readerPerspective":"途中で諦めた人の目線","coreLearning":"正解を書こうとするプレッシャーをやめたことで楽になった体験","publishedAt":"2025-03-05"},
+      {"publishedTitle":"文字単価に悩むより、楽天経済圏を整えた方が早かった話","titleKeywords":["文字単価","楽天経済圏","収入","副業戦略"],"expansionAxis":"比較","emotionAxis":"焦り","thinkingPattern":"比較型","readerPerspective":"始める前","coreLearning":"文字単価の交渉より生活コストを下げる方が手取りを増やす近道だという気づき","publishedAt":"2025-03-05"},
+      {"publishedTitle":"提案文60件送って分かった、時給を上げる唯一の方法","titleKeywords":["提案文","時給","クラウドワークス","営業"],"expansionAxis":"原因追及","emotionAxis":"悔しさ","thinkingPattern":"原因追及型","readerPerspective":"続けられている人の目線","coreLearning":"60件の提案から見えた、時給を上げるための唯一の正解","publishedAt":"2025-03-05"},
+      {"publishedTitle":"2件目の案件で見えた、1件目との決定的な違い","titleKeywords":["案件","成長","ライター","気づき"],"expansionAxis":"比較","emotionAxis":"安堵","thinkingPattern":"比較型","readerPerspective":"続けられている人の目線","coreLearning":"2件目の案件をこなして初めて見えた、1件目との決定的な違いと成長の正体","publishedAt":"2025-03-05"},
+      {"publishedTitle":"2件目でやっと気づいた、副業ライターの「成長の正体」","titleKeywords":["副業ライター","成長","案件","気づき"],"expansionAxis":"原因追及","emotionAxis":"安堵","thinkingPattern":"原因追及型","readerPerspective":"続けられている人の目線","coreLearning":"2件目の案件で気づいた、副業ライターとして成長するとはどういうことか","publishedAt":"2025-03-05"},
+      {"publishedTitle":"提案文47件送って学んだこと　返信率4%から見えた「通る提案」の本質","titleKeywords":["提案文","返信率","採用","営業"],"expansionAxis":"原因追及","emotionAxis":"悔しさ","thinkingPattern":"原因追及型","readerPerspective":"途中で諦めた人の目線","coreLearning":"47件送って返信率4%という現実から見えた、通る提案の本質的な条件","publishedAt":"2025-03-05"},
+      {"publishedTitle":"0部記事を5部に変えた改善全記録｜失敗10本の修正ログ","titleKeywords":["有料note","改善","失敗","修正","売れない"],"expansionAxis":"手順","emotionAxis":"悔しさ","thinkingPattern":"手順型","readerPerspective":"途中で諦めた人の目線","coreLearning":"売れなかった有料記事を改善して売れるようにした、失敗10本の修正記録","publishedAt":"2025-03-05"},
+      {"publishedTitle":"note有料記事、最初の10本は全部失敗した｜0部記録と改善ログ","titleKeywords":["有料note","失敗","0部","改善"],"expansionAxis":"タイムライン","emotionAxis":"悔しさ","thinkingPattern":"タイムライン型","readerPerspective":"始めた直後","coreLearning":"有料記事最初の10本が全て売れなかったリアルな記録と、そこからの改善","publishedAt":"2025-03-05"},
+      {"publishedTitle":"副業ライター、noteとクラウドワークス、どっちで稼ぐべきか｜3ヶ月検証","titleKeywords":["note","クラウドワークス","副業ライター","比較","稼ぐ"],"expansionAxis":"比較","emotionAxis":"焦り","thinkingPattern":"比較型","readerPerspective":"始める前","coreLearning":"3ヶ月間の実体験からnoteとクラウドワークスどちらで稼ぐべきかの結論","publishedAt":"2025-03-05"},
+      {"publishedTitle":"noteで有料記事が売れた後、何をすべきか｜初動5部からの戦略設計","titleKeywords":["有料note","戦略","売れた後","次の一手"],"expansionAxis":"手順","emotionAxis":"安堵","thinkingPattern":"手順型","readerPerspective":"続けられている人の目線","coreLearning":"有料記事が売れ始めた後にやるべき戦略的な次の動き","publishedAt":"2025-03-05"},
+      {"publishedTitle":"なぜ私は\"売れた話\"より\"売れなかった話\"を書くのか","titleKeywords":["売れなかった話","失敗談","発信戦略","note"],"expansionAxis":"再定義","emotionAxis":"悔しさ","thinkingPattern":"再定義型","readerPerspective":"始める前","coreLearning":"成功談より失敗談を書く理由と、その戦略的な意図","publishedAt":"2025-03-05"},
+      {"publishedTitle":"売れなかった理由はプロンプトだった0部→5部に変えた設計全公開","titleKeywords":["有料note","プロンプト","AI","改善","売れない"],"expansionAxis":"原因追及","emotionAxis":"悔しさ","thinkingPattern":"原因追及型","readerPerspective":"途中で諦めた人の目線","coreLearning":"売れなかった原因がプロンプトにあったという発見と、改善した設計の全公開","publishedAt":"2025-03-05"},
+      {"publishedTitle":"AIで有料note、300円で売れた。でも「丸投げ」では失敗した話","titleKeywords":["AI","有料note","失敗","丸投げ"],"expansionAxis":"落とし穴","emotionAxis":"焦り","thinkingPattern":"落とし穴型","readerPerspective":"始めた直後","coreLearning":"AIに丸投げした有料noteが売れない理由と、正しいAIの使い方","publishedAt":"2025-03-05"},
+      {"publishedTitle":"副業ライターは\"発信\"をやるべきか問題に、私なりの結論を出す","titleKeywords":["副業ライター","発信","X","note","戦略"],"expansionAxis":"再定義","emotionAxis":"焦り","thinkingPattern":"再定義型","readerPerspective":"始める前","coreLearning":"副業ライターが発信をすべきかどうかについての実体験からの結論","publishedAt":"2025-03-05"},
+      {"publishedTitle":"noteとクラウドワークス、どっちに時間を使うべきか本気で検証してみた","titleKeywords":["note","クラウドワークス","時間","比較","検証"],"expansionAxis":"比較","emotionAxis":"焦り","thinkingPattern":"比較型","readerPerspective":"始める前","coreLearning":"noteとクラウドワークスへの時間配分について本気で検証した結果","publishedAt":"2025-03-05"},
+      {"publishedTitle":"副業ライターが月3万円から伸び悩んだ時期にやった3つのこと","titleKeywords":["副業ライター","月3万円","伸び悩み","壁"],"expansionAxis":"手順","emotionAxis":"焦り","thinkingPattern":"手順型","readerPerspective":"続かなくなった時","coreLearning":"月3万円の壁で伸び悩んだ時期にやった3つの具体的な打ち手","publishedAt":"2025-03-05"},
+      {"publishedTitle":"副業ライターが単価2円に到達するまでに「やめた」こと","titleKeywords":["副業ライター","文字単価","2円","やめる"],"expansionAxis":"落とし穴","emotionAxis":"安堵","thinkingPattern":"落とし穴型","readerPerspective":"続けられている人の目線","coreLearning":"単価2円到達のために手放したこと、やめたことの記録","publishedAt":"2025-03-05"},
+      {"publishedTitle":"副業ライターがAIに依存しすぎると、じわじわ実力が落ちていく","titleKeywords":["副業ライター","AI依存","実力","落とし穴"],"expansionAxis":"タイムライン","emotionAxis":"焦り","thinkingPattern":"タイムライン型","readerPerspective":"続けられている人の目線","coreLearning":"AIへの依存が時間をかけてライターとしての実力をじわじわ削っていくメカニズム","publishedAt":"2025-03-05"},
+      {"publishedTitle":"副業ライターが最初の1万円を稼ぐまでにやったこと。才能は関係なかった。","titleKeywords":["副業ライター","1万円","才能","始め方"],"expansionAxis":"手順","emotionAxis":"焦り","thinkingPattern":"手順型","readerPerspective":"始める前","coreLearning":"才能に関係なく最初の1万円を稼ぐためにやった具体的な行動","publishedAt":"2025-03-05"},
+      {"publishedTitle":"ChatGPTとClaudeを使い分けて記事を書いてみたら、思っていた結果と全然違った","titleKeywords":["ChatGPT","Claude","AI","使い分け","ライティング"],"expansionAxis":"比較","emotionAxis":"焦り","thinkingPattern":"比較型","readerPerspective":"始めた直後","coreLearning":"ChatGPTとClaudeを使い分けて記事を書いた結果、予想と全然違った現実","publishedAt":"2025-03-05"}
+    ]);
+  }
+  if (localStorage.getItem(PUBLISHED_POSTS_KEY) === null) {
+    setPublishedPosts([]);
+  }
+}
+
 // ================================================================
 // X作成フロー
 // ================================================================
@@ -5991,6 +6246,10 @@ async function generateXPosts() {
   const prompt = promptTemplate
     .replace('${materialText}', material)
     .replace('${type}', typeLabel);
+
+  console.log('[xPrompt] templateに${materialText}が含まれるか:', promptTemplate.includes('${materialText}'));
+  console.log('[xPrompt] templateに${type}が含まれるか:', promptTemplate.includes('${type}'));
+  console.log('[xPrompt] 置換後のprompt（先頭500文字）:', prompt.substring(0, 500));
 
   try {
     const res = await fetch(
