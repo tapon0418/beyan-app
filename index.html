@@ -98,7 +98,7 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 .sec-body{overflow:hidden;transition:max-height .25s ease;padding:0 2px;will-change:max-height}
 
 /* ===== セクションカード（色分け） ===== */
-#sec-today, #sec-notes, #sec-xposts, #sec-archive {
+#sec-axis, #sec-notes, #sec-xposts, #sec-archive {
   border-radius:16px;
   margin-bottom:14px;
   border:1.5px solid var(--border2);
@@ -107,7 +107,6 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 #sec-notes    { border-left:5px solid var(--orange); }
 #sec-xposts   { border-left:5px solid #1a1a2e; }
 #sec-archive  { border-left:5px solid #7c3aed; }
-#sec-today    { border-left:5px solid var(--yellow); }
 
 /* notes section header gets a warm orange tint */
 #sec-notes > .sec-head {
@@ -904,7 +903,7 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   .stat-num { font-size:24px; }
 
   /* セクション：小画面での余白・文字調整 */
-  #sec-today,#sec-notes,#sec-xposts,#sec-archive {
+  #sec-notes,#sec-xposts,#sec-archive {
     margin-bottom:12px !important;
     border-radius:12px !important;
   }
@@ -1061,15 +1060,9 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   margin-top: 4px !important;
 }
 
-/* 数字ポップアニメ（ページロード時） */
-#st-done, #st-wip, #st-xprep, #st-idea {
-  animation: statPop .6s cubic-bezier(.34,1.56,.64,1) backwards;
-}
-#st-done{animation-delay:.15s}#st-wip{animation-delay:.2s}
-#st-xprep{animation-delay:.25s}#st-idea{animation-delay:.3s}
 
 /* ---- セクションカード（frosted glass）---- */
-#sec-today, #sec-notes, #sec-xposts, #sec-archive {
+#sec-axis, #sec-notes, #sec-xposts, #sec-archive {
   background: var(--glass) !important;
   backdrop-filter: blur(6px) !important;
   box-shadow: 0 4px 24px var(--glass-shadow), 0 1px 0 rgba(255,255,255,.5) !important;
@@ -1087,7 +1080,6 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   letter-spacing: .2px !important;
 }
 #sec-notes > .sec-head  { border-left: none; }
-#sec-today > .sec-head  { color: var(--yellow); }
 
 /* ---- きらーん共通ミックスイン ---- */
 /* note-item / xpost-item / stat-box / slot / wip-card 共通のshine */
@@ -1191,33 +1183,6 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   animation: shineSwipe .65s cubic-bezier(.4,0,.2,1);
 }
 
-/* ---- スロット（今日の予定）--- */
-.slot {
-  background: rgba(255,250,240,0.72) !important;
-  border: 1px solid rgba(255,248,230,.88) !important;
-  box-shadow: 0 2px 10px var(--glass-shadow) !important;
-  backdrop-filter: blur(8px) !important;
-  border-radius: 12px !important;
-  overflow: hidden;
-  position: relative;
-}
-.slot::before {
-  content: '';
-  position: absolute;
-  top: -80%; left: -140%;
-  width: 65%; height: 280%;
-  background: linear-gradient(108deg,
-    transparent 20%,
-    rgba(255,228,120,.2) 38%,
-    rgba(255,248,200,.8) 50%,
-    rgba(255,220,100,.2) 62%,
-    transparent 80%);
-  transform: skewX(-18deg);
-  pointer-events: none;
-  opacity: 0;
-  z-index: 5;
-}
-.slot:hover::before { animation: shineSwipe .6s cubic-bezier(.4,0,.2,1); }
 
 /* ---- WIPカード ---- */
 .wip-card {
@@ -1439,7 +1404,6 @@ input:focus, textarea:focus, select:focus {
     <button class="tpill" id="tp-top"    onclick="window.scrollTo({top:0,behavior:'smooth'})"><span class="tpill-icon">📊</span><span class="tpill-label"> ダッシュ</span></button>
     <button class="tpill active" id="tp-notes"  onclick="scrollToSec('sec-notes')"><span class="tpill-icon">📝</span><span class="tpill-label"> note</span></button>
     <button class="tpill" id="tp-xposts" onclick="scrollToSec('sec-xposts')"><span class="tpill-icon">𝕏</span><span class="tpill-label"> X投稿</span></button>
-    <button class="tpill" id="tp-today"  onclick="scrollToSec('sec-today')"><span class="tpill-icon">📅</span><span class="tpill-label"> 今日</span></button>
     <button class="tpill" id="tp-tmpl"   onclick="openSettings();switchStab('gemini')"><span class="tpill-icon">📋</span><span class="tpill-label"> 指示文</span></button>
     <button class="tpill" id="tp-xprompt" onclick="scrollToSec('sec-xprompt')"><span class="tpill-icon">📋</span><span class="tpill-label"> X管理</span></button>
     <button class="tpill" id="tp-xwrite"  onclick="scrollToSec('sec-xwrite')"><span class="tpill-icon">✍️</span><span class="tpill-label"> X作成</span></button>
@@ -1458,9 +1422,6 @@ input:focus, textarea:focus, select:focus {
   </button>
   <button class="bnav-btn" id="bn-xposts" onclick="scrollToSec('sec-xposts');setNavActive('xposts')">
     <span class="bnav-icon">𝕏</span><span class="bnav-lbl">X投稿</span>
-  </button>
-  <button class="bnav-btn" id="bn-today"  onclick="scrollToSec('sec-today');setNavActive('today')">
-    <span class="bnav-icon">📅</span><span class="bnav-lbl">今日</span>
   </button>
   <button class="bnav-btn" id="bn-tmpl"   onclick="openSettings();switchStab('gemini')">
     <span class="bnav-icon">📋</span><span class="bnav-lbl">指示文</span>
@@ -1771,25 +1732,7 @@ input:focus, textarea:focus, select:focus {
     </details>
   </div>
 
-  <!-- ===== 統計 ===== -->
-  <div class="stats-row" style="margin-top:4px">
-    <div class="stat-box">
-      <div class="stat-num" style="color:var(--green)" id="st-done">0</div>
-      <div class="stat-lbl">公開済み</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num" style="color:var(--yellow)" id="st-wip">0</div>
-      <div class="stat-lbl">執筆中</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num" style="color:var(--orange)" id="st-xprep">0</div>
-      <div class="stat-lbl">X準備中</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num" style="color:var(--text2)" id="st-idea">0</div>
-      <div class="stat-lbl">アイデア</div>
-    </div>
-  </div>
+
 
   <!-- 執筆中ピックアップ -->
   <div id="wip-pickup" style="margin-top:12px"></div>
@@ -1833,20 +1776,9 @@ input:focus, textarea:focus, select:focus {
 
   </div><!-- /dashboard-cards -->
 
-  <!-- ===== 今日の予定 ===== -->
-  <div id="sec-today">
-    <div class="sec-head" onclick="toggleSec('today')">
-      <div class="sec-head-title">📅 今日の予定</div>
-      <div class="sec-head-count" id="today-date-label"></div>
-      <svg class="sec-chevron open" id="chev-today" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
-    </div>
-    <div class="sec-body" id="body-today" style="padding:12px 14px 8px">
-      <div id="today-routine"></div>
-    </div>
-  </div>
 
   <!-- ===== 展開軸・感情軸 使用状況 ===== -->
-  <div id="sec-axis">
+  <div id="sec-axis" style="position:relative;z-index:2">
     <div class="sec-head" onclick="toggleSec('axis')">
       <div class="sec-head-title">🔄 軸の使用状況</div>
       <div class="sec-head-count" id="axis-warn-label"></div>
@@ -2620,7 +2552,7 @@ function renderAll() {
   renderNotes();
   renderXPosts();
   renderArchive();
-  renderToday();
+  
   renderNetaList();
   renderXPromptList();
 }
@@ -2831,7 +2763,7 @@ const cp = id => navigator.clipboard.writeText(document.getElementById(id).textC
 // ================================================================
 // SECTION COLLAPSE
 // ================================================================
-const secState = {today:true, axis:false, notes:true, xposts:true, xprompt:true, xwrite:true, archive:false, tools:false, import:false};
+const secState = {axis:false, notes:true, xposts:true, xprompt:true, xwrite:true, archive:false, tools:false, import:false};
 function toggleSec(name, forceOpen) {
   if (forceOpen !== undefined) {
     secState[name] = forceOpen;
@@ -2876,10 +2808,6 @@ function scrollToSec(id) {
 // STATS
 // ================================================================
 function updateStats() {
-  document.getElementById('st-done').textContent  = S.notes.filter(n=>n.status==='done').length;
-  document.getElementById('st-wip').textContent   = S.notes.filter(n=>n.status==='writing').length;
-  document.getElementById('st-xprep').textContent = S.notes.filter(n=>n.status==='xprep').length;
-  document.getElementById('st-idea').textContent  = S.notes.filter(n=>n.status==='idea').length;
   // 未使用候補カウンター（機能⑤）
   const unusedCnt = S.notes.filter(n =>
     n.status !== 'done' &&
@@ -3173,7 +3101,7 @@ function finishAndPublish() {
     n.status = 'done';
     save();
     renderNotes();
-    renderToday();
+    
   }
   closeOverlay('modal-finish');
   toast('公開済みに登録しました');
@@ -3496,37 +3424,7 @@ function renderAxisStats() {
     </div>`;
 }
 
-function renderToday() {
-  const now = new Date();
-  const dow = ['日','月','火','水','木','金','土'];
-  document.getElementById('today-date-label').textContent =
-    `${now.getMonth()+1}月${now.getDate()}日（${dow[now.getDay()]}）`;
-  const h = now.getHours();
-  const slots = [
-    {time:'🌅 朝7時',title:'タイプA投稿',desc:'拡散狙い・noteリンクなし。ストックから選んで投稿。',done:h>=7},
-    {time:'☀️ 日中',title:'リプ周り 10件',desc:'フォロワー100〜1,000の副業垢にコメント・いいね。',done:h>=12},
-    {time:'🌙 夜21時',title:'タイプB投稿',desc:'信頼構築・noteリンクあり。ストックから選んで投稿。',done:h>=21},
-  ];
-  const writing = S.notes.filter(n=>n.status==='writing').slice(0,2);
-  const xprep   = S.notes.filter(n=>n.status==='xprep').slice(0,2);
-  document.getElementById('today-routine').innerHTML = [
-    ...slots.map(s => `<div class="slot" style="${s.done?'opacity:.5':''}">
-      <div class="slot-time">${s.time}${s.done?' ✅':''}</div>
-      <div class="slot-title">${s.title}</div>
-      <div class="slot-desc">${s.desc}</div>
-    </div>`),
-    writing.length ? `<div style="font-size:11px;color:var(--text3);margin:10px 0 5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">✍️ 執筆中</div>` +
-      writing.map(n=>`<div class="slot" style="cursor:pointer" onclick="openWork(${n.id})">
-        <div class="slot-title">${n.title}</div>
-        <div class="slot-desc">${n.memo||'執筆メモなし'}</div>
-      </div>`).join('') : '',
-    xprep.length ? `<div style="font-size:11px;color:var(--text3);margin:10px 0 5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">📣 X準備中</div>` +
-      xprep.map(n=>`<div class="slot" style="cursor:pointer" onclick="openWork(${n.id})">
-        <div class="slot-title">${n.title}</div>
-        <div class="slot-desc">${n.memo||''}</div>
-      </div>`).join('') : '',
-  ].join('');
-}
+
 
 // ================================================================
 // X POSTS
@@ -3732,7 +3630,7 @@ function quickUpdateStatus() {
   if (newStatus === 'writing' && n.status !== 'writing') {
     _showWritingCheck(() => {
       n.status = 'writing';
-      save(); renderNotes(); renderToday();
+      save(); renderNotes(); 
       toast('ステータスを更新しました');
     }, () => {
       // キャンセル：セレクトを元に戻す
@@ -3741,7 +3639,7 @@ function quickUpdateStatus() {
     return;
   }
   n.status = newStatus;
-  save(); renderNotes(); renderToday();
+  save(); renderNotes(); 
   toast('ステータスを更新しました');
 }
 
@@ -3950,7 +3848,7 @@ document.getElementById('me-save').addEventListener('click',()=>{
         next:        document.getElementById('me-management-next').value.trim(),
       },
     });
-    save(); renderNotes(); renderToday(); closeOverlay('modal-edit');
+    save(); renderNotes();  closeOverlay('modal-edit');
     if(curId===id) openWork(id);
     toast('保存しました');
   };
@@ -4799,7 +4697,7 @@ renderSnapshot();
 renderNotes();
 renderXPosts();
 renderArchive();
-renderToday();
+
 renderNetaList();
 renderXPromptList();
 renderXManage();

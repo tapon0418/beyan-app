@@ -36,12 +36,12 @@ async function run() {
   const bw = await page.evaluate(() => document.body.scrollWidth);
   bw <= 392 ? ok('no horizontal scroll') : ng('horizontal scroll', bw + 'px');
 
-  // All 5 sections
+  // sec-today削除後: 3セクション確認
   const secs = await page.evaluate(() =>
-    ['sec-notes','sec-xposts','sec-today','sec-archive']
+    ['sec-notes','sec-xposts','sec-archive']
       .filter(id => !!document.getElementById(id)).length
   );
-  secs === 4 ? ok('all 4 sections') : ng('sections', secs + '/4');
+  secs === 3 ? ok('all 3 sections') : ng('sections', secs + '/3');
 
   // Note click opens modal (inject a dummy note then click action btn)
   const clickResult = await page.evaluate(() => {
