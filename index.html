@@ -1330,10 +1330,16 @@ input:focus, textarea:focus, select:focus {
 .ni-action-btn.claude{background:rgba(124,58,237,.1);border-color:rgba(124,58,237,.3);color:#7c3aed}
 .ni-action-btn.finish{background:var(--orange-dim);border-color:var(--orange);color:var(--orange)}
 /* PC hover: 薄くアクションボタンを表示 */
-.ni-hover-btns{display:none;position:absolute;right:42px;top:50%;transform:translateY(-50%);gap:5px;z-index:3}
+.ni-hover-btns{display:none;position:absolute;right:76px;top:50%;transform:translateY(-50%);gap:5px;z-index:3}
 @media(min-width:768px){
   .ni-hover-btns{display:flex;opacity:0;transition:opacity .15s;pointer-events:none}
   .note-item:hover .ni-hover-btns{opacity:1;pointer-events:auto}
+}
+/* モバイル常時表示 執筆開始ボタン */
+.ni-work-mobile{display:none}
+@media(max-width:767px){
+  .ni-work-mobile{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;padding:0 10px;border-radius:8px;border:1.5px solid var(--accent);background:transparent;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+  .ni-work-mobile:active{background:rgba(58,102,80,.15)}
 }
 .ni-hover-btn{font-size:11px;padding:4px 9px;border-radius:20px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;box-shadow:0 1px 4px rgba(40,80,50,.1)}
 /* Modal改善 */
@@ -3027,6 +3033,7 @@ function renderNotes() {
             <button class="ni-hover-btn" onclick="event.stopPropagation();window.open(CLAUDE_PROJECT_URL,'_blank')">✍ クロ</button>
             <button class="ni-hover-btn" onclick="event.stopPropagation();openWork(${n.id})">✍ 執筆開始</button>
           </div>
+          <button class="ni-work-mobile" onclick="event.stopPropagation();openWork(${n.id})">✍ 執筆開始</button>
           <button class="note-del-btn" id="ndb-${n.id}" onclick="deleteNote(${n.id},event)" title="削除" style="position:static;margin-left:0;flex-shrink:0">🗑</button>
           <svg class="ni-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0"><polyline points="6 9 12 15 18 9"/></svg>
         </div>
