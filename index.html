@@ -1714,29 +1714,6 @@ input:focus, textarea:focus, select:focus {
 
 <div class="main">
 
-  <!-- ===== スナップショット ===== -->
-  <div id="snapshot-area" style="margin-bottom:14px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="font-weight:700;font-size:.88rem;color:var(--accent);">📌 プロジェクト概況</span>
-      <span id="snapshot-updated-at" style="font-size:.7rem;color:var(--text3);"></span>
-    </div>
-    <div id="snapshot-cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:8px;"></div>
-    <details id="snapshot-paste-details">
-      <summary style="list-style:none;cursor:pointer;">
-        <div style="display:flex;align-items:center;gap:7px;padding:7px 12px;background:var(--bg3);border:1px solid var(--bg5);border-radius:8px;font-size:.78rem;color:var(--text2);font-weight:700;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          JSONで更新
-        </div>
-      </summary>
-      <div style="padding:6px 2px 2px;">
-        <textarea id="snapshot-paste-input" rows="5" placeholder="{&quot;snapshot&quot;:{&quot;updatedAt&quot;:&quot;YYYY-MM-DD&quot;,&quot;projects&quot;:[...],&quot;pending&quot;:&quot;...&quot;}}" style="width:100%;background:var(--bg3);color:var(--text);border:1px solid var(--bg5);border-radius:8px;padding:10px;font-size:12px;font-family:monospace;box-sizing:border-box;resize:vertical;min-height:90px;line-height:1.5;"></textarea>
-        <div style="display:flex;gap:8px;margin-top:6px;align-items:center;">
-          <button onclick="updateSnapshot()" style="min-height:36px;padding:0 18px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;">更新</button>
-          <span id="snapshot-paste-msg" style="font-size:.78rem;color:var(--green);"></span>
-        </div>
-      </div>
-    </details>
-  </div>
 
 
 
