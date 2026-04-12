@@ -91,22 +91,31 @@ body{font-family:'Noto Sans JP',sans-serif;color:var(--text);
 .sec-head{display:flex;align-items:center;gap:10px;padding:14px 16px 13px;cursor:pointer;
   user-select:none;-webkit-user-select:none;
   background:var(--bg3);border-bottom:1px solid var(--border)}
-.sec-head-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:.15px;flex:1}
+.sec-head-title{font-size:15px;font-weight:700;color:var(--text);letter-spacing:.15px}
 .sec-head-count{font-size:11px;color:var(--text3);flex-shrink:0;white-space:nowrap}
 .sec-chevron{transition:transform .2s;color:var(--text3);flex-shrink:0}
 .sec-chevron.open{transform:rotate(180deg)}
 .sec-body{overflow:hidden;transition:max-height .25s ease;padding:0 2px;will-change:max-height}
 
 /* ===== セクションカード（色分け） ===== */
-#sec-axis, #sec-notes, #sec-xposts, #sec-archive {
+#sec-axis, #sec-notes, #sec-xposts, #sec-archive,
+#sec-tools, #sec-import, #sec-promptreviews, #sec-failurepatterns {
   border-radius:16px;
   margin-bottom:14px;
   border:1.5px solid var(--border2);
   overflow:clip;
 }
-#sec-notes    { border-left:5px solid var(--orange); }
-#sec-xposts   { border-left:5px solid #1a1a2e; }
-#sec-archive  { border-left:5px solid #7c3aed; }
+#sec-axis         { border-left:5px solid #5b8fa8; }
+#sec-notes        { border-left:5px solid var(--orange); }
+#sec-xposts       { border-left:5px solid #1a1a2e; }
+#sec-archive      { border-left:5px solid #7c3aed; }
+#sec-tools        { border-left:5px solid var(--accent); }
+#sec-import       { border-left:5px solid #4a7fa5; }
+#sec-promptreviews{ border-left:5px solid #8b7ab5; }
+#sec-failurepatterns{ border-left:5px solid #c05040; }
+/* 説明テキスト付きヘッダー */
+.sec-head-left{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.sec-desc{font-size:11px;color:var(--text3);line-height:1.4;font-weight:400;letter-spacing:0}
 
 /* notes section header gets a warm orange tint */
 #sec-notes > .sec-head {
@@ -1074,6 +1083,10 @@ button:active, .btn:active, .tpill:active, .ftab:active, .stab:active,
   background: transparent !important;
   padding: 15px 18px 14px !important;
 }
+.sec-head-left {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
 .sec-head-title {
   font-size: 14px !important;
   font-weight: 800 !important;
@@ -1763,7 +1776,10 @@ input:focus, textarea:focus, select:focus {
   <!-- ===== 展開軸・感情軸 使用状況 ===== -->
   <div id="sec-axis" style="position:relative;z-index:2">
     <div class="sec-head" onclick="toggleSec('axis')">
-      <div class="sec-head-title">🔄 軸の使用状況</div>
+      <div class="sec-head-left">
+        <div class="sec-head-title">🔄 軸の使用状況</div>
+        <div class="sec-desc">同じ展開軸・感情軸が連続していないかを確認。3連続で警告が出たら次の記事で変える</div>
+      </div>
       <div class="sec-head-count" id="axis-warn-label"></div>
       <svg class="sec-chevron" id="chev-axis" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
@@ -1775,7 +1791,10 @@ input:focus, textarea:focus, select:focus {
   <!-- ===== note進捗表 ===== -->
   <div id="sec-notes">
     <div class="sec-head" onclick="toggleSec('notes')">
-      <div class="sec-head-title">📝 note進捗表</div>
+      <div class="sec-head-left">
+        <div class="sec-head-title">📝 note進捗表</div>
+        <div class="sec-desc">記事候補の追加・進捗管理・執筆開始はここから。ステータスで絞り込んで管理する</div>
+      </div>
       <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
         <span id="notes-unused-label" style="font-size:11px;color:var(--text3)"></span>
         <span id="notes-axis-warn" style="font-size:11px;color:var(--orange);font-weight:700;display:none">展開軸3連続!</span>
@@ -1907,7 +1926,10 @@ input:focus, textarea:focus, select:focus {
   <!-- ===== アーカイブ ===== -->
   <div id="sec-archive">
     <div class="sec-head" onclick="toggleSec('archive')">
-      <div class="sec-head-title">📦 アーカイブ</div>
+      <div class="sec-head-left">
+        <div class="sec-head-title">📦 アーカイブ</div>
+        <div class="sec-desc">公開済みnote記事とX投稿の保管庫。ステータスを「公開済み」にした記事が自動で移動</div>
+      </div>
       <div class="sec-head-count" id="archive-count-label"></div>
       <svg class="sec-chevron" id="chev-archive" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
@@ -1933,7 +1955,10 @@ input:focus, textarea:focus, select:focus {
   <!-- ===== ツール（クロ向けコンテキスト / ジミー向けJSON） ===== -->
   <div id="sec-tools">
     <div class="sec-head" onclick="toggleSec('tools')">
-      <div class="sec-head-title">🛠 ツール</div>
+      <div class="sec-head-left">
+        <div class="sec-head-title">🛠 各ツール</div>
+        <div class="sec-desc">クロ（Claude）へのコンテキスト送信・ジミー（Gemini）向けJSON出力。記事執筆セッション開始時に使う</div>
+      </div>
       <div class="sec-head-count"></div>
       <svg class="sec-chevron" id="chev-tools" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
@@ -1972,7 +1997,10 @@ input:focus, textarea:focus, select:focus {
   <!-- ===== JSONインポート ===== -->
   <div id="sec-import">
     <div class="sec-head" onclick="toggleSec('import')">
-      <div class="sec-head-title">📥 JSONインポート</div>
+      <div class="sec-head-left">
+        <div class="sec-head-title">📥 JSONインポート</div>
+        <div class="sec-desc">クロが生成した記事候補JSONを貼り付けて登録。記事ネタが少なくなったらここから追加</div>
+      </div>
       <div class="sec-head-count"></div>
       <svg class="sec-chevron" id="chev-import" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
@@ -1997,7 +2025,10 @@ input:focus, textarea:focus, select:focus {
   <!-- ===== プロンプト見直し履歴 ===== -->
   <div id="sec-promptreviews">
     <div class="sec-head" onclick="toggleSec('promptreviews')">
-      <div class="sec-head-title">📋 プロンプト見直し履歴</div>
+      <div class="sec-head-left">
+        <div class="sec-head-title">📋 プロンプト見直し履歴</div>
+        <div class="sec-desc">ジミー・クロへの指示文の改善記録。記事の質が落ちたとき・指示文を変えたときに記録</div>
+      </div>
       <div class="sec-head-count" id="promptreviews-count-label"></div>
       <svg class="sec-chevron" id="chev-promptreviews" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
@@ -2010,7 +2041,10 @@ input:focus, textarea:focus, select:focus {
   <!-- ===== 失敗パターン ===== -->
   <div id="sec-failurepatterns">
     <div class="sec-head" onclick="toggleSec('failurepatterns')">
-      <div class="sec-head-title">⚠️ 失敗パターン</div>
+      <div class="sec-head-left">
+        <div class="sec-head-title">⚠️ 失敗パターン</div>
+        <div class="sec-desc">記事で起きた失敗・反省点の記録。同じミスを繰り返さないために、気づいたらすぐ追加</div>
+      </div>
       <div class="sec-head-count" id="failurepatterns-count-label"></div>
       <svg class="sec-chevron" id="chev-failurepatterns" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
     </div>
