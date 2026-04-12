@@ -1399,7 +1399,7 @@ input:focus, textarea:focus, select:focus {
 
 <!-- TOPBAR -->
 <header class="topbar">
-  <div class="brand">nabebase</div>
+  <div class="brand">nabebase <span style="font-size:9px;font-weight:600;opacity:.6;letter-spacing:.04em;vertical-align:middle">スキーマ V6</span></div>
   <div class="topbar-pills">
     <button class="tpill" id="tp-top"    onclick="window.scrollTo({top:0,behavior:'smooth'})"><span class="tpill-icon">📊</span><span class="tpill-label"> ダッシュ</span></button>
     <button class="tpill active" id="tp-notes"  onclick="scrollToSec('sec-notes')"><span class="tpill-icon">📝</span><span class="tpill-label"> note</span></button>
@@ -2011,11 +2011,84 @@ input:focus, textarea:focus, select:focus {
     </div>
   </div>
 
+  <!-- ===== プロンプト見直し履歴 ===== -->
+  <div id="sec-promptreviews">
+    <div class="sec-head" onclick="toggleSec('promptreviews')">
+      <div class="sec-head-title">📋 プロンプト見直し履歴</div>
+      <div class="sec-head-count" id="promptreviews-count-label"></div>
+      <svg class="sec-chevron" id="chev-promptreviews" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-promptreviews" style="max-height:0;overflow:hidden;padding:12px 14px 8px">
+      <button onclick="openPromptReviewModal()" style="width:100%;min-height:40px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.88rem;cursor:pointer;font-family:inherit;margin-bottom:10px">＋ 見直し記録を追加</button>
+      <div id="promptreviews-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+
+  <!-- ===== 失敗パターン ===== -->
+  <div id="sec-failurepatterns">
+    <div class="sec-head" onclick="toggleSec('failurepatterns')">
+      <div class="sec-head-title">⚠️ 失敗パターン</div>
+      <div class="sec-head-count" id="failurepatterns-count-label"></div>
+      <svg class="sec-chevron" id="chev-failurepatterns" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+    <div class="sec-body" id="body-failurepatterns" style="max-height:0;overflow:hidden;padding:12px 14px 8px">
+      <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">
+        <button onclick="openFailurePatternModal()" style="flex:1;min-height:38px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit">＋ 追加</button>
+        <div style="display:flex;gap:4px">
+          <button id="fp-filter-active" class="chip active" onclick="setFpFilter('active')">棚卸し済みを除く</button>
+          <button id="fp-filter-all"    class="chip"        onclick="setFpFilter('all')">全件表示</button>
+        </div>
+      </div>
+      <div id="failurepatterns-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+
   </div><!-- /main-content -->
   <div class="sidebar-right" id="notes-sidebar-r"></div>
   </div><!-- /three-col-layout -->
 
 </div><!-- /main -->
+
+<!-- ===== MODAL: プロンプト見直し履歴 編集 ===== -->
+<div class="overlay" id="modal-promptreview" onclick="if(event.target===this)closeOverlay('modal-promptreview')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="pr-modal-title">見直し記録を追加</div>
+      <button class="modal-close" onclick="closeOverlay('modal-promptreview')">✕</button>
+    </div>
+    <input type="hidden" id="pr-edit-id">
+    <div class="input-group"><label class="input-label">実施日 *</label><input type="text" id="pr-date" placeholder="例: 2026-04-15"></div>
+    <div class="input-group"><label class="input-label">使った見直し視点 *</label><input type="text" id="pr-viewpoint" placeholder="例: 崩すべき前提認識の網羅性チェック"></div>
+    <div class="input-group"><label class="input-label">発見した問題 *</label><textarea id="pr-problem" rows="3" placeholder="例: readerBeliefToBreakが浅かった"></textarea></div>
+    <div class="input-group"><label class="input-label">修正箇所 *</label><textarea id="pr-fix" rows="3" placeholder="例: axis.readerBeliefToBreakの記述を具体化"></textarea></div>
+    <div class="input-group"><label class="input-label">スキーマバージョン *</label><input type="text" id="pr-schema-ver" placeholder="V6"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeOverlay('modal-promptreview')">キャンセル</button>
+      <button class="btn btn-accent" onclick="savePromptReview()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: 失敗パターン 編集 ===== -->
+<div class="overlay" id="modal-failurepattern" onclick="if(event.target===this)closeOverlay('modal-failurepattern')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-title" id="fp-modal-title">失敗パターンを追加</div>
+      <button class="modal-close" onclick="closeOverlay('modal-failurepattern')">✕</button>
+    </div>
+    <input type="hidden" id="fp-edit-id">
+    <div class="input-group"><label class="input-label">タイトル *</label><input type="text" id="fp-title" placeholder="例: リサーチ不足による内容の薄さ"></div>
+    <div class="input-group"><label class="input-label">内容・詳細 *</label><textarea id="fp-detail" rows="4" placeholder="例: ぺぺのリサーチ結果を使わずに執筆した結果…"></textarea></div>
+    <div class="input-group"><label class="input-label">再発防止策 *</label><textarea id="fp-prevention" rows="3" placeholder="例: 執筆前に必ずリサーチ結果を確認する"></textarea></div>
+    <div class="input-group"><label class="input-label">発生日</label><input type="text" id="fp-date" placeholder="例: 2026-04-15"></div>
+    <div class="btn-row">
+      <button class="btn btn-ghost" onclick="closeOverlay('modal-failurepattern')">キャンセル</button>
+      <button class="btn btn-accent" onclick="saveFailurePattern()">保存</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== MODAL: 楽天カード生成 ===== -->
 <div class="overlay" id="modal-rakuten" onclick="if(event.target===this)closeOverlay('modal-rakuten')">
@@ -2215,6 +2288,8 @@ input:focus, textarea:focus, select:focus {
       <div><label class="input-label">感情軸</label><input type="text" id="me-axis-emotionAxis" placeholder="例: 焦り"></div>
     </div>
     <div class="input-group"><label class="input-label">直近記事との差分</label><input type="text" id="me-axis-diffFromLast" placeholder="例: 前回は再定義型・今回は落とし穴型"></div>
+    <div class="input-group"><label class="input-label">崩すべき前提認識</label><input type="text" id="me-axis-readerBeliefToBreak" placeholder="例: 実績がないと案件は取れない"></div>
+    <div class="input-group"><label class="input-label">読了後の変化</label><input type="text" id="me-axis-readerChangeAfterReading" placeholder="例: 実績より提案文の書き方が大事だと気づく"></div>
     <!-- research -->
     <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:.04em;">RESEARCH</div>
     <div class="input-group"><label class="input-label">リサーチプロンプト</label><textarea id="me-research-researchPrompt" rows="2" placeholder="例: ジミー：腱鞘炎対策グッズ一覧"></textarea></div>
@@ -2228,11 +2303,29 @@ input:focus, textarea:focus, select:focus {
       <div><label class="input-label">読者視点</label><input type="text" id="me-article-readerPerspective" placeholder="例: 始めた直後"></div>
     </div>
     <div class="input-group"><label class="input-label">アフィ文脈</label><input type="text" id="me-article-affiliateContext" placeholder="例: 楽天で購入したグッズ紹介"></div>
+    <div class="input-group"><label class="input-label">2本先への種まき</label><input type="text" id="me-article-seedingTwoAhead" placeholder="例: 習慣化の話につながる種を撒く"></div>
+    <div class="input-2col">
+      <div><label class="input-label">シリーズ名</label><input type="text" id="me-article-seriesName" placeholder="例: 副業初心者シリーズ"></div>
+      <div><label class="input-label">シリーズ内順番</label><input type="text" id="me-article-seriesOrder" placeholder="例: 第3回"></div>
+    </div>
+    <div class="input-group"><label class="input-label">前の記事との接続点</label><input type="text" id="me-article-prevConnection" placeholder="例: 前回の「ネタ出し」の続き"></div>
     <!-- management -->
     <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:.04em;">MANAGEMENT</div>
     <div class="input-group"><label class="input-label">使用状況</label><input type="text" id="me-management-usageStatus" placeholder="例: X投稿済み・note未公開"></div>
     <div class="input-group"><label class="input-label">既存記事との接続</label><input type="text" id="me-management-connection" placeholder="例: 「提案文47件」の続編"></div>
     <div class="input-group"><label class="input-label">次の記事への引き継ぎ</label><input type="text" id="me-management-next" placeholder="例: 2件目案件の話へつなぐ"></div>
+    <div class="input-group"><label class="input-label">進行状態</label>
+      <select id="me-management-progressStatus">
+        <option value="">未着手</option>
+        <option value="step1">STEP1完了</option>
+        <option value="step2">STEP2完了</option>
+        <option value="step3">STEP3ジミー被りチェックOK</option>
+        <option value="step4">STEP4パペリサーチ完了</option>
+        <option value="step5">STEP5ジミー構成完了</option>
+        <option value="step6">STEP6記事完了</option>
+      </select>
+    </div>
+    <div class="input-group"><label class="input-label">スキーマバージョン</label><input type="text" id="me-management-schemaVersion" placeholder="V6" style="color:var(--text3)"></div>
     <div class="btn-row" style="margin-top:4px">
       <button class="btn btn-ghost" onclick="closeOverlay('modal-edit')">キャンセル</button>
       <button class="btn btn-accent" id="me-save">保存</button>
@@ -2382,6 +2475,8 @@ const X_DRAFT_POSTS_KEY      = 'xDraftPosts';
 const X_PROMPT_KEY           = 'xPrompt';
 const PUBLISHED_ARTICLES_KEY = 'publishedArticles';
 const PUBLISHED_POSTS_KEY    = 'publishedPosts';
+const PROMPT_REVIEWS_KEY     = 'beyan_promptReviews';
+const FAILURE_PATTERNS_KEY   = 'beyan_failurePatterns';
 let _xManageTab    = 'stock';
 let _xManageFilter = 'all';
 const DEFAULT_X_PROMPT =
@@ -2581,9 +2676,10 @@ function renderAll() {
   renderNotes();
   renderXPosts();
   renderArchive();
-  
   renderNetaList();
   renderXPromptList();
+  renderPromptReviews();
+  renderFailurePatterns();
 }
 
 
@@ -2792,7 +2888,7 @@ const cp = id => navigator.clipboard.writeText(document.getElementById(id).textC
 // ================================================================
 // SECTION COLLAPSE
 // ================================================================
-const secState = {axis:false, notes:true, xposts:true, xprompt:true, xwrite:true, archive:false, tools:false, import:false};
+const secState = {axis:false, notes:true, xposts:true, xprompt:true, xwrite:true, archive:false, tools:false, import:false, promptreviews:false, failurepatterns:false};
 function toggleSec(name, forceOpen) {
   if (forceOpen !== undefined) {
     secState[name] = forceOpen;
@@ -3817,6 +3913,8 @@ function openEditModal() {
   document.getElementById('me-axis-expansionAxis').value=ax.expansionAxis||oldAxisStr.split('／')[2]?.trim()||'';
   document.getElementById('me-axis-emotionAxis').value=ax.emotionAxis||oldAxisStr.split('／')[0]?.trim()||'';
   document.getElementById('me-axis-diffFromLast').value=ax.diffFromLast||'';
+  document.getElementById('me-axis-readerBeliefToBreak').value=ax.readerBeliefToBreak||c.readerBeliefToBreak||'';
+  document.getElementById('me-axis-readerChangeAfterReading').value=ax.readerChangeAfterReading||c.readerChangeAfterReading||'';
   // research
   const r=n.research||{};
   document.getElementById('me-research-researchPrompt').value=r.researchPrompt||n.researchNote||'';
@@ -3828,11 +3926,17 @@ function openEditModal() {
   document.getElementById('me-article-thinkingPattern').value=ar.thinkingPattern||'';
   document.getElementById('me-article-readerPerspective').value=ar.readerPerspective||'';
   document.getElementById('me-article-affiliateContext').value=ar.affiliateContext||'';
+  document.getElementById('me-article-seedingTwoAhead').value=ar.seedingTwoAhead||'';
+  document.getElementById('me-article-seriesName').value=ar.seriesName||'';
+  document.getElementById('me-article-seriesOrder').value=ar.seriesOrder||'';
+  document.getElementById('me-article-prevConnection').value=ar.prevConnection||'';
   // management
   const m=n.management||{};
   document.getElementById('me-management-usageStatus').value=m.usageStatus||'';
   document.getElementById('me-management-connection').value=m.connection||n.prevLink||'';
   document.getElementById('me-management-next').value=m.next||n.nextLink||'';
+  document.getElementById('me-management-progressStatus').value=m.progressStatus||'';
+  document.getElementById('me-management-schemaVersion').value=m.schemaVersion||'V6';
   openOverlay('modal-edit');
 }
 document.getElementById('me-save').addEventListener('click',()=>{
@@ -3857,9 +3961,11 @@ document.getElementById('me-save').addEventListener('click',()=>{
         nextHook:                 document.getElementById('me-concept-nextHook').value.trim(),
       },
       axis: {
-        expansionAxis: document.getElementById('me-axis-expansionAxis').value.trim(),
-        emotionAxis:   document.getElementById('me-axis-emotionAxis').value.trim(),
-        diffFromLast:  document.getElementById('me-axis-diffFromLast').value.trim(),
+        expansionAxis:            document.getElementById('me-axis-expansionAxis').value.trim(),
+        emotionAxis:              document.getElementById('me-axis-emotionAxis').value.trim(),
+        diffFromLast:             document.getElementById('me-axis-diffFromLast').value.trim(),
+        readerBeliefToBreak:      document.getElementById('me-axis-readerBeliefToBreak').value.trim(),
+        readerChangeAfterReading: document.getElementById('me-axis-readerChangeAfterReading').value.trim(),
       },
       research: {
         researchPrompt: document.getElementById('me-research-researchPrompt').value.trim(),
@@ -3871,11 +3977,17 @@ document.getElementById('me-save').addEventListener('click',()=>{
         thinkingPattern:   document.getElementById('me-article-thinkingPattern').value.trim(),
         readerPerspective: document.getElementById('me-article-readerPerspective').value.trim(),
         affiliateContext:  document.getElementById('me-article-affiliateContext').value.trim(),
+        seedingTwoAhead:   document.getElementById('me-article-seedingTwoAhead').value.trim(),
+        seriesName:        document.getElementById('me-article-seriesName').value.trim(),
+        seriesOrder:       document.getElementById('me-article-seriesOrder').value.trim(),
+        prevConnection:    document.getElementById('me-article-prevConnection').value.trim(),
       },
       management: {
-        usageStatus: document.getElementById('me-management-usageStatus').value.trim(),
-        connection:  document.getElementById('me-management-connection').value.trim(),
-        next:        document.getElementById('me-management-next').value.trim(),
+        usageStatus:    document.getElementById('me-management-usageStatus').value.trim(),
+        connection:     document.getElementById('me-management-connection').value.trim(),
+        next:           document.getElementById('me-management-next').value.trim(),
+        progressStatus: document.getElementById('me-management-progressStatus').value,
+        schemaVersion:  document.getElementById('me-management-schemaVersion').value.trim() || 'V6',
       },
     });
     save(); renderNotes();  closeOverlay('modal-edit');
@@ -4407,9 +4519,11 @@ function importJSON() {
           nextHook:                 t.concept?.nextHook                 || '',
         },
         axis: {
-          expansionAxis: t.axis?.expansionAxis || '',
-          emotionAxis:   t.axis?.emotionAxis   || '',
-          diffFromLast:  t.axis?.diffFromLast  || '',
+          expansionAxis:            t.axis?.expansionAxis            || '',
+          emotionAxis:              t.axis?.emotionAxis              || '',
+          diffFromLast:             t.axis?.diffFromLast             || t.axis?.['前回との差分'] || '',
+          readerBeliefToBreak:      t.axis?.readerBeliefToBreak      || t.axis?.['崩すべき前提認識'] || t.concept?.readerBeliefToBreak || '',
+          readerChangeAfterReading: t.axis?.readerChangeAfterReading || t.axis?.['読了後の変化']     || t.concept?.readerChangeAfterReading || '',
         },
         research: {
           researchPrompt: t.research?.researchPrompt || t.researchNote || '',
@@ -4421,11 +4535,17 @@ function importJSON() {
           thinkingPattern:   t.article?.thinkingPattern   || '',
           readerPerspective: t.article?.readerPerspective || '',
           affiliateContext:  t.article?.affiliateContext  || '',
+          seedingTwoAhead:   t.article?.seedingTwoAhead   || t.article?.['2本先への種まき'] || '',
+          seriesName:        t.article?.seriesName        || t.article?.シリーズ名         || '',
+          seriesOrder:       t.article?.seriesOrder       || t.article?.シリーズ内順番     || '',
+          prevConnection:    t.article?.prevConnection    || t.article?.['前の記事との接続点'] || '',
         },
         management: {
-          usageStatus: t.management?.usageStatus || '',
-          connection:  t.management?.connection  || t.prevLink || '',
-          next:        t.management?.next        || t.nextLink || '',
+          usageStatus:    t.management?.usageStatus    || '',
+          connection:     t.management?.connection     || t.prevLink || '',
+          next:           t.management?.next           || t.nextLink || '',
+          progressStatus: t.management?.progressStatus || '',
+          schemaVersion:  t.management?.schemaVersion  || 'V6',
         },
       });
     });
@@ -6064,6 +6184,179 @@ function deleteXPrompt(id) {
   _saveXPrompts(getXPrompts().filter(x => x.id !== id));
   renderXPromptList();
   toast('削除しました');
+}
+
+// ================================================================
+// プロンプト見直し履歴 (beyan_promptReviews)
+// ================================================================
+function getPromptReviews() {
+  try { return JSON.parse(localStorage.getItem(PROMPT_REVIEWS_KEY) || '[]'); } catch { return []; }
+}
+function _savePromptReviews(list) {
+  localStorage.setItem(PROMPT_REVIEWS_KEY, JSON.stringify(list));
+}
+let _prEditId = null;
+function openPromptReviewModal(id) {
+  _prEditId = id || null;
+  const isEdit = !!id;
+  document.getElementById('pr-modal-title').textContent = isEdit ? '見直し記録を編集' : '見直し記録を追加';
+  document.getElementById('pr-edit-id').value = id || '';
+  if (isEdit) {
+    const item = getPromptReviews().find(x => x.id === id);
+    if (!item) return;
+    document.getElementById('pr-date').value        = item.実施日 || '';
+    document.getElementById('pr-viewpoint').value   = item.使った見直し視点 || '';
+    document.getElementById('pr-problem').value     = item.発見した問題 || '';
+    document.getElementById('pr-fix').value         = item.修正箇所 || '';
+    document.getElementById('pr-schema-ver').value  = item.スキーマバージョン || 'V6';
+  } else {
+    document.getElementById('pr-date').value        = new Date().toISOString().slice(0,10);
+    document.getElementById('pr-viewpoint').value   = '';
+    document.getElementById('pr-problem').value     = '';
+    document.getElementById('pr-fix').value         = '';
+    document.getElementById('pr-schema-ver').value  = 'V6';
+  }
+  openOverlay('modal-promptreview');
+}
+function savePromptReview() {
+  const date      = document.getElementById('pr-date').value.trim();
+  const viewpoint = document.getElementById('pr-viewpoint').value.trim();
+  const problem   = document.getElementById('pr-problem').value.trim();
+  const fix       = document.getElementById('pr-fix').value.trim();
+  const ver       = document.getElementById('pr-schema-ver').value.trim();
+  if (!date || !viewpoint || !problem || !fix || !ver) { toast('全フィールドを入力してください'); return; }
+  const list = getPromptReviews();
+  const editId = document.getElementById('pr-edit-id').value;
+  if (editId) {
+    const idx = list.findIndex(x => x.id === editId);
+    if (idx >= 0) list[idx] = { ...list[idx], 実施日:date, 使った見直し視点:viewpoint, 発見した問題:problem, 修正箇所:fix, スキーマバージョン:ver };
+  } else {
+    list.unshift({ id: String(Date.now()), 実施日:date, 使った見直し視点:viewpoint, 発見した問題:problem, 修正箇所:fix, スキーマバージョン:ver });
+  }
+  _savePromptReviews(list);
+  closeOverlay('modal-promptreview');
+  renderPromptReviews();
+  toast('保存しました');
+}
+function deletePromptReview(id) {
+  if (!confirm('この記録を削除しますか？')) return;
+  _savePromptReviews(getPromptReviews().filter(x => x.id !== id));
+  renderPromptReviews();
+  toast('削除しました');
+}
+function renderPromptReviews() {
+  const list = getPromptReviews().slice().sort((a,b) => (b.実施日||'').localeCompare(a.実施日||''));
+  const el   = document.getElementById('promptreviews-list');
+  const lbl  = document.getElementById('promptreviews-count-label');
+  if (lbl) lbl.textContent = list.length + '件';
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">記録がありません</div>'; return; }
+  el.innerHTML = list.map(r => `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+        <div>
+          <span style="font-size:11px;color:var(--text3)">${r.実施日||''}</span>
+          <span style="margin-left:8px;font-size:11px;background:var(--bg5);color:var(--text2);padding:1px 7px;border-radius:8px">${r.スキーマバージョン||''}</span>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="openPromptReviewModal('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">編集</button>
+          <button onclick="deletePromptReview('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--orange);cursor:pointer;font-family:inherit">削除</button>
+        </div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:4px">${_escHtml(r.使った見直し視点||'')}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6"><b style="color:var(--text3)">発見:</b> ${_escHtml(r.発見した問題||'')}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6"><b style="color:var(--text3)">修正:</b> ${_escHtml(r.修正箇所||'')}</div>
+    </div>`).join('');
+}
+
+// ================================================================
+// 失敗パターン (beyan_failurePatterns)
+// ================================================================
+function getFailurePatterns() {
+  try { return JSON.parse(localStorage.getItem(FAILURE_PATTERNS_KEY) || '[]'); } catch { return []; }
+}
+function _saveFailurePatterns(list) {
+  localStorage.setItem(FAILURE_PATTERNS_KEY, JSON.stringify(list));
+}
+let _fpFilter = 'active'; // 'active' = 棚卸し済みを除く, 'all' = 全件
+function setFpFilter(val) {
+  _fpFilter = val;
+  document.getElementById('fp-filter-active')?.classList.toggle('active', val === 'active');
+  document.getElementById('fp-filter-all')?.classList.toggle('active', val === 'all');
+  renderFailurePatterns();
+}
+function openFailurePatternModal(id) {
+  document.getElementById('fp-modal-title').textContent = id ? '失敗パターンを編集' : '失敗パターンを追加';
+  document.getElementById('fp-edit-id').value = id || '';
+  if (id) {
+    const item = getFailurePatterns().find(x => x.id === id);
+    if (!item) return;
+    document.getElementById('fp-title').value      = item.タイトル || '';
+    document.getElementById('fp-detail').value     = item.内容 || '';
+    document.getElementById('fp-prevention').value = item.再発防止策 || '';
+    document.getElementById('fp-date').value       = item.発生日 || '';
+  } else {
+    ['fp-title','fp-detail','fp-prevention','fp-date'].forEach(i => { document.getElementById(i).value = ''; });
+    document.getElementById('fp-date').value = new Date().toISOString().slice(0,10);
+  }
+  openOverlay('modal-failurepattern');
+}
+function saveFailurePattern() {
+  const title      = document.getElementById('fp-title').value.trim();
+  const detail     = document.getElementById('fp-detail').value.trim();
+  const prevention = document.getElementById('fp-prevention').value.trim();
+  const date       = document.getElementById('fp-date').value.trim();
+  if (!title || !detail || !prevention) { toast('タイトル・内容・再発防止策は必須です'); return; }
+  const list  = getFailurePatterns();
+  const editId = document.getElementById('fp-edit-id').value;
+  if (editId) {
+    const idx = list.findIndex(x => x.id === editId);
+    if (idx >= 0) list[idx] = { ...list[idx], タイトル:title, 内容:detail, 再発防止策:prevention, 発生日:date };
+  } else {
+    list.unshift({ id: String(Date.now()), タイトル:title, 内容:detail, 再発防止策:prevention, 発生日:date, 棚卸し済み:false });
+  }
+  _saveFailurePatterns(list);
+  closeOverlay('modal-failurepattern');
+  renderFailurePatterns();
+  toast('保存しました');
+}
+function toggleFpInventory(id) {
+  const list = getFailurePatterns();
+  const idx  = list.findIndex(x => x.id === id);
+  if (idx < 0) return;
+  list[idx].棚卸し済み = !(list[idx].棚卸し済み ?? false);
+  _saveFailurePatterns(list);
+  renderFailurePatterns();
+}
+function deleteFailurePattern(id) {
+  if (!confirm('この失敗パターンを削除しますか？')) return;
+  _saveFailurePatterns(getFailurePatterns().filter(x => x.id !== id));
+  renderFailurePatterns();
+  toast('削除しました');
+}
+function renderFailurePatterns() {
+  let list = getFailurePatterns().map(x => ({ 棚卸し済み: x.棚卸し済み ?? false, ...x }));
+  if (_fpFilter === 'active') list = list.filter(x => !x.棚卸し済み);
+  const el  = document.getElementById('failurepatterns-list');
+  const lbl = document.getElementById('failurepatterns-count-label');
+  const all = getFailurePatterns().length;
+  if (lbl) lbl.textContent = all + '件';
+  if (!el) return;
+  if (!list.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">' + (_fpFilter==='active'?'棚卸し済みを除くと0件です':'記録がありません') + '</div>'; return; }
+  el.innerHTML = list.map(r => `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;${r.棚卸し済み?'opacity:.55':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">${_escHtml(r.タイトル||'')}</div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button onclick="toggleFpInventory('${r.id}')" title="${r.棚卸し済み?'棚卸し済みを解除':'棚卸し済みにする'}" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:${r.棚卸し済み?'rgba(74,136,56,.2)':'var(--bg2)'};color:${r.棚卸し済み?'var(--green)':'var(--text2)'};cursor:pointer;font-family:inherit">${r.棚卸し済み?'✅ 棚卸済':'棚卸し'}</button>
+          <button onclick="openFailurePatternModal('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">編集</button>
+          <button onclick="deleteFailurePattern('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--orange);cursor:pointer;font-family:inherit">削除</button>
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:4px">${_escHtml(r.内容||'')}</div>
+      <div style="font-size:11px;color:var(--green);line-height:1.5">🛡 ${_escHtml(r.再発防止策||'')}</div>
+      ${r.発生日?`<div style="font-size:10px;color:var(--text3);margin-top:4px">${r.発生日}</div>`:''}
+    </div>`).join('');
 }
 
 // ================================================================
