@@ -7029,7 +7029,6 @@ const WF_STEPS = [
       'nabebaseの失敗パターンと照合した（絶対禁止フラグを確認）',
       '直近5本の方向A・B比率を確認した（3本以上偏りがあれば逆に切り替えた）',
       'シリーズの場合は前の記事との接続点を特定した（単発の場合は「単発」と確認）',
-      'nabebaseの進行状態を「STEP1完了」に更新した',
     ],
   },
   {
@@ -7045,7 +7044,6 @@ const WF_STEPS = [
       '思考の型が3本連続していないことを確認した',
       '視点が直近3本と被っていないことを確認した',
       '読者印象レベルのチェックをした（「また同じ話だ」と感じないか）',
-      'nabebaseの進行状態を「STEP2完了」に更新した',
     ],
   },
   {
@@ -7058,7 +7056,6 @@ const WF_STEPS = [
     tasks: [
       'テンプレートに今回の軸情報を記入してジミーに投げた',
       'ジミーからOKが返ってきた',
-      'nabebaseの進行状態を「STEP3ジミー被りチェックOK」に更新した',
       'nabebaseに記事候補JSON（V6スキーマ）が登録されていることを確認した',
     ],
   },
@@ -7074,7 +7071,6 @@ const WF_STEPS = [
       'パペに投げた',
       'パペのリサーチ結果が返ってきた',
       'nabebaseの「パペ依頼状況」を「完了」に更新した',
-      'nabebaseの進行状態を「STEP4パペリサーチ完了」に更新した',
     ],
   },
   {
@@ -7091,7 +7087,6 @@ const WF_STEPS = [
       '骨子OKの4点を確認した（流れの一貫性・被り・着地・失敗パターン一致）',
       'ジミーに骨子OKを返した',
       'ジミーから詳細設計（⑤〜⑬）が返ってきた',
-      'nabebaseの進行状態を「STEP5ジミー構成完了」に更新した',
     ],
   },
   {
@@ -7107,11 +7102,19 @@ const WF_STEPS = [
       '自己チェック②：後半が前向きな着地になっているか確認した',
       '自己チェック③：語り口のハイブリッド設計が守られているか確認した',
       '自己チェック④：思考の型と視点が記事全体で一貫しているか確認した',
-      'nabebaseの進行状態を「STEP6記事完了」に更新した',
       'nabebaseの使用状況を「使用済み」に更新した',
       '公開記事サマリーJSONをnabebaseに登録した',
     ],
   },
+];
+
+const WF_STEP_STATES = [
+  'STEP1完了',
+  'STEP2完了',
+  'STEP3ジミー被りチェックOK',
+  'STEP4パペリサーチ完了',
+  'STEP5ジミー構成完了',
+  'STEP6記事完了',
 ];
 
 let _wfNoteId = null;
@@ -7120,7 +7123,7 @@ function openWorkflowNav(noteId) {
   const n = S.notes.find(x => x.id === noteId);
   if (!n) return;
   _wfNoteId = noteId;
-  document.getElementById('wf-article-title').textContent = n.title;
+  document.getElementById('wf-article-title').textContent = n.title || '（未設定）';
   renderWorkflowNav();
   document.getElementById('modal-workflow').classList.add('open');
 }
@@ -7223,6 +7226,14 @@ function wfToggleCheck(noteId, si, ti, checked) {
   const tasks = _wfLoadTasks(noteId);
   tasks[si + '_' + ti] = checked;
   _wfSaveTasks(noteId, tasks);
+  // STEPが全完了したら記事候補レコードのworkflowStateを自動更新
+  if (_wfStepDone(si, tasks)) {
+    const n = S.notes.find(x => x.id === noteId);
+    if (n && WF_STEP_STATES[si]) {
+      n.workflowState = WF_STEP_STATES[si];
+      save();
+    }
+  }
   renderWorkflowNav();
 }
 
