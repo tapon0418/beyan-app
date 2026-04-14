@@ -1377,6 +1377,48 @@ input:focus, textarea:focus, select:focus {
 .xwrite-result-area { width:100%; min-height:160px; font-size:13px; line-height:1.7; background:var(--bg2); border:1px solid var(--border); border-radius:10px; padding:12px; color:var(--text); font-family:'Noto Sans JP',sans-serif; resize:vertical; box-sizing:border-box; }
 .xwrite-tag-btn { padding:5px 12px; background:var(--bg3); border:1px solid var(--border); border-radius:20px; color:var(--text2); font-size:12px; cursor:pointer; font-family:inherit; transition:all .15s; }
 .xwrite-tag-btn.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+/* ===== WORKFLOW NAVIGATOR MODAL ===== */
+.wf-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:600;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+.wf-overlay.open{display:flex}
+.wf-modal{background:var(--bg3);border-radius:16px;max-width:560px;width:100%;max-height:calc(100vh - 32px);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.3)}
+.wf-header{padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:flex-start;gap:10px}
+.wf-header-left{flex:1;min-width:0}
+.wf-article-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wf-progress-track{height:3px;background:var(--bg5);border-radius:2px;overflow:hidden}
+.wf-progress-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+.wf-close-btn{width:32px;height:32px;border:none;background:var(--bg4);border-radius:50%;color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-family:inherit}
+.wf-close-btn:hover{background:var(--bg5)}
+.wf-body{flex:1;overflow-y:auto;padding:10px 12px 16px;display:flex;flex-direction:column;gap:8px}
+.wf-step{border:1.5px solid var(--border2);border-radius:12px;overflow:hidden;transition:opacity .2s}
+.wf-step.locked{opacity:.35}
+.wf-step.locked .wf-check-item{pointer-events:none}
+.wf-step.done{border-left:3px solid var(--accent)}
+.wf-step-header{display:flex;align-items:center;gap:10px;padding:11px 14px}
+.wf-badge{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.wf-step.locked .wf-badge,.wf-step.active .wf-badge{background:var(--bg4);color:var(--text3);border:1.5px solid var(--border2)}
+.wf-step.done .wf-badge{background:var(--accent);color:#fff;border:none}
+.wf-step-title-wrap{flex:1;min-width:0}
+.wf-step-title{font-size:14px;font-weight:500;color:var(--text)}
+.wf-step-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.wf-step-count{font-size:11px;color:var(--text3);flex-shrink:0;white-space:nowrap}
+.wf-content{padding:0 14px 14px;display:flex;flex-direction:column;gap:8px}
+.wf-desc-box{background:var(--bg2);border-radius:8px;padding:10px 12px}
+.wf-desc-label{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;font-weight:600}
+.wf-desc-text{font-size:13px;color:var(--text);line-height:1.7;white-space:pre-line}
+.wf-warn-box{background:rgba(192,112,48,.12);border:1px solid rgba(192,112,48,.3);border-radius:8px;padding:9px 12px;font-size:12px;color:var(--orange);line-height:1.5}
+.wf-info-box{background:rgba(74,127,165,.1);border:1px solid rgba(74,127,165,.3);border-radius:8px;padding:9px 12px;font-size:12px;color:#4a7fa5;line-height:1.5}
+.wf-copy-btn{width:100%;min-height:40px;background:var(--bg4);border:1.5px solid var(--border2);border-radius:8px;color:var(--text);font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s}
+.wf-copy-btn:hover{background:var(--bg5)}
+.wf-copy-btn.copied{background:rgba(58,102,80,.15);color:var(--accent);border-color:rgba(58,102,80,.5)}
+.wf-checklist{display:flex;flex-direction:column;gap:7px}
+.wf-check-item{display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:3px 0}
+.wf-check-item input[type=checkbox]{width:16px;height:16px;flex-shrink:0;margin-top:2px;accent-color:var(--accent);cursor:pointer}
+.wf-check-item input[type=checkbox]:disabled{opacity:.5;cursor:default}
+.wf-check-label{font-size:12px;color:var(--text);line-height:1.5}
+.wf-check-label.checked{text-decoration:line-through;color:var(--text3)}
+.wf-complete-banner{background:rgba(58,102,80,.1);border:1px solid rgba(58,102,80,.3);border-radius:10px;padding:14px 16px;text-align:center}
+.wf-complete-title{font-size:14px;font-weight:500;color:var(--accent);margin-bottom:4px}
+.wf-complete-sub{font-size:12px;color:var(--accent);opacity:.85;line-height:1.6}
 </style>
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -2104,6 +2146,22 @@ input:focus, textarea:focus, select:focus {
       <button class="btn btn-ghost" onclick="closeOverlay('modal-failurepattern')">キャンセル</button>
       <button class="btn btn-accent" onclick="saveFailurePattern()">保存</button>
     </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: 執筆ワークフローナビゲーター ===== -->
+<div class="wf-overlay" id="modal-workflow">
+  <div class="wf-modal">
+    <div class="wf-header">
+      <div class="wf-header-left">
+        <div class="wf-article-title" id="wf-article-title"></div>
+        <div class="wf-progress-track">
+          <div class="wf-progress-fill" id="wf-progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+      <button class="wf-close-btn" onclick="closeWorkflowNav()">✕</button>
+    </div>
+    <div class="wf-body" id="wf-body"></div>
   </div>
 </div>
 
@@ -3066,6 +3124,7 @@ function renderNotes() {
             </div>
             <div class="ni-actions">
               <button class="ni-action-btn primary" onclick="event.stopPropagation();openWork(${n.id})">✍ 執筆開始</button>
+              <button class="ni-action-btn" onclick="event.stopPropagation();openWorkflowNav(${n.id})" style="background:rgba(58,102,80,.12);color:var(--accent);border-color:rgba(58,102,80,.35)">📋 ワークフロー</button>
               <button class="ni-action-btn" onclick="event.stopPropagation();openOverlay('modal-howto')" style="background:var(--bg3);color:var(--text2)">📖 使い方</button>
               ${(n.status==='review'||n.status==='done')?`<button class="ni-action-btn finish" onclick="event.stopPropagation();openFinishModal(${n.id})">🎯 仕上げ</button>`:''}
             </div>
@@ -6913,6 +6972,290 @@ function importXData(event) {
 
 
 runNabebaseTests();
+
+// ================================================================
+// 執筆ワークフローナビゲーター
+// ================================================================
+const WF_STEP3_COPY = `【ジミーへの被りチェック依頼】
+使用モデル：gemini-3.1-pro-preview
+
+nabebaseの公開記事全件・失敗パターン全件（絶対禁止フラグ含む）を参照して
+以下の新規記事候補との被り・失敗パターンとの一致をチェックしてください
+
+【チェック対象の新規候補】
+タイトル：
+展開軸：
+感情軸：
+思考の型：
+読者視点：
+学びの核心（1文）：
+タイトルキーワード（配列）：
+
+【チェック項目】
+・タイトルキーワードの重複（部分一致含む）
+・展開軸の重複
+・感情軸の重複
+・思考の型の重複
+・読者視点の重複
+・学びの核心が70%以上類似しているもの
+・失敗パターンとの軸の組み合わせ一致
+・絶対禁止フラグが「絶対禁止」のパターンとの一致（最優先でNG）
+
+【判定基準】
+・絶対禁止フラグと一致 → 即NG（理由を明記。修正案の提示不要）
+・完全一致 → NG（使用禁止）
+・類似70%以上 → 要修正（どこが近いかを明示）
+・失敗パターンと一致（絶対禁止以外） → 要修正（理由を明記）
+・問題なし → OK
+
+【出力形式】
+判定：OK / NG / 要修正
+理由：（該当する過去記事タイトルと被り箇所を明記）
+修正案：（要修正の場合のみ。修正後の軸・キーワード候補を出す）`;
+
+const WF_STEPS = [
+  {
+    title: 'STEP 1：クロの事前チェック',
+    sub: '軸の確認と差分設計',
+    desc: 'まずnabebaseを開いて、直近3本の公開済み記事の「展開軸・感情軸・思考の型」を確認します。今回使う軸と被っていれば、別の軸に選び直してください。\n\n次に、棚卸しログを読んで「崩すべき前提認識」と「読了後の変化」を自分の言葉で導き出します。ここで導き出した内容が、パペへの依頼文の核になります。\n\n最後に方向A・B（共感軸・テーマ昇華軸）の直近5本の比率を確認して、偏りがあれば逆の方向に切り替えます。全項目が終わったら進行状態を「STEP1完了」に更新してください。',
+    warn: null,
+    info: null,
+    copyBtn: null,
+    tasks: [
+      'nabebaseで直近3本の展開軸・感情軸・思考の型を確認した',
+      '直近3本と被りがないか照合した（被りがあれば別の軸を選び直した）',
+      '崩すべき前提認識を棚卸しログから導出した',
+      '読了後の変化を棚卸しログから導出した',
+      'nabebaseの失敗パターンと照合した（絶対禁止フラグを確認）',
+      '直近5本の方向A・B比率を確認した（3本以上偏りがあれば逆に切り替えた）',
+      'シリーズの場合は前の記事との接続点を特定した（単発の場合は「単発」と確認）',
+      'nabebaseの進行状態を「STEP1完了」に更新した',
+    ],
+  },
+  {
+    title: 'STEP 2：思考枠チェック',
+    sub: '本文レベルの被り確認',
+    desc: 'STEP1で決めた軸を使って、本文レベルで被りがないかを確認します。展開軸や感情軸が違っていても「読者が読んだ後の感触」が似ていることがあります。\n\n「直近3本を読んだ読者がこの記事を読んで、また同じ話だと感じないか」を基準に確認してください。1つでも似ていると感じたら、展開軸か視点を変えて再設計します。\n\n全項目が問題なければ、nabebaseの進行状態を「STEP2完了」に更新してください。',
+    warn: null,
+    info: null,
+    copyBtn: null,
+    tasks: [
+      'タイトルの問い構造が直近3本と異なることを確認した',
+      '読者が得る学びの結論が直近3本と異なることを確認した',
+      '思考の型が3本連続していないことを確認した',
+      '視点が直近3本と被っていないことを確認した',
+      '読者印象レベルのチェックをした（「また同じ話だ」と感じないか）',
+      'nabebaseの進行状態を「STEP2完了」に更新した',
+    ],
+  },
+  {
+    title: 'STEP 3：ジミー被りチェック',
+    sub: '全公開記事・失敗パターンとの照合',
+    desc: '下の「テンプレートをコピー」ボタンを押して、タイトル・展開軸・感情軸・思考の型・読者視点・学びの核心・タイトルキーワードを埋めてジミーに投げます。\n\nジミーはnabebase全公開記事と失敗パターン全件を参照して、OK・NG・要修正を返してきます。OKが返ってきたらnabebaseの進行状態を「STEP3ジミー被りチェックOK」に更新してください。',
+    warn: '要修正が返ってきた場合は軸を修正して再チェックしてください（上限3回）。3回目でもNGが返ってきた場合は、その記事候補を失敗パターンに登録して次の候補に移ります。',
+    info: null,
+    copyBtn: { label: 'ジミー被りチェックテンプレートをコピー', text: WF_STEP3_COPY },
+    tasks: [
+      'テンプレートに今回の軸情報を記入してジミーに投げた',
+      'ジミーからOKが返ってきた',
+      'nabebaseの進行状態を「STEP3ジミー被りチェックOK」に更新した',
+      'nabebaseに記事候補JSON（V6スキーマ）が登録されていることを確認した',
+    ],
+  },
+  {
+    title: 'STEP 4：パペへのリサーチ依頼',
+    sub: '一次情報の収集',
+    desc: 'パペへのリサーチ指示文v3.2を開いて、「記事軸の確認」ブロックの8項目を今回の記事内容に書き換えてからパペに投げます。\n\nパペのリサーチ結果が返ってきたら、nabebaseの「パペ依頼状況」を「完了」に更新して、進行状態を「STEP4パペリサーチ完了」に更新してください。',
+    warn: null,
+    info: '書き換える8項目：記事タイトル・この記事が解決する問題・ターゲット読者の感情状態・崩すべき前提認識・読了後に読者に起きる変化・展開軸・今回使う思考の型・今回使う視点',
+    copyBtn: null,
+    tasks: [
+      'パペ指示文v3.2の「記事軸の確認」ブロック8項目を今回の内容で書き換えた',
+      'パペに投げた',
+      'パペのリサーチ結果が返ってきた',
+      'nabebaseの「パペ依頼状況」を「完了」に更新した',
+      'nabebaseの進行状態を「STEP4パペリサーチ完了」に更新した',
+    ],
+  },
+  {
+    title: 'STEP 5：ジミーへの素材整理',
+    sub: '学びの骨格設計',
+    desc: 'パペのリサーチ結果を一切要約せず、原文のまま全文コピーします。それをジミーへの素材整理指示テンプレートと合わせてジミーに投げます。\n\nジミーからまず骨子（①〜④）が返ってきます。骨子の4点（流れ・被り・着地・失敗パターン一致）を確認してOKを返してください。OKを返したあと、ジミーから詳細設計（⑤〜⑬）が届きます。\n\n詳細設計が届いたらnabebaseの進行状態を「STEP5ジミー構成完了」に更新してください。',
+    warn: '骨子の差し戻しは最大3回まで。3回目でもOKが返せない場合は、その記事候補を失敗パターンに登録してべーやんに報告します。パペの結果は絶対に要約・圧縮しないでください。',
+    info: null,
+    copyBtn: null,
+    tasks: [
+      'パペの結果を一切要約せず原文のまま全文コピーした',
+      'ジミーへの素材整理指示と合わせてジミーに投げた',
+      'ジミーから骨子（①〜④）が返ってきた',
+      '骨子OKの4点を確認した（流れの一貫性・被り・着地・失敗パターン一致）',
+      'ジミーに骨子OKを返した',
+      'ジミーから詳細設計（⑤〜⑬）が返ってきた',
+      'nabebaseの進行状態を「STEP5ジミー構成完了」に更新した',
+    ],
+  },
+  {
+    title: 'STEP 6：記事制作',
+    sub: '執筆・自己チェック・登録',
+    desc: 'ジミーの設計素材を記事制作チャットに渡して執筆します。\n\n書き終わったら4点の自己チェックを実行してください。問題があれば自分で修正してからべーやんに渡します。最後にnabebaseへの登録を忘れずに行ってください。',
+    warn: null,
+    info: null,
+    copyBtn: null,
+    tasks: [
+      'ジミーの設計素材を記事制作チャットに渡した',
+      '自己チェック①：上から目線の箇所がないか確認した',
+      '自己チェック②：後半が前向きな着地になっているか確認した',
+      '自己チェック③：語り口のハイブリッド設計が守られているか確認した',
+      '自己チェック④：思考の型と視点が記事全体で一貫しているか確認した',
+      'nabebaseの進行状態を「STEP6記事完了」に更新した',
+      'nabebaseの使用状況を「使用済み」に更新した',
+      '公開記事サマリーJSONをnabebaseに登録した',
+    ],
+  },
+];
+
+let _wfNoteId = null;
+
+function openWorkflowNav(noteId) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n) return;
+  _wfNoteId = noteId;
+  document.getElementById('wf-article-title').textContent = n.title;
+  renderWorkflowNav();
+  document.getElementById('modal-workflow').classList.add('open');
+}
+
+function closeWorkflowNav() {
+  document.getElementById('modal-workflow').classList.remove('open');
+  _wfNoteId = null;
+}
+
+function _wfKey(noteId) {
+  const n = S.notes.find(x => x.id === noteId);
+  return 'workflow_progress_' + (n ? n.title : String(noteId));
+}
+
+function _wfLoadTasks(noteId) {
+  try {
+    const raw = localStorage.getItem(_wfKey(noteId));
+    return raw ? (JSON.parse(raw).tasks || {}) : {};
+  } catch { return {}; }
+}
+
+function _wfSaveTasks(noteId, tasks) {
+  const n = S.notes.find(x => x.id === noteId);
+  localStorage.setItem(_wfKey(noteId), JSON.stringify({
+    articleTitle: n ? n.title : '',
+    tasks,
+  }));
+}
+
+function _wfStepDone(si, tasks) {
+  return WF_STEPS[si].tasks.every((_, ti) => !!tasks[si + '_' + ti]);
+}
+
+function _wfEsc(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderWorkflowNav() {
+  const noteId = _wfNoteId;
+  if (!noteId) return;
+  const tasks = _wfLoadTasks(noteId);
+  let doneCount = 0;
+  for (let i = 0; i < WF_STEPS.length; i++) { if (_wfStepDone(i, tasks)) doneCount++; }
+  document.getElementById('wf-progress-fill').style.width = (doneCount / WF_STEPS.length * 100) + '%';
+
+  let html = '';
+  for (let si = 0; si < WF_STEPS.length; si++) {
+    const step = WF_STEPS[si];
+    const isDone = _wfStepDone(si, tasks);
+    const prevDone = si === 0 || _wfStepDone(si - 1, tasks);
+    const isActive = !isDone && prevDone;
+    const stateClass = isDone ? 'done' : isActive ? 'active' : 'locked';
+    const checkedCount = step.tasks.filter((_, ti) => !!tasks[si + '_' + ti]).length;
+
+    html += '<div class="wf-step ' + stateClass + '">'
+      + '<div class="wf-step-header">'
+      + '<div class="wf-badge">' + (isDone ? '✓' : si + 1) + '</div>'
+      + '<div class="wf-step-title-wrap">'
+      + '<div class="wf-step-title">' + _wfEsc(step.title) + '</div>'
+      + '<div class="wf-step-sub">' + _wfEsc(step.sub) + '</div>'
+      + '</div>'
+      + '<div class="wf-step-count">' + checkedCount + '/' + step.tasks.length + '</div>'
+      + '</div>';
+
+    if (isActive) {
+      html += '<div class="wf-content">'
+        + '<div class="wf-desc-box">'
+        + '<div class="wf-desc-label">このSTEPでやること</div>'
+        + '<div class="wf-desc-text">' + _wfEsc(step.desc) + '</div>'
+        + '</div>';
+      if (step.warn) html += '<div class="wf-warn-box">⚠️ ' + _wfEsc(step.warn) + '</div>';
+      if (step.info) html += '<div class="wf-info-box">📌 ' + _wfEsc(step.info) + '</div>';
+      if (step.copyBtn) {
+        const bid = 'wf-cbtn-' + si;
+        html += '<button class="wf-copy-btn" id="' + bid + '" onclick="wfCopyText(' + si + ',\'' + bid + '\')">' + _wfEsc(step.copyBtn.label) + '</button>';
+      }
+      html += '<div class="wf-checklist">';
+      step.tasks.forEach(function(task, ti) {
+        const checked = !!tasks[si + '_' + ti];
+        const dis = stateClass === 'locked' ? ' disabled' : '';
+        html += '<label class="wf-check-item">'
+          + '<input type="checkbox"' + (checked ? ' checked' : '') + dis + ' onchange="wfToggleCheck(' + noteId + ',' + si + ',' + ti + ',this.checked)">'
+          + '<span class="wf-check-label' + (checked ? ' checked' : '') + '">' + _wfEsc(task) + '</span>'
+          + '</label>';
+      });
+      html += '</div></div>';
+    }
+    html += '</div>';
+  }
+  if (doneCount === WF_STEPS.length) {
+    html += '<div class="wf-complete-banner">'
+      + '<div class="wf-complete-title">✅ 全STEP完了</div>'
+      + '<div class="wf-complete-sub">公開記事サマリーJSONのnabebase登録を確認してください</div>'
+      + '</div>';
+  }
+  document.getElementById('wf-body').innerHTML = html;
+}
+
+function wfToggleCheck(noteId, si, ti, checked) {
+  const tasks = _wfLoadTasks(noteId);
+  tasks[si + '_' + ti] = checked;
+  _wfSaveTasks(noteId, tasks);
+  renderWorkflowNav();
+}
+
+function wfCopyText(si, btnId) {
+  const step = WF_STEPS[si];
+  if (!step || !step.copyBtn) return;
+  const text = step.copyBtn.text;
+  const btn = document.getElementById(btnId);
+  const origLabel = btn ? btn.textContent : '';
+  const onCopied = function() {
+    if (!btn) return;
+    btn.textContent = 'コピーしました';
+    btn.classList.add('copied');
+    setTimeout(function() {
+      btn.textContent = origLabel;
+      btn.classList.remove('copied');
+    }, 1800);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(onCopied).catch(function() { _wfFallback(text); onCopied(); });
+  } else { _wfFallback(text); onCopied(); }
+}
+
+function _wfFallback(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.top = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand('copy');
+  document.body.removeChild(ta);
+}
 
 </script>
 
