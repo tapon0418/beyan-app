@@ -13,6 +13,7 @@ const PROMPT_REVIEWS_KEY     = 'beyan_promptReviews';
 const FAILURE_PATTERNS_KEY   = 'beyan_failurePatterns';
 let _xManageTab    = 'stock';
 let _xManageFilter = 'all';
+let _overlapResults = {};
 const DEFAULT_X_PROMPT =
 `あなたはX（Twitter）投稿文の専門家です。
 以下の素材をもとに、投稿文を作成できる限り多く生成してください。
@@ -207,6 +208,7 @@ function _updateGeminiTsDisplay() {
 }
 
 function renderAll() {
+  renderTopDashboard();
   renderNotes();
   renderXPosts();
   renderArchive();
@@ -583,10 +585,13 @@ function renderNotes() {
             </div>
             <div class="ni-actions">
               <button class="ni-action-btn primary" onclick="event.stopPropagation();openWork(${n.id})">✍ 執筆開始</button>
-              <button class="ni-action-btn" onclick="event.stopPropagation();openWorkflowNav(${n.id})" style="background:rgba(58,102,80,.12);color:var(--accent);border-color:rgba(58,102,80,.35)">📋 ワークフロー</button>
+              <button class="ni-action-btn" onclick="event.stopPropagation();openNoteEditModal(${n.id})">📝 詳細編集</button>
+              <button class="ni-action-btn" onclick="event.stopPropagation();openWorkflowNav(${n.id})" style="background:var(--bg3);color:var(--text2)">📋 ワークフロー</button>
               <button class="ni-action-btn" onclick="event.stopPropagation();openOverlay('modal-howto')" style="background:var(--bg3);color:var(--text2)">📖 使い方</button>
               ${(n.status==='review'||n.status==='done')?`<button class="ni-action-btn finish" onclick="event.stopPropagation();openFinishModal(${n.id})">🎯 仕上げ</button>`:''}
             </div>
+            ${_buildOverlapBtn(n)}
+            <div id="overlap-result-${n.id}">${_overlapResults[n.id] || ''}</div>
           </div>
           ${monthEditRow}
         </div>
@@ -1427,8 +1432,14 @@ function saveFromWork() {
 // ================================================================
 // 記事詳細編集モーダル
 // ================================================================
+let _editFromCard = false;
+function openNoteEditModal(id) {
+  curId = Number(id);
+  _editFromCard = true;
+  openEditModal();
+}
 function openEditModal() {
-  const n = S.notes.find(x=>x.id===curId); if(!n) return;
+  const n = S.notes.find(x=>x.id===curId || x.id===Number(curId)); if(!n) return;
   document.getElementById('me-id').value=n.id;
   document.getElementById('me-title').value=n.title||'';
   document.getElementById('me-type').value=n.type||'エッセイ(A)';
@@ -1527,7 +1538,8 @@ document.getElementById('me-save').addEventListener('click',()=>{
       },
     });
     save(); renderNotes();  closeOverlay('modal-edit');
-    if(curId===id) openWork(id);
+    if(!_editFromCard && curId===id) openWork(id);
+    _editFromCard = false;
     toast('保存しました');
   };
   if (newStatus === 'writing' && n.status !== 'writing') {
@@ -4725,5 +4737,420 @@ function _wfFallback(text) {
   ta.select();
   document.execCommand('copy');
   document.body.removeChild(ta);
+}
+
+// ================================================================
+// トップダッシュボード
+// ================================================================
+
+const TOP_STEP_OPS = [
+  {
+    label: 'STEP1\nリサーチ',
+    ops: [
+      { role: 'jimmy', text: 'ジミーに記事テーマ・ターゲット読者・想定キーワードをリサーチさせる' },
+      { role: 'jimmy', text: '競合記事・検索意図・読者の悩みパターンを調査させる' },
+      { role: 'pape', text: 'リサーチ結果をもとに記事候補JSONを作成してnabebaseに登録' }
+    ],
+    update: '記事候補ページで候補を追加 → ステータスを「執筆待ち」に変更'
+  },
+  {
+    label: 'STEP2\n執筆指示',
+    ops: [
+      { role: 'pape', text: 'nabebaseのコンテキスト生成ボタンでクロ用コンテキストをコピー' },
+      { role: 'kuro', text: 'クロに展開軸・感情軸・思考の型・読者視点を確定させる' },
+      { role: 'kuro', text: 'クロに執筆指示文（nb2Prompt）を生成させる' }
+    ],
+    update: '記事カードの「執筆指示文」欄にnb2Promptを貼り付けて保存'
+  },
+  {
+    label: 'STEP3\n執筆',
+    ops: [
+      { role: 'kuro', text: 'nb2Promptをクロに送信して記事本文を執筆させる' },
+      { role: 'kuro', text: 'AI記号（# ※ ** 等）を除去してnote入稿用に整形させる' }
+    ],
+    update: 'ステータスを「執筆中」→「整形待ち」に更新'
+  },
+  {
+    label: 'STEP4\n見出し画像',
+    ops: [
+      { role: 'jimmy', text: 'ジミーに見出し画像プロンプトをテンプレートから生成させる' },
+      { role: 'jimmy', text: 'Imagen APIで1280×720px画像を生成する' },
+      { role: 'kuro', text: 'クロが記事本文と画像の内容一致を確認（画像チェック）' }
+    ],
+    update: 'ステータスを「画像生成中」→「note入稿待ち」に更新'
+  },
+  {
+    label: 'STEP5\nnote投稿',
+    ops: [
+      { role: 'pape', text: '整形済み本文をnoteエディタに貼り付ける' },
+      { role: 'pape', text: '見出し画像をアップロードして設定する' },
+      { role: 'beyan', text: 'nabebaseで楽天アフィリエイトリンクを生成して記事に追加' },
+      { role: 'pape', text: 'noteで記事を公開する' }
+    ],
+    update: 'ステータスを「公開済み」に更新。note URLを記事カードに記録'
+  },
+  {
+    label: 'STEP6\nX投稿',
+    ops: [
+      { role: 'jimmy', text: 'ジミーにX投稿文（告知ツイート）を生成させる' },
+      { role: 'pape', text: 'X（Twitter）に投稿する' },
+      { role: 'beyan', text: 'nabebaseのX投稿欄に投稿内容を記録する' }
+    ],
+    update: 'X投稿セクションに投稿内容を登録して完了'
+  }
+];
+
+const WSTATE_STEPS = ['research', 'writing', 'editing', 'image', 'note', 'xpost'];
+
+const TOP_NEXT_ACTIONS = {
+  research: 'STEP1：ジミーにリサーチを依頼する',
+  writing:  'STEP2：クロに執筆指示文を生成させる',
+  editing:  'STEP3：クロに整形を依頼する',
+  image:    'STEP4：ジミーに見出し画像を生成させる',
+  note:     'STEP5：noteに入稿して公開する',
+  xpost:    'STEP6：X投稿文を作成して投稿する'
+};
+
+let _topOpenStep = -1;
+
+function renderTopDashboard() {
+  _renderTopCurrentArticle();
+  _renderTopStatusCards();
+  _renderTopWarnBanners();
+  _renderTopTwoCol();
+}
+
+function _getUnusedCandidates() {
+  return (S.notes || []).filter(n => !n.used && n.status !== 'done' && n.status !== 'archived');
+}
+
+function _renderTopCurrentArticle() {
+  const area = document.getElementById('top-current-area');
+  if (!area) return;
+
+  const wip = (S.notes || []).find(n => n.status !== 'done' && n.status !== 'archived' && n.workflowState);
+  const candidate = (S.notes || []).find(n => n.status !== 'done' && n.status !== 'archived' && !n.workflowState);
+  const note = wip || candidate;
+
+  if (!note) {
+    area.innerHTML = '<div class="top-no-article">執筆中の記事がありません。記事候補を追加してSTEP1から始めましょう。</div>';
+    return;
+  }
+
+  area.innerHTML = _buildCurrentCard(note);
+}
+
+function _buildCurrentCard(n) {
+  const title = _wfEsc(n.title || '（未設定）');
+  const wstate = n.workflowState || 'research';
+  const stepIdx = WSTATE_STEPS.indexOf(wstate);
+  const currentIdx = stepIdx >= 0 ? stepIdx : 0;
+
+  const stepBtns = TOP_STEP_OPS.map((s, i) => {
+    const cls = i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'future';
+    const labelHtml = s.label.replace('\n', '<br>');
+    return `<button class="top-step-btn ${cls}" onclick="toggleTopStep(${i})">${labelHtml}</button>`;
+  }).join('');
+
+  const nextAction = TOP_NEXT_ACTIONS[wstate] || '';
+  const metaStatus = wstate ? `現在フェーズ：${['リサーチ','執筆指示','執筆','見出し画像','note投稿','X投稿'][currentIdx] || wstate}` : '';
+
+  return `<div class="top-current-card">
+  <div class="top-current-title">📝 ${title}</div>
+  <div class="top-current-meta">${metaStatus}${nextAction ? '　→　次のアクション：' + nextAction : ''}</div>
+  <div class="top-step-bar">${stepBtns}</div>
+  ${TOP_STEP_OPS.map((s, i) => `<div class="top-step-detail" id="top-step-detail-${i}">
+    <div style="padding:10px 12px;background:var(--bg4);border-radius:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">${s.label.replace('\n',' ')} の操作内容</div>
+      ${s.ops.map(op => `<div class="top-op-row"><span class="top-role-tag ${op.role}">${{kuro:'クロ',pape:'なべちゃん',jimmy:'ジミー',beyan:'beyan'}[op.role]||op.role}</span><span style="font-size:12px;color:var(--text);line-height:1.5">${_wfEsc(op.text)}</span></div>`).join('')}
+      <div class="top-update-box">✏️ 完了後の更新：${_wfEsc(s.update)}</div>
+    </div>
+  </div>`).join('')}
+</div>`;
+}
+
+function toggleTopStep(si) {
+  if (_topOpenStep === si) {
+    _topOpenStep = -1;
+  } else {
+    _topOpenStep = si;
+  }
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById('top-step-detail-' + i);
+    if (!el) continue;
+    if (i === _topOpenStep) {
+      el.classList.add('open');
+    } else {
+      el.classList.remove('open');
+    }
+  }
+}
+
+function _renderTopStatusCards() {
+  const area = document.getElementById('top-status-area');
+  if (!area) return;
+
+  const notes = S.notes || [];
+  const unusedCnt = _getUnusedCandidates().length;
+  const doneLast5 = notes.filter(n => n.status === 'done').slice(-5);
+  const dirA = doneLast5.filter(n => n.type === 'A').length;
+  const dirB = doneLast5.filter(n => n.type === 'B').length;
+  const dirLabel = doneLast5.length === 0 ? '—' : (dirA >= dirB ? `A:${dirA} / B:${dirB}` : `B:${dirB} / A:${dirA}`);
+
+  const weeklyKey = 'beyan_weekly_review';
+  const lastReview = localStorage.getItem(weeklyKey);
+  let weeklyLabel = '未実施';
+  let weeklyDone = false;
+  if (lastReview) {
+    const d = new Date(lastReview);
+    const now = new Date();
+    const diffDays = Math.floor((now - d) / 86400000);
+    if (diffDays < 7) {
+      weeklyLabel = `${diffDays}日前`;
+      weeklyDone = true;
+    } else {
+      weeklyLabel = `${diffDays}日前（要実施）`;
+    }
+  }
+
+  area.innerHTML = `<div class="top-status-grid">
+  <div class="top-stat-card">
+    <div class="top-stat-num" id="dash-stock-num2">${unusedCnt}</div>
+    <div class="top-stat-label">📦 記事候補ストック</div>
+    <div class="top-stat-sub">未使用の候補数</div>
+  </div>
+  <div class="top-stat-card">
+    <div class="top-stat-num" style="font-size:24px;margin-top:4px">${dirLabel}</div>
+    <div class="top-stat-label">📊 A/B方向バランス</div>
+    <div class="top-stat-sub">直近5記事の展開軸比率</div>
+  </div>
+  <div class="top-stat-card" style="cursor:pointer" onclick="markWeeklyReview()">
+    <div class="top-stat-num" style="font-size:20px;margin-top:6px;color:${weeklyDone ? 'var(--green)' : 'var(--orange)'}">${weeklyLabel}</div>
+    <div class="top-stat-label">🔄 週次レビュー</div>
+    <div class="top-stat-sub">${weeklyDone ? '良好' : 'タップで記録'}</div>
+  </div>
+</div>`;
+}
+
+function markWeeklyReview() {
+  localStorage.setItem('beyan_weekly_review', new Date().toISOString());
+  _renderTopStatusCards();
+}
+
+function _renderTopWarnBanners() {
+  const area = document.getElementById('top-warn-area');
+  if (!area) return;
+
+  const banners = [];
+  const unusedCnt = _getUnusedCandidates().length;
+
+  if (unusedCnt === 0) {
+    banners.push({ cls: 'red', text: '⚠️ 記事候補がありません。リサーチからSTEP1を始めましょう。' });
+  } else if (unusedCnt <= 2) {
+    banners.push({ cls: 'orange', text: `⚡ 記事候補が残り${unusedCnt}件です。補充を検討してください。` });
+  }
+
+  const weeklyKey = 'beyan_weekly_review';
+  const lastReview = localStorage.getItem(weeklyKey);
+  if (lastReview) {
+    const diffDays = Math.floor((new Date() - new Date(lastReview)) / 86400000);
+    if (diffDays >= 7) {
+      banners.push({ cls: 'orange', text: `🔄 週次レビューが${diffDays}日間未実施です。軸・失敗パターンを見直しましょう。` });
+    }
+  } else {
+    banners.push({ cls: 'orange', text: '🔄 週次レビューがまだ記録されていません。ステータスカードをタップして記録しましょう。' });
+  }
+
+  if (banners.length === 0) {
+    banners.push({ cls: 'green', text: '✅ 現在の進行状況は良好です。引き続き執筆を進めましょう！' });
+  }
+
+  area.innerHTML = banners.map(b => `<div class="top-warn-banner ${b.cls}">${b.text}</div>`).join('');
+}
+
+function _renderTopTwoCol() {
+  const area = document.getElementById('top-two-col-area');
+  if (!area) return;
+
+  const candidates = _getUnusedCandidates().slice(0, 3);
+  const candHtml = candidates.length > 0
+    ? candidates.map(n => `<div class="top-cand-item"><span style="color:var(--text3);margin-right:6px">📌</span>${_wfEsc(n.title || '（タイトル未設定）')}</div>`).join('')
+    : '<div style="font-size:12px;color:var(--text3);padding:8px 0">候補がありません</div>';
+
+  const posts = (typeof getPublishedPosts === 'function' ? getPublishedPosts() : []).slice(0, 3);
+  const postsHtml = posts.length > 0
+    ? posts.map(p => `<div class="top-xpost-item"><div style="font-size:11px;color:var(--text3)">${p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('ja-JP') : ''}</div><div>${_wfEsc(p.postSummary || '')}</div></div>`).join('')
+    : '<div style="font-size:12px;color:var(--text3);padding:8px 0">投稿記録がありません</div>';
+
+  area.innerHTML = `<div class="top-two-col">
+  <div class="top-col-card">
+    <div class="top-col-title">📦 記事候補ストック（直近3件）</div>
+    ${candHtml}
+    <span class="top-more-link" onclick="document.querySelector('[data-sec=tools]')?.click()">すべて見る →</span>
+  </div>
+  <div class="top-col-card">
+    <div class="top-col-title">🐦 X投稿記録（直近3件）</div>
+    ${postsHtml}
+    <span class="top-more-link" onclick="document.querySelector('[data-sec=xposts]')?.click()">すべて見る →</span>
+  </div>
+</div>`;
+}
+
+// ================================================================
+// 被りチェック
+// ================================================================
+
+function _buildOverlapBtn(n) {
+  const ws = n.workflowState || '';
+  if (!ws) return '';
+  if (ws.includes('STEP2')) {
+    return `<div style="margin-top:8px">
+      <button id="overlap-btn-${n.id}" class="ni-action-btn"
+        style="background:rgba(66,133,244,.12);color:#4285f4;border-color:rgba(66,133,244,.35)"
+        onclick="event.stopPropagation();runOverlapCheck(${n.id},this)">🔍 被りチェック</button>
+    </div>`;
+  }
+  if (['STEP3','STEP4','STEP5','STEP6'].some(s => ws.includes(s))) {
+    return `<div style="margin-top:8px">
+      <button class="ni-action-btn" disabled
+        style="background:var(--bg4);color:var(--text3);border-color:var(--border);cursor:default;opacity:.6">✅ チェック済み</button>
+    </div>`;
+  }
+  return '';
+}
+
+async function runOverlapCheck(noteId, btn) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n) return;
+
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  if (!apiKey) {
+    _setOverlapResult(noteId, '<div style="color:var(--orange);font-size:12px;padding:8px 0">⚠️ 設定画面からGemini APIキーを登録してください</div>');
+    return;
+  }
+
+  btn.textContent = '🔍 チェック中...';
+  btn.disabled = true;
+
+  const published = getPublishedArticles()
+    .sort((a, b) => (b.publishedAt || '') > (a.publishedAt || '') ? 1 : -1)
+    .slice(0, 30);
+  const failures = JSON.parse(localStorage.getItem(FAILURE_PATTERNS_KEY) || '[]');
+
+  const axis = (typeof n.axis === 'object' && n.axis) ? n.axis : {};
+  const art = n.article || {};
+  const concept = n.concept || {};
+
+  const prompt = `以下の公開済み記事・失敗パターンを参照して、新規候補との被りをチェックしてください。
+
+【公開済み記事（直近30件）】
+${JSON.stringify(published)}
+
+【失敗パターン（全件）】
+${JSON.stringify(failures)}
+
+【チェック対象の新規候補】
+タイトル：${n.title || ''}
+タイトルキーワード：なし
+展開軸：${axis.expansionAxis || ''}
+感情軸：${axis.emotionAxis || ''}
+思考の型：${art.thinkingPattern || ''}
+読者視点：${art.readerPerspective || ''}
+学びの核心：${concept.coreProblem || ''}
+
+【チェック項目】
+・タイトルキーワードの重複（部分一致含む）
+・展開軸・感情軸・思考の型・読者視点の重複
+・学びの核心が70%以上類似しているもの
+・絶対禁止フラグが「絶対禁止」の失敗パターンとの一致
+
+【判定基準と出力形式】
+必ず以下の形式で出力してください。1行目は必ずこの3つのどれか：
+「判定：OK」「判定：NG」「判定：要修正」
+2行目以降：理由（被っている記事タイトルと箇所を具体的に）
+要修正の場合のみ末尾に：修正案（変更すべき軸とその候補を提示）`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey
+        },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 800 }
+        })
+      }
+    );
+
+    if (res.status === 429) {
+      _setOverlapResult(noteId, '<div style="color:var(--orange);font-size:12px;padding:8px 0">⚠️ リクエスト上限に達しました。1分後に再試行してください</div>');
+      btn.textContent = '🔍 被りチェック';
+      btn.disabled = false;
+      return;
+    }
+    if (!res.ok) {
+      _setOverlapResult(noteId, `<div style="color:#c84646;font-size:12px;padding:8px 0">❌ APIエラー（${res.status}）。Gemini APIキーと通信状態を確認してください</div>`);
+      btn.textContent = '🔍 被りチェック';
+      btn.disabled = false;
+      return;
+    }
+
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) throw new Error('parse failed');
+
+    let bgColor = 'rgba(130,130,130,.08)';
+    let borderColor = 'var(--border)';
+    let isOk = false;
+    if (text.includes('判定：OK')) {
+      bgColor = 'rgba(58,102,80,.1)'; borderColor = 'rgba(58,102,80,.35)'; isOk = true;
+    } else if (text.includes('判定：NG')) {
+      bgColor = 'rgba(200,70,70,.1)'; borderColor = 'rgba(200,70,70,.35)';
+    } else if (text.includes('判定：要修正')) {
+      bgColor = 'rgba(230,180,0,.08)'; borderColor = 'rgba(230,180,0,.4)';
+    }
+
+    const okBtn = isOk
+      ? `<button onclick="event.stopPropagation();applyOverlapOK(${noteId},this)" style="margin-top:10px;padding:6px 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit">✅ OKとして進行状態を更新する</button>`
+      : '';
+
+    const resultHtml = `<div style="padding:10px 12px;border-radius:10px;border:1px solid ${borderColor};background:${bgColor};margin-top:0">
+      <div style="font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap">${_wfEsc(text)}</div>
+      ${okBtn}
+    </div>`;
+
+    _overlapResults[noteId] = resultHtml;
+    const resultEl = document.getElementById('overlap-result-' + noteId);
+    if (resultEl) resultEl.innerHTML = resultHtml;
+
+    btn.textContent = '🔄 再チェック';
+    btn.disabled = false;
+
+  } catch(e) {
+    _setOverlapResult(noteId, '<div style="color:#c84646;font-size:12px;padding:8px 0">❌ レスポンスの解析に失敗しました。再試行してください</div>');
+    btn.textContent = '🔍 被りチェック';
+    btn.disabled = false;
+  }
+}
+
+function _setOverlapResult(noteId, html) {
+  _overlapResults[noteId] = html;
+  const el = document.getElementById('overlap-result-' + noteId);
+  if (el) el.innerHTML = html;
+}
+
+function applyOverlapOK(noteId, btn) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n) return;
+  n.workflowState = 'STEP3ジミー被りチェックOK';
+  save();
+  btn.textContent = '✅ 更新しました';
+  btn.disabled = true;
+  delete _overlapResults[noteId];
+  renderNotes();
 }
 

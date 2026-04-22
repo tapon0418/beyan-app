@@ -1419,6 +1419,42 @@ input:focus, textarea:focus, select:focus {
 .wf-complete-banner{background:rgba(58,102,80,.1);border:1px solid rgba(58,102,80,.3);border-radius:10px;padding:14px 16px;text-align:center}
 .wf-complete-title{font-size:14px;font-weight:500;color:var(--accent);margin-bottom:4px}
 .wf-complete-sub{font-size:12px;color:var(--accent);opacity:.85;line-height:1.6}
+/* ===== TOP DASHBOARD ===== */
+.top-current-card{background:var(--bg3);border:1.5px solid rgba(58,102,80,.4);border-radius:14px;padding:18px 20px;margin-bottom:12px}
+.top-current-title{font-size:15px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.top-current-meta{font-size:12px;color:var(--text3);margin-bottom:12px}
+.top-step-bar{display:flex;gap:4px;margin-bottom:0}
+.top-step-btn{flex:1;padding:8px 4px;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s,transform .1s;line-height:1.3;text-align:center}
+.top-step-btn:hover{transform:translateY(-1px)}
+.top-step-btn.done{background:rgba(58,102,80,.25);color:var(--accent)}
+.top-step-btn.current{background:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,102,80,.4)}
+.top-step-btn.future{background:var(--bg4);color:var(--text3)}
+.top-step-detail{overflow:hidden;max-height:0;transition:max-height .25s ease,opacity .2s;opacity:0;margin-top:0}
+.top-step-detail.open{max-height:600px;opacity:1;margin-top:8px}
+.top-op-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.top-op-row:last-child{border-bottom:none}
+.top-role-tag{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;flex-shrink:0;margin-top:1px}
+.top-role-tag.kuro{background:rgba(58,102,80,.2);color:var(--accent)}
+.top-role-tag.pape{background:rgba(200,160,60,.2);color:#c8a03c}
+.top-role-tag.jimmy{background:rgba(66,133,244,.2);color:#4285f4}
+.top-role-tag.beyan{background:rgba(130,100,200,.2);color:#8264c8}
+.top-update-box{margin-top:8px;background:var(--bg4);border-radius:8px;padding:8px 12px;font-size:11px;color:var(--text3);line-height:1.6}
+.top-status-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.top-stat-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:4px}
+.top-stat-num{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;line-height:1;color:var(--green)}
+.top-stat-label{font-size:11px;color:var(--text3)}
+.top-stat-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.top-warn-banner{border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.top-warn-banner.orange{background:rgba(230,140,40,.12);border:1px solid rgba(230,140,40,.35);color:var(--orange)}
+.top-warn-banner.red{background:rgba(200,70,70,.1);border:1px solid rgba(200,70,70,.3);color:#c84646}
+.top-warn-banner.green{background:rgba(58,102,80,.12);border:1px solid rgba(58,102,80,.3);color:var(--accent)}
+.top-two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:0}
+.top-col-card{background:var(--bg3);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px}
+.top-col-title{font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;text-transform:uppercase;letter-spacing:.04em}
+.top-cand-item,.top-xpost-item{padding:7px 0;border-bottom:1px solid var(--border);font-size:12px;line-height:1.5}
+.top-cand-item:last-child,.top-xpost-item:last-child{border-bottom:none}
+.top-more-link{display:block;margin-top:8px;font-size:11px;color:var(--accent);cursor:pointer;text-align:right}
+.top-no-article{background:var(--bg3);border:1.5px dashed var(--border);border-radius:14px;padding:24px;text-align:center;color:var(--text3);font-size:13px;margin-bottom:12px}
 </style>
 <!-- Firebase SDK (compat) -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
@@ -1782,37 +1818,19 @@ input:focus, textarea:focus, select:focus {
   <div class="sidebar-left" id="notes-sidebar-l"></div>
   <div class="main-content">
 
-  <!-- ===== ダッシュボードカード（機能②⑤） ===== -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-
-    <!-- 機能②：クロとのセッションカード -->
-    <div style="background:var(--bg3);border:1.5px solid rgba(58,102,80,.35);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px">
-      <div style="font-size:13px;font-weight:700;color:var(--accent)">🤖 クロとのセッションを始める</div>
-      <div style="font-size:11px;color:var(--text3);line-height:1.5">クロとのチャット開始時に、このテキストを貼り付けてください</div>
-      <button id="btn-copy-ctx" onclick="generateAndCopyClaudeCtx(this)" style="width:100%;min-height:40px;background:var(--accent);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;">コンテキストを生成してコピー</button>
-      <div id="dash-ctx-steps" style="display:none;font-size:.72rem;color:var(--text3);line-height:2;background:var(--bg4);border-radius:8px;padding:8px 10px">
-        STEP 1：上のボタンを押してコンテキストをコピー<br>
-        STEP 2：クロのチャット画面を開く<br>
-        STEP 3：コピーしたテキストをそのまま貼り付けてセッション開始
-      </div>
-      <details id="dash-ctx-details" style="display:none">
-        <summary style="list-style:none;cursor:pointer;font-size:.72rem;color:var(--text3);padding:2px 0">▼ 内容を確認する</summary>
-        <textarea id="dash-ctx-out" rows="8" readonly style="width:100%;margin-top:6px;background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px;font-size:10px;font-family:monospace;line-height:1.6;resize:vertical;box-sizing:border-box;"></textarea>
-      </details>
+  <!-- ===== トップダッシュボード ===== -->
+  <div id="top-dashboard" style="margin-bottom:14px">
+    <div id="top-current-area"></div>
+    <div id="top-status-area"></div>
+    <div id="top-warn-area"></div>
+    <div id="top-two-col-area"></div>
+    <!-- 記事候補ストック数（非表示・updateStats用） -->
+    <div id="dash-stock-card" style="display:none">
+      <div id="dash-stock-num">0</div>
+      <div id="dash-stock-warn"></div>
+      <div id="dash-stock-link"></div>
     </div>
-
-    <!-- 機能⑤：記事候補ストックカード -->
-    <div id="dash-stock-card" style="background:var(--bg3);border:1.5px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:8px">
-      <div style="font-size:13px;font-weight:700;color:var(--text)">📦 記事候補ストック</div>
-      <div style="text-align:center;padding:6px 0">
-        <div id="dash-stock-num" style="font-family:'Syne',sans-serif;font-size:44px;font-weight:800;line-height:1;color:var(--green)">0</div>
-        <div style="font-size:11px;color:var(--text3);margin-top:4px">未使用候補</div>
-      </div>
-      <div id="dash-stock-warn" style="display:none;font-size:.72rem;color:var(--orange);font-weight:700;line-height:1.6"></div>
-      <div id="dash-stock-link" style="font-size:.75rem"></div>
-    </div>
-
-  </div><!-- /dashboard-cards -->
+  </div><!-- /top-dashboard -->
 
 
   <!-- ===== 展開軸・感情軸 使用状況 ===== -->
