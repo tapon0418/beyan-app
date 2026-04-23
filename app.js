@@ -153,20 +153,63 @@ function _fbEnsureFields(data) {
   if (!data.weeklyReviews) data.weeklyReviews = [];
   if (!data.neta) data.neta = [];
   if (!data.snapshot) data.snapshot = { updatedAt: '', projects: [], pending: '' };
-  return data;
+  // localStorage→Firebase 一括移行（初回のみ実行）
+  let _migrated = false;
+  function _lsMigrate(field, lsKey, defaultVal, parse) {
+    if (data[field] === undefined || data[field] === null) {
+      const raw = localStorage.getItem(lsKey);
+      if (raw) {
+        try { data[field] = parse ? JSON.parse(raw) : raw; } catch(e) { data[field] = defaultVal; }
+        localStorage.removeItem(lsKey);
+        _migrated = true;
+      } else {
+        data[field] = defaultVal;
+      }
+    }
+  }
+  _lsMigrate('publishedArticles', PUBLISHED_ARTICLES_KEY, null, true);
+  _lsMigrate('publishedPosts',    PUBLISHED_POSTS_KEY,    [], true);
+  _lsMigrate('failurePatterns',   FAILURE_PATTERNS_KEY,   [], true);
+  _lsMigrate('xPostsNew',         X_POSTS_KEY,            [], true);
+  _lsMigrate('xDraftPosts',       X_DRAFT_POSTS_KEY,      [], true);
+  _lsMigrate('xPromptCustom',     X_PROMPT_KEY,           null, false);
+  _lsMigrate('promptReviews',     PROMPT_REVIEWS_KEY,     [], true);
+  _lsMigrate('shareStats',        SHARE_STATS_KEY,        {}, true);
+  _lsMigrate('claudeTmpl',        CLAUDE_TMPL_KEY,        null, false);
+  _lsMigrate('promptVault',       PROMPT_VAULT_KEY,       [], true);
+  _lsMigrate('xpromptVault',      XPROMPT_KEY,            null, true);
+  _lsMigrate('weeklyReviewTs',    'beyan_weekly_review',  null, false);
+  if (!data.workflowProgress) {
+    const wfData = {};
+    const toRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('workflow_progress_')) {
+        try { wfData[k.slice('workflow_progress_'.length)] = JSON.parse(localStorage.getItem(k)); toRemove.push(k); } catch(e) {}
+      }
+    }
+    toRemove.forEach(k => localStorage.removeItem(k));
+    data.workflowProgress = wfData;
+    if (toRemove.length > 0) _migrated = true;
+  }
+  if (!data.imggenPrompt) {
+    const raw = localStorage.getItem('nabebase_imggen_prompt');
+    if (raw) { data.imggenPrompt = raw; _migrated = true; }
+    else data.imggenPrompt = null;
+  }
+  return _migrated;
 }
 
 // ================================================================
 // バックアップ・エクスポート・インポート
 // ================================================================
 function downloadBackup() {
-  const data = {};
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    try { data[key] = JSON.parse(localStorage.getItem(key)); }
-    catch(e) { data[key] = localStorage.getItem(key); }
-  }
-  // Firebaseキャッシュも含める
+  const data = { beyan_v6: S };
+  // APIキーはlocalStorageに残留（セキュリティのため）
+  const gk = localStorage.getItem(GEMINI_KEY_STORAGE);
+  if (gk) data[GEMINI_KEY_STORAGE] = gk;
+  const ck = localStorage.getItem(CLAUDE_API_KEY_STORAGE);
+  if (ck) data[CLAUDE_API_KEY_STORAGE] = ck;
   if (_geminiTmpl !== null) data['_cache_gemini_tmpl'] = _geminiTmpl;
   const json = JSON.stringify(data, null, 2);
   _downloadFile(json, `nabebase_backup_${new Date().toISOString().slice(0,10)}.json`, 'application/json');
@@ -257,8 +300,8 @@ async function runSystemDiagnosis() {
     : '⚪ Geminiテンプレート: 未更新');
 
   // APIキー
-  lines.push(localStorage.getItem('beyan_gemini_key') ? '✅ Gemini APIキー: 設定済み' : '⚠️ Gemini APIキー: 未設定');
-  lines.push(localStorage.getItem('beyan_claude_key') || localStorage.getItem('claude_api_key')
+  lines.push(localStorage.getItem(GEMINI_KEY_STORAGE) ? '✅ Gemini APIキー: 設定済み' : '⚠️ Gemini APIキー: 未設定');
+  lines.push(localStorage.getItem(CLAUDE_API_KEY_STORAGE) || localStorage.getItem('beyan_claude_key')
     ? '✅ Claude APIキー: 設定済み' : '⚠️ Claude APIキー: 未設定');
 
   alert(lines.join('\n'));
@@ -304,14 +347,16 @@ function initFirebase() {
         }
 
         // Firebaseにデータあり
-        _fbEnsureFields(data);
+        const _didMigrate = _fbEnsureFields(data);
         if (_fromLocalStorage) {
           ['beyan_v6','beyan_v5','beyan_v4','beyan_v2'].forEach(k => localStorage.removeItem(k));
           _fromLocalStorage = false;
         }
-        if (JSON.stringify(data) !== JSON.stringify(S)) {
-          S = data;
-          renderAll();
+        S = data;
+        renderAll();
+        if (_didMigrate) {
+          save();
+          setTimeout(() => toast('📤 ローカルデータをFirebaseに移行しました'), 800);
         }
         if (loadEl) loadEl.style.display = 'none';
         return;
@@ -1345,7 +1390,7 @@ function genChatGPT() {
   if (n.geminiResult !== result) { n.geminiResult = result; save(); }
   const isYuryou = n.type==='有料note';
   // カスタムテンプレがあればそちらを使う（変数は動的に埋め込む）
-  const claudeSaved = localStorage.getItem(CLAUDE_TMPL_KEY);
+  const claudeSaved = S.claudeTmpl;
   let claudePrompt;
   if (claudeSaved !== null) {
     claudePrompt = claudeSaved
@@ -2422,9 +2467,9 @@ function openSettings() {
     (_geminiTmpl !== null && _geminiTmpl !== undefined) ? _geminiTmpl : getDefaultGeminiTmpl();
 
   // クロ指示文テンプレートをテキストエリアに読み込む（genChatGPT内のテンプレ）
-  const savedClaude = localStorage.getItem(CLAUDE_TMPL_KEY);
+  const savedClaude = S.claudeTmpl;
   document.getElementById('settings-claude-tmpl').value =
-    savedClaude !== null ? savedClaude : getDefaultClaudeTmpl();
+    savedClaude !== null && savedClaude !== undefined ? savedClaude : getDefaultClaudeTmpl();
 
   // Gemini APIキーを読み込む
   const savedGeminiApi = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
@@ -2593,7 +2638,7 @@ function _escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 function getVaultPrompts() {
-  return JSON.parse(localStorage.getItem(PROMPT_VAULT_KEY) || '[]');
+  return S.promptVault || [];
 }
 function renderVaultList() {
   const list = getVaultPrompts();
@@ -2639,7 +2684,7 @@ function saveVaultPrompt() {
   } else {
     list.unshift({ id: Date.now(), name, body, memo });
   }
-  localStorage.setItem(PROMPT_VAULT_KEY, JSON.stringify(list));
+  S.promptVault = list; save();
   document.getElementById('vault-name').value = '';
   document.getElementById('vault-body').value = '';
   document.getElementById('vault-memo').value = '';
@@ -2697,7 +2742,7 @@ function switchStab(tab) {
 // クロ共有
 // ================================================================
 function openShareModal() {
-  const stats = JSON.parse(localStorage.getItem(SHARE_STATS_KEY) || '{}');
+  const stats = S.shareStats || {};
   document.getElementById('share-followers').value = stats.followers || '';
   document.getElementById('share-impress').value   = stats.impress   || '';
   document.getElementById('share-nview').value     = stats.nview     || '';
@@ -2720,7 +2765,7 @@ function buildShareReport() {
   const nlikes    = document.getElementById('share-nlikes').value    || '未入力';
 
   // 数値を保存
-  localStorage.setItem(SHARE_STATS_KEY, JSON.stringify({ followers, impress, nview, nlikes }));
+  S.shareStats = { followers, impress, nview, nlikes }; save();
 
   const notes = S.notes.map(n => ({
     title: n.title, type: n.type, cat: n.cat,
@@ -2796,7 +2841,7 @@ function resetGeminiTmpl() {
 
 function saveClaudeTmpl() {
   const val = document.getElementById('settings-claude-tmpl').value;
-  localStorage.setItem(CLAUDE_TMPL_KEY, val);
+  S.claudeTmpl = val; save();
   const msg = document.getElementById('settings-claude-msg');
   msg.style.display = 'block';
   setTimeout(() => { msg.style.display = 'none'; }, 2500);
@@ -2804,7 +2849,7 @@ function saveClaudeTmpl() {
 
 function resetClaudeTmpl() {
   if (!confirm('デフォルトに戻しますか？')) return;
-  localStorage.removeItem(CLAUDE_TMPL_KEY);
+  S.claudeTmpl = null; save();
   document.getElementById('settings-claude-tmpl').value = getDefaultClaudeTmpl();
   const msg = document.getElementById('settings-claude-msg');
   msg.textContent = '🔄 デフォルトに戻しました';
@@ -3084,7 +3129,7 @@ let _imgPromptVaultTimer = null;
 function _updateImgPromptVaultTs() {
   const el = document.getElementById('imgprompt-vault-ts');
   if (!el) return;
-  const raw = localStorage.getItem('nabebase_imggen_prompt');
+  const raw = S.imggenPrompt || localStorage.getItem('nabebase_imggen_prompt');
   if (!raw) { el.textContent = ''; return; }
   const now = new Date();
   el.textContent = `最終更新：${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
@@ -3247,7 +3292,7 @@ JSONのみ。説明文・マークダウン・コードブロック不要。
     if (pbar) pbar.style.width = '60%';
     console.log('[ImgGen] step2 SVG generating...');
 
-    const savedPrompt = localStorage.getItem('nabebase_imggen_prompt') || '';
+    const savedPrompt = S.imggenPrompt || localStorage.getItem('nabebase_imggen_prompt') || '';
 
     const step2Prompt = savedPrompt
       ? savedPrompt
@@ -3659,16 +3704,15 @@ function getXPrompts() {
 コピーボタンをつけてください。`
     }
   ];
-  const raw = localStorage.getItem(XPROMPT_KEY);
-  if (!raw) {
-    localStorage.setItem(XPROMPT_KEY, JSON.stringify(defaults));
+  if (!S.xpromptVault || S.xpromptVault.length === 0) {
+    S.xpromptVault = defaults; save();
     return defaults;
   }
-  return JSON.parse(raw);
+  return S.xpromptVault;
 }
 
 function _saveXPrompts(arr) {
-  localStorage.setItem(XPROMPT_KEY, JSON.stringify(arr));
+  S.xpromptVault = arr; save();
 }
 
 function renderXPromptList() {
@@ -3738,10 +3782,10 @@ function deleteXPrompt(id) {
 // プロンプト見直し履歴 (beyan_promptReviews)
 // ================================================================
 function getPromptReviews() {
-  try { return JSON.parse(localStorage.getItem(PROMPT_REVIEWS_KEY) || '[]'); } catch { return []; }
+  try { return S.promptReviews || []; } catch { return []; }
 }
 function _savePromptReviews(list) {
-  localStorage.setItem(PROMPT_REVIEWS_KEY, JSON.stringify(list));
+  S.promptReviews = list; save();
 }
 let _prEditId = null;
 function openPromptReviewModal(id) {
@@ -3821,10 +3865,10 @@ function renderPromptReviews() {
 // 失敗パターン (beyan_failurePatterns)
 // ================================================================
 function getFailurePatterns() {
-  try { return JSON.parse(localStorage.getItem(FAILURE_PATTERNS_KEY) || '[]'); } catch { return []; }
+  try { return S.failurePatterns || []; } catch { return []; }
 }
 function _saveFailurePatterns(list) {
-  localStorage.setItem(FAILURE_PATTERNS_KEY, JSON.stringify(list));
+  S.failurePatterns = list; save();
 }
 let _fpFilter = 'active'; // 'active' = 棚卸し済みを除く, 'all' = 全件
 function setFpFilter(val) {
@@ -3910,27 +3954,26 @@ function renderFailurePatterns() {
 // ================================================================
 // X投稿 データ操作
 
-function getNewXPosts()  { return JSON.parse(localStorage.getItem(X_POSTS_KEY) || '[]'); }
-function setNewXPosts(a) { localStorage.setItem(X_POSTS_KEY, JSON.stringify(a)); }
-function getXDrafts()    { return JSON.parse(localStorage.getItem(X_DRAFT_POSTS_KEY) || '[]'); }
-function setXDrafts(a)   { localStorage.setItem(X_DRAFT_POSTS_KEY, JSON.stringify(a)); }
-function getXPromptText(){ return localStorage.getItem(X_PROMPT_KEY) || DEFAULT_X_PROMPT; }
+function getNewXPosts()  { return S.xPostsNew || []; }
+function setNewXPosts(a) { S.xPostsNew = a; save(); }
+function getXDrafts()    { return S.xDraftPosts || []; }
+function setXDrafts(a)   { S.xDraftPosts = a; save(); }
+function getXPromptText(){ return S.xPromptCustom || DEFAULT_X_PROMPT; }
 
 function getPublishedArticles() {
-  const list = JSON.parse(localStorage.getItem(PUBLISHED_ARTICLES_KEY) || '[]');
-  // 新フィールドが欠けている既存レコードにデフォルト補完
+  const list = S.publishedArticles || [];
   return list.map(a => {
     const rec = { humanTechUsed: [], ...a };
     rec.headlineKeywords = Object.assign({ catch: '', main: '', sub: '' }, a.headlineKeywords || {});
     return rec;
   });
 }
-function setPublishedArticles(a) { localStorage.setItem(PUBLISHED_ARTICLES_KEY, JSON.stringify(a)); }
-function getPublishedPosts()     { return JSON.parse(localStorage.getItem(PUBLISHED_POSTS_KEY) || '[]'); }
-function setPublishedPosts(a)    { localStorage.setItem(PUBLISHED_POSTS_KEY, JSON.stringify(a)); }
+function setPublishedArticles(a) { S.publishedArticles = a; save(); }
+function getPublishedPosts()     { return S.publishedPosts || []; }
+function setPublishedPosts(a)    { S.publishedPosts = a; save(); }
 
 function _initPublishedCollections() {
-  if (localStorage.getItem(PUBLISHED_ARTICLES_KEY) === null) {
+  if (!S.publishedArticles || S.publishedArticles.length === 0) {
     setPublishedArticles([
       {"publishedTitle":"AIで副業が加速するどころか案件を断った。3交代勤務者が知るべきAI活用の現実","titleKeywords":["AI","副業","3交代勤務","案件","AI活用"],"expansionAxis":"落とし穴","emotionAxis":"焦り","thinkingPattern":"落とし穴型","readerPerspective":"始めた直後","coreLearning":"AIを使えば副業が加速すると思っていたが、現実は逆だったという気づき","publishedAt":"2025-04-08"},
       {"publishedTitle":"夜勤明けに気づいた。副業が続く人は完璧を目指していなかった","titleKeywords":["夜勤明け","副業","完璧主義","継続"],"expansionAxis":"再定義","emotionAxis":"安堵","thinkingPattern":"再定義型","readerPerspective":"続かなくなった時","coreLearning":"副業を続けられる人は完璧を目指さない、という逆説的な気づき","publishedAt":"2025-04-08"},
@@ -3972,7 +4015,7 @@ function _initPublishedCollections() {
       {"publishedTitle":"ChatGPTとClaudeを使い分けて記事を書いてみたら、思っていた結果と全然違った","titleKeywords":["ChatGPT","Claude","AI","使い分け","ライティング"],"expansionAxis":"比較","emotionAxis":"焦り","thinkingPattern":"比較型","readerPerspective":"始めた直後","coreLearning":"ChatGPTとClaudeを使い分けて記事を書いた結果、予想と全然違った現実","publishedAt":"2025-03-05"}
     ]);
   }
-  if (localStorage.getItem(PUBLISHED_POSTS_KEY) === null) {
+  if (!S.publishedPosts) {
     setPublishedPosts([]);
   }
 }
@@ -4353,7 +4396,7 @@ function _initXPromptTextarea() {
 function saveXPromptText() {
   const ta = document.getElementById('xPromptTextarea');
   if (!ta) return;
-  localStorage.setItem(X_PROMPT_KEY, ta.value);
+  S.xPromptCustom = ta.value; save();
   const msg = document.getElementById('xprompt-save-msg');
   if (msg) { msg.style.display = 'block'; setTimeout(() => { msg.style.display = 'none'; }, 1500); }
 }
@@ -4361,7 +4404,7 @@ function saveXPromptText() {
 function resetXPromptText() {
   const ta = document.getElementById('xPromptTextarea');
   if (ta) ta.value = DEFAULT_X_PROMPT;
-  localStorage.setItem(X_PROMPT_KEY, DEFAULT_X_PROMPT);
+  S.xPromptCustom = null; save();
   const msg = document.getElementById('xprompt-save-msg');
   if (msg) { msg.style.display = 'block'; setTimeout(() => { msg.style.display = 'none'; }, 1500); }
 }
@@ -4612,18 +4655,20 @@ function _wfKey(noteId) {
 }
 
 function _wfLoadTasks(noteId) {
-  try {
-    const raw = localStorage.getItem(_wfKey(noteId));
-    return raw ? (JSON.parse(raw).tasks || {}) : {};
-  } catch { return {}; }
+  const id = Number(noteId);
+  const n = S.notes.find(x => x.id === id);
+  const key = n ? n.title : String(id);
+  const prog = S.workflowProgress && S.workflowProgress[key];
+  return prog ? (prog.tasks || {}) : {};
 }
 
 function _wfSaveTasks(noteId, tasks) {
-  const n = S.notes.find(x => x.id === noteId);
-  localStorage.setItem(_wfKey(noteId), JSON.stringify({
-    articleTitle: n ? n.title : '',
-    tasks,
-  }));
+  const id = Number(noteId);
+  const n = S.notes.find(x => x.id === id);
+  const key = n ? n.title : String(id);
+  if (!S.workflowProgress) S.workflowProgress = {};
+  S.workflowProgress[key] = { articleTitle: key, tasks };
+  save();
 }
 
 function _wfStepDone(si, tasks) {
@@ -5186,8 +5231,7 @@ function _renderTopStatusCards() {
   const dirB = doneLast5.filter(n => n.type === 'B').length;
   const dirLabel = doneLast5.length === 0 ? '—' : (dirA >= dirB ? `A:${dirA} / B:${dirB}` : `B:${dirB} / A:${dirA}`);
 
-  const weeklyKey = 'beyan_weekly_review';
-  const lastReview = localStorage.getItem(weeklyKey);
+  const lastReview = S.weeklyReviewTs || null;
   let weeklyLabel = '未実施';
   let weeklyDone = false;
   if (lastReview) {
@@ -5222,7 +5266,7 @@ function _renderTopStatusCards() {
 }
 
 function markWeeklyReview() {
-  localStorage.setItem('beyan_weekly_review', new Date().toISOString());
+  S.weeklyReviewTs = new Date().toISOString(); save();
   _renderTopStatusCards();
 }
 
@@ -5239,8 +5283,7 @@ function _renderTopWarnBanners() {
     banners.push({ cls: 'orange', text: `⚡ 記事候補が残り${unusedCnt}件です。補充を検討してください。` });
   }
 
-  const weeklyKey = 'beyan_weekly_review';
-  const lastReview = localStorage.getItem(weeklyKey);
+  const lastReview = S.weeklyReviewTs || null;
   if (lastReview) {
     const diffDays = Math.floor((new Date() - new Date(lastReview)) / 86400000);
     if (diffDays >= 7) {
