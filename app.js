@@ -3293,7 +3293,7 @@ JSONのみ。説明文・マークダウン・コードブロック不要。
 
     console.log('[ImgGen] step2 prompt:', step2Prompt);
     const step2Res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -4591,9 +4591,10 @@ const WF_STEP_STATES = [
 let _wfNoteId = null;
 
 function openWorkflowNav(noteId) {
-  const n = S.notes.find(x => x.id === noteId);
+  const id = Number(noteId);
+  const n = S.notes.find(x => x.id === id);
   if (!n) return;
-  _wfNoteId = noteId;
+  _wfNoteId = id;
   document.getElementById('wf-article-title').textContent = n.title || '（未設定）';
   renderWorkflowNav();
   document.getElementById('modal-workflow').classList.add('open');
@@ -4605,8 +4606,9 @@ function closeWorkflowNav() {
 }
 
 function _wfKey(noteId) {
-  const n = S.notes.find(x => x.id === noteId);
-  return 'workflow_progress_' + (n ? n.title : String(noteId));
+  const id = Number(noteId);
+  const n = S.notes.find(x => x.id === id);
+  return 'workflow_progress_' + (n ? n.title : String(id));
 }
 
 function _wfLoadTasks(noteId) {
@@ -4671,12 +4673,28 @@ function renderWorkflowNav() {
         const bid = 'wf-cbtn-' + si;
         html += '<button class="wf-copy-btn" id="' + bid + '" onclick="wfCopyText(' + si + ',\'' + bid + '\')">' + _wfEsc(step.copyBtn.label) + '</button>';
       }
+      // STEP3: Gemini自動送信ボタン
+      if (si === 2) {
+        html += '<button class="wf-copy-btn" id="wf-step3-send-btn" style="background:var(--blue,#1a73e8);color:#fff;margin-top:6px" onclick="wfStep3AutoSend()">🤖 Geminiに自動送信</button>'
+          + '<div id="wf-step3-result" style="margin-top:8px"></div>';
+      }
+      // STEP5: パペ結果貼り付け + ジミーへ送信
+      if (si === 4) {
+        html += '<div style="margin-top:10px">'
+          + '<div style="font-size:12px;color:var(--text2);margin-bottom:4px">📋 パペのリサーチ結果を貼り付け（原文のまま）</div>'
+          + '<textarea id="wf-pape-result" rows="7" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:6px;padding:8px;background:var(--bg2);color:var(--text);resize:vertical;box-sizing:border-box;font-family:inherit" placeholder="Perplexityのリサーチ結果をここに貼り付け..."></textarea>'
+          + '<button class="wf-copy-btn" id="wf-step5-send-btn" style="background:var(--blue,#1a73e8);color:#fff;margin-top:6px" onclick="wfStep5AutoSend()">🤖 ジミーに投げる</button>'
+          + '<div id="wf-step5-result" style="margin-top:8px"></div>'
+          + '</div>';
+      }
+      // 差し戻し登録ボタン（全STEP共通）
+      html += '<button onclick="wfOpenFailure(' + si + ')" style="margin-top:8px;font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--orange,#b45309);background:transparent;color:var(--orange,#b45309);cursor:pointer;font-family:inherit">⚠️ 差し戻し登録</button>';
       html += '<div class="wf-checklist">';
       step.tasks.forEach(function(task, ti) {
         const checked = !!tasks[si + '_' + ti];
         const dis = stateClass === 'locked' ? ' disabled' : '';
         html += '<label class="wf-check-item">'
-          + '<input type="checkbox"' + (checked ? ' checked' : '') + dis + ' onchange="wfToggleCheck(' + noteId + ',' + si + ',' + ti + ',this.checked)">'
+          + '<input type="checkbox"' + (checked ? ' checked' : '') + dis + ' onchange="wfToggleCheck(_wfNoteId,' + si + ',' + ti + ',this.checked)">'
           + '<span class="wf-check-label' + (checked ? ' checked' : '') + '">' + _wfEsc(task) + '</span>'
           + '</label>';
       });
@@ -4699,11 +4717,13 @@ function wfToggleCheck(noteId, si, ti, checked) {
   _wfSaveTasks(noteId, tasks);
   // STEPが全完了したら記事候補レコードのworkflowStateを自動更新
   if (_wfStepDone(si, tasks)) {
-    const n = S.notes.find(x => x.id === noteId);
+    const n = S.notes.find(x => x.id === Number(noteId));
     if (n && WF_STEP_STATES[si]) {
       n.workflowState = WF_STEP_STATES[si];
       save();
     }
+    // STEP6完了: 公開記事サマリーJSONを自動登録
+    if (si === 5) _wfAutoRegisterPublished(Number(noteId));
   }
   renderWorkflowNav();
 }
@@ -4711,7 +4731,24 @@ function wfToggleCheck(noteId, si, ti, checked) {
 function wfCopyText(si, btnId) {
   const step = WF_STEPS[si];
   if (!step || !step.copyBtn) return;
-  const text = step.copyBtn.text;
+  let text = step.copyBtn.text;
+  // STEP3: ノートデータを動的埋め込み
+  if (si === 2 && _wfNoteId) {
+    const n = S.notes.find(x => x.id === _wfNoteId);
+    if (n) {
+      const axis = (n.axis && typeof n.axis === 'object') ? n.axis : {};
+      const art = n.article || {};
+      const mgmt = n.management || {};
+      text = text
+        .replace('タイトル：', 'タイトル：' + (n.title || ''))
+        .replace('展開軸：', '展開軸：' + (axis.expansionAxis || ''))
+        .replace('感情軸：', '感情軸：' + (axis.emotionAxis || ''))
+        .replace('思考の型：', '思考の型：' + (art.thinkingPattern || ''))
+        .replace('読者視点：', '読者視点：' + (art.readerPerspective || ''))
+        .replace('学びの核心（1文）：', '学びの核心（1文）：' + (art.soulSentence || ''))
+        .replace('タイトルキーワード（配列）：', 'タイトルキーワード（配列）：' + JSON.stringify(mgmt.titleKeywords || []));
+    }
+  }
   const btn = document.getElementById(btnId);
   const origLabel = btn ? btn.textContent : '';
   const onCopied = function() {
@@ -4737,6 +4774,258 @@ function _wfFallback(text) {
   ta.select();
   document.execCommand('copy');
   document.body.removeChild(ta);
+}
+
+// ----------------------------------------------------------------
+// STEP3: Gemini自動被りチェック送信
+// ----------------------------------------------------------------
+async function wfStep3AutoSend() {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  if (!apiKey) { toast('Gemini APIキーが設定されていません'); return; }
+
+  const btn = document.getElementById('wf-step3-send-btn');
+  const resultEl = document.getElementById('wf-step3-result');
+  if (btn) { btn.disabled = true; btn.textContent = '送信中...'; }
+  if (resultEl) resultEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">⏳ Geminiに送信中...</div>';
+
+  const axis = (n.axis && typeof n.axis === 'object') ? n.axis : {};
+  const art = n.article || {};
+  const mgmt = n.management || {};
+  const published = getPublishedArticles().map(a => ({
+    title: a.publishedTitle, expansionAxis: a.expansionAxis, emotionAxis: a.emotionAxis,
+    thinkingPattern: a.thinkingPattern, readerPerspective: a.readerPerspective, coreLearning: a.coreLearning
+  }));
+  const failures = getFailurePatterns().map(x => ({ タイトル: x.タイトル, 内容: x.内容, 絶対禁止: x.棚卸し済み ? false : true }));
+
+  const prompt = `【ジミーへの被りチェック依頼】
+
+nabebaseの公開記事全件・失敗パターン全件（絶対禁止フラグ含む）を参照して以下の新規記事候補との被り・失敗パターンとの一致をチェックしてください。
+
+【公開済み記事一覧（JSON）】
+${JSON.stringify(published, null, 2)}
+
+【失敗パターン一覧（JSON）】
+${JSON.stringify(failures, null, 2)}
+
+【チェック対象の新規候補】
+タイトル：${n.title || ''}
+展開軸：${axis.expansionAxis || ''}
+感情軸：${axis.emotionAxis || ''}
+思考の型：${art.thinkingPattern || ''}
+読者視点：${art.readerPerspective || ''}
+学びの核心（1文）：${art.soulSentence || ''}
+タイトルキーワード（配列）：${JSON.stringify(mgmt.titleKeywords || [])}
+
+【チェック項目】
+・タイトルキーワードの重複（部分一致含む）
+・展開軸の重複
+・感情軸の重複
+・思考の型の重複
+・読者視点の重複
+・学びの核心が70%以上類似しているもの
+・失敗パターンとの軸の組み合わせ一致
+・絶対禁止フラグとの一致（最優先でNG）
+
+【判定基準】
+・絶対禁止フラグと一致 → 即NG（理由を明記。修正案の提示不要）
+・完全一致 → NG（使用禁止）
+・類似70%以上 → 要修正（どこが近いかを明示）
+・失敗パターンと一致（絶対禁止以外） → 要修正（理由を明記）
+・問題なし → OK
+
+【出力形式】必ず1行目を以下3つのどれか：「判定：OK」「判定：NG」「判定：要修正」
+2行目以降：理由（被っている記事タイトルと箇所を具体的に）
+要修正の場合のみ末尾：修正案`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 1200 }
+        })
+      }
+    );
+    if (!res.ok) { throw new Error('APIエラー: ' + res.status); }
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '返答なし';
+
+    let bgColor = 'rgba(130,130,130,.08)', borderColor = 'var(--border)', badge = '';
+    if (text.includes('判定：OK') || text.includes('判定: OK')) {
+      bgColor = 'rgba(74,136,56,.08)'; borderColor = 'var(--green)'; badge = '✅ ';
+      // 全タスクを自動チェック + workflowState更新
+      const tasks2 = _wfLoadTasks(_wfNoteId);
+      WF_STEPS[2].tasks.forEach(function(_, ti) { tasks2['2_' + ti] = true; });
+      _wfSaveTasks(_wfNoteId, tasks2);
+      n.workflowState = WF_STEP_STATES[2];
+      save();
+      setTimeout(function() { renderWorkflowNav(); toast('✅ STEP3 被りチェックOK - 自動完了しました'); }, 600);
+    } else if (text.includes('判定：NG') || text.includes('判定: NG')) {
+      bgColor = 'rgba(180,50,50,.08)'; borderColor = '#c84646'; badge = '❌ ';
+    } else if (text.includes('判定：要修正') || text.includes('判定: 要修正')) {
+      bgColor = 'rgba(180,100,20,.08)'; borderColor = 'var(--orange,#b45309)'; badge = '⚠️ ';
+    }
+    if (resultEl) resultEl.innerHTML = '<div style="white-space:pre-wrap;font-size:12px;background:' + bgColor + ';border:1px solid ' + borderColor + ';border-radius:8px;padding:10px;line-height:1.6">' + badge + _escHtml(text) + '</div>';
+  } catch(e) {
+    if (resultEl) resultEl.innerHTML = '<div style="color:#c84646;font-size:12px;padding:8px 0">❌ エラー: ' + _escHtml(e.message) + '</div>';
+    toast('Gemini送信エラー: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Geminiに自動送信'; }
+  }
+}
+
+// ----------------------------------------------------------------
+// STEP5: ジミーへの素材整理自動送信
+// ----------------------------------------------------------------
+async function wfStep5AutoSend() {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  if (!apiKey) { toast('Gemini APIキーが設定されていません'); return; }
+  const papeResult = (document.getElementById('wf-pape-result')?.value || '').trim();
+  if (!papeResult) { toast('パペのリサーチ結果を貼り付けてください'); return; }
+
+  const btn = document.getElementById('wf-step5-send-btn');
+  const resultEl = document.getElementById('wf-step5-result');
+  if (btn) { btn.disabled = true; btn.textContent = '送信中...'; }
+  if (resultEl) resultEl.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:8px 0">⏳ ジミーに送信中...</div>';
+
+  const axis = (n.axis && typeof n.axis === 'object') ? n.axis : {};
+  const art = n.article || {};
+  const con = n.concept || {};
+  const failures = getFailurePatterns().filter(function(x) { return !x.棚卸し済み; })
+    .map(function(x) { return x.タイトル + '：' + x.内容; }).join('\n');
+
+  const prompt = `【ジミーへの素材整理依頼】
+
+以下の記事候補の素材を整理して骨子と詳細設計を作成してください。
+
+【記事候補情報】
+タイトル：${n.title || ''}
+展開軸：${axis.expansionAxis || ''}
+感情軸：${axis.emotionAxis || ''}
+思考の型：${art.thinkingPattern || ''}
+読者視点：${art.readerPerspective || ''}
+崩すべき前提認識：${art.readerBeliefToBreak || con.readerBeliefToBreak || ''}
+読了後の変化：${art.readerChangeAfterReading || con.readerChangeAfterReading || ''}
+学びの核心（1文）：${art.soulSentence || ''}
+
+【失敗パターン（棚卸し済みを除く）】
+${failures || 'なし'}
+
+【パペのリサーチ結果（原文・要約禁止）】
+${papeResult}
+
+【依頼内容】
+まず骨子（①〜④）を出力してください：
+① 流れの一貫性：展開軸と感情軸に沿った論理構造が成立しているか
+② 被りチェック：直近記事との読後感触の差分
+③ 着地：読了後の変化が記事の論理で達成できるか
+④ 失敗パターン一致：絶対禁止フラグとの照合結果
+
+骨子の4点が問題なければ、そのまま詳細設計（⑤〜⑬）まで続けて出力してください。
+問題がある場合は骨子の時点で指摘してください。`;
+
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.7, maxOutputTokens: 8192 }
+        })
+      }
+    );
+    if (!res.ok) { throw new Error('APIエラー: ' + res.status); }
+    const data = await res.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '返答なし';
+
+    // 結果をノートに保存
+    if (!n.article) n.article = {};
+    n.article.jimmyMaterial = { result: text, sentAt: new Date().toISOString() };
+    if (!n.management) n.management = {};
+    n.management.papeResult = papeResult;
+    save();
+
+    if (resultEl) resultEl.innerHTML = '<div style="white-space:pre-wrap;font-size:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:280px;overflow-y:auto;line-height:1.6">' + _escHtml(text) + '</div>'
+      + '<button onclick="wfStep5Complete()" style="margin-top:8px;font-size:12px;padding:6px 14px;border-radius:6px;border:none;background:var(--green);color:#fff;cursor:pointer;font-family:inherit">✅ 内容確認済み - STEP5を完了にする</button>';
+  } catch(e) {
+    if (resultEl) resultEl.innerHTML = '<div style="color:#c84646;font-size:12px;padding:8px 0">❌ エラー: ' + _escHtml(e.message) + '</div>';
+    toast('Gemini送信エラー: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 ジミーに投げる'; }
+  }
+}
+
+function wfStep5Complete() {
+  const tasks = _wfLoadTasks(_wfNoteId);
+  WF_STEPS[4].tasks.forEach(function(_, ti) { tasks['4_' + ti] = true; });
+  _wfSaveTasks(_wfNoteId, tasks);
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (n) { n.workflowState = WF_STEP_STATES[4]; save(); }
+  renderWorkflowNav();
+  toast('✅ STEP5完了 - 進行状態を自動更新しました');
+}
+
+// ----------------------------------------------------------------
+// 差し戻し登録（失敗パターン事前入力）
+// ----------------------------------------------------------------
+function wfOpenFailure(si) {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) return;
+  const stepTitle = WF_STEPS[si] ? WF_STEPS[si].title : 'STEP' + (si + 1);
+  const axis = (n.axis && typeof n.axis === 'object') ? n.axis : {};
+  const art = n.article || {};
+  document.getElementById('fp-modal-title').textContent = '差し戻し - 失敗パターン登録';
+  document.getElementById('fp-edit-id').value = '';
+  document.getElementById('fp-title').value = '[' + stepTitle + '] ' + (n.title || '');
+  document.getElementById('fp-detail').value = '展開軸：' + (axis.expansionAxis || '') + '\n感情軸：' + (axis.emotionAxis || '') + '\n思考の型：' + (art.thinkingPattern || '');
+  document.getElementById('fp-prevention').value = '';
+  document.getElementById('fp-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('modal-workflow').classList.remove('open');
+  openOverlay('modal-failurepattern');
+}
+
+// ----------------------------------------------------------------
+// STEP6完了: 公開記事サマリーJSON自動登録
+// ----------------------------------------------------------------
+function _wfAutoRegisterPublished(noteId) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n) return;
+  const list = getPublishedArticles();
+  const existing = list.findIndex(function(a) { return a.publishedTitle === n.title; });
+  const axis = (n.axis && typeof n.axis === 'object') ? n.axis : {};
+  const art = n.article || {};
+  const mgmt = n.management || {};
+  const con = n.concept || {};
+  const entry = {
+    publishedTitle:   n.title || '',
+    titleKeywords:    mgmt.titleKeywords || [],
+    expansionAxis:    axis.expansionAxis || '',
+    emotionAxis:      axis.emotionAxis || '',
+    thinkingPattern:  art.thinkingPattern || '',
+    readerPerspective: art.readerPerspective || '',
+    coreLearning:     art.soulSentence || con.coreProblem || '',
+    publishedAt:      new Date().toISOString().slice(0, 10),
+    headlineKeywords: { catch: '', main: '', sub: '' },
+    humanTechUsed:    art.humanTechUsed || [],
+  };
+  if (existing >= 0) list[existing] = Object.assign({}, list[existing], entry);
+  else list.unshift(entry);
+  setPublishedArticles(list);
+  if (n.status !== 'done') {
+    n.status = 'done';
+    save();
+    renderNotes();
+  }
+  toast('✅ 公開記事サマリーJSONを自動登録 - ステータスを公開済みに更新しました');
 }
 
 // ================================================================
