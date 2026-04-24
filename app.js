@@ -197,6 +197,17 @@ function _fbEnsureFields(data) {
     if (raw) { data.imggenPrompt = raw; _migrated = true; }
     else data.imggenPrompt = null;
   }
+  // workflowProgress の不正キー（未設定タイトル）を削除
+  if (data.workflowProgress) {
+    const BAD_KEYS = ['（未設定）', '', 'undefined', 'null'];
+    BAD_KEYS.forEach(k => {
+      if (data.workflowProgress[k] !== undefined) {
+        delete data.workflowProgress[k];
+        if (_fbRef) _fbRef.child('workflowProgress/' + encodeURIComponent(k)).remove().catch(() => {});
+        _migrated = true;
+      }
+    });
+  }
   return _migrated;
 }
 
@@ -2388,21 +2399,10 @@ function _updateStockCard(cnt) {
   const linkEl = document.getElementById('dash-stock-link');
   if (!numEl) return;
   numEl.textContent = cnt;
-  const isLow = cnt < 5;
-  numEl.style.color = isLow ? 'var(--orange)' : 'var(--green)';
-  if (card) {
-    card.style.border = isLow
-      ? '1.5px solid rgba(192,112,48,.5)'
-      : '1.5px solid var(--border)';
-  }
+  numEl.style.color = 'var(--green)';
+  if (card) card.style.border = '1.5px solid var(--border)';
   if (linkEl) {
-    if (cnt === 0) {
-      linkEl.innerHTML = `<span style="color:var(--orange);font-size:.72rem">⚠️ ネタ切れ注意！クロにネタ出しを依頼してください</span>`;
-    } else if (cnt >= 5) {
-      linkEl.innerHTML = `<a href="#" onclick="event.preventDefault();toggleSec('notes',true);setTimeout(()=>document.getElementById('sec-notes')?.scrollIntoView({behavior:'smooth'}),80)" style="color:var(--accent);text-decoration:underline">📝 記事候補一覧を見る</a>`;
-    } else {
-      linkEl.innerHTML = `<a href="#" onclick="event.preventDefault();toggleSec('import',true);setTimeout(()=>document.getElementById('sec-import')?.scrollIntoView({behavior:'smooth'}),80)" style="color:var(--orange);text-decoration:underline">🔍 クロにネタ出しを依頼（JSONインポートから追加）</a>`;
-    }
+    linkEl.innerHTML = `<a href="#" onclick="event.preventDefault();toggleSec('notes',true);setTimeout(()=>document.getElementById('sec-notes')?.scrollIntoView({behavior:'smooth'}),80)" style="color:var(--accent);text-decoration:underline">📝 記事候補一覧を見る</a>`;
   }
   // ジミー用ボタンの件数も更新
   const jimmyBtn = document.getElementById('arc-jimmy-btn');
@@ -4677,6 +4677,7 @@ function _wfSaveTasks(noteId, tasks) {
   const id = Number(noteId);
   const n = S.notes.find(x => x.id === id);
   const key = n ? n.title : String(id);
+  if (!key || key === '（未設定）') return;
   if (!S.workflowProgress) S.workflowProgress = {};
   S.workflowProgress[key] = { articleTitle: key, tasks };
   save();
@@ -5540,8 +5541,9 @@ function renderTopDashboard() {
   _renderTopTwoCol();
 }
 
+const DONE_STATUSES = ['done', '公開済み', 'archived'];
 function _getUnusedCandidates() {
-  return (S.notes || []).filter(n => !n.used && n.status !== 'done' && n.status !== 'archived');
+  return (S.notes || []).filter(n => !n.used && !DONE_STATUSES.includes(n.status));
 }
 
 function _renderTopCurrentArticle() {
@@ -5560,12 +5562,11 @@ function _renderTopStatusCards() {
   const area = document.getElementById('top-status-area');
   if (!area) return;
 
-  const notes = S.notes || [];
-  const unusedCnt = _getUnusedCandidates().length;
-  const doneLast5 = notes.filter(n => n.status === 'done').slice(-5);
-  const dirA = doneLast5.filter(n => n.type === 'A').length;
-  const dirB = doneLast5.filter(n => n.type === 'B').length;
-  const dirLabel = doneLast5.length === 0 ? '—' : (dirA >= dirB ? `A:${dirA} / B:${dirB}` : `B:${dirB} / A:${dirA}`);
+  const unused = _getUnusedCandidates();
+  const unusedCnt = unused.length;
+  const dirA = unused.filter(n => n.type && (n.type.includes('(A)') || n.type === 'A')).length;
+  const dirB = unused.filter(n => n.type && (n.type.includes('(B)') || n.type === 'B')).length;
+  const dirLabel = unusedCnt === 0 ? '—' : `A:${dirA} / B:${dirB}`;
 
   const lastReview = S.weeklyReviewTs || null;
   let weeklyLabel = '未実施';
@@ -5591,7 +5592,7 @@ function _renderTopStatusCards() {
   <div class="top-stat-card">
     <div class="top-stat-num" style="font-size:24px;margin-top:4px">${dirLabel}</div>
     <div class="top-stat-label">📊 A/B方向バランス</div>
-    <div class="top-stat-sub">直近5記事の展開軸比率</div>
+    <div class="top-stat-sub">未使用候補の内訳</div>
   </div>
   <div class="top-stat-card" style="cursor:pointer" onclick="markWeeklyReview()">
     <div class="top-stat-num" style="font-size:20px;margin-top:6px;color:${weeklyDone ? 'var(--green)' : 'var(--orange)'}">${weeklyLabel}</div>
@@ -5611,14 +5612,6 @@ function _renderTopWarnBanners() {
   if (!area) return;
 
   const banners = [];
-  const unusedCnt = _getUnusedCandidates().length;
-
-  if (unusedCnt === 0) {
-    banners.push({ cls: 'red', text: '⚠️ 記事候補がありません。リサーチからSTEP1を始めましょう。' });
-  } else if (unusedCnt <= 2) {
-    banners.push({ cls: 'orange', text: `⚡ 記事候補が残り${unusedCnt}件です。補充を検討してください。` });
-  }
-
   const lastReview = S.weeklyReviewTs || null;
   const needsReview = S.weeklyReviewNeeded || !lastReview ||
     Math.floor((new Date() - new Date(lastReview)) / 86400000) >= 7;
