@@ -5023,6 +5023,7 @@ function wfBulkInitWorkflow() {
   renderNotes();
   toast(`✅ ${targets.length}件を初期化しました（STEP1完了）`);
 }
+window.wfBulkInitWorkflow = wfBulkInitWorkflow;
 
 function wfCopyPapeReq(btn) {
   const el = _wfEl('pape-req-display');
