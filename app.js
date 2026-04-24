@@ -365,8 +365,6 @@ function initFirebase() {
         }
         S = data;
         renderAll();
-        // [TEMP] workflowState未設定の記事を出力
-        { const noWS = (S.notes || []).filter(x => !x.workflowState); console.log('[beyan] workflowState未設定の記事:', noWS.length, '件', noWS.map(x => x.title)); }
         if (_didMigrate) {
           save();
           setTimeout(() => toast('📤 ローカルデータをFirebaseに移行しました'), 800);
