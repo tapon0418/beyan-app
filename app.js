@@ -5015,15 +5015,14 @@ function wfStartWorkflow() {
   toast('✅ ワークフローを開始しました（STEP1完了）');
 }
 
-function wfBulkInitWorkflow() {
+window.wfBulkInitWorkflow = function() {
   const targets = (S.notes || []).filter(x => !x.workflowState);
   if (targets.length === 0) { toast('ℹ️ 未設定の記事はありません'); return; }
   targets.forEach(n => { n.workflowState = 'STEP1完了'; });
   save();
   renderNotes();
   toast(`✅ ${targets.length}件を初期化しました（STEP1完了）`);
-}
-window.wfBulkInitWorkflow = wfBulkInitWorkflow;
+};
 
 function wfCopyPapeReq(btn) {
   const el = _wfEl('pape-req-display');
