@@ -5020,8 +5020,14 @@ window.wfBulkInitWorkflow = function() {
     const e = document.getElementById('toast');
     if (!e) { alert(msg); return; }
     e.textContent = msg;
-    e.classList.add('show');
-    setTimeout(() => e.classList.remove('show'), 2800);
+    // classList依存を排除してinline styleで直接表示
+    e.style.opacity = '1';
+    e.style.transform = 'translateX(-50%) translateY(0)';
+    e.style.pointerEvents = 'auto';
+    setTimeout(() => {
+      e.style.opacity = '0';
+      e.style.transform = 'translateX(-50%) translateY(20px)';
+    }, 3000);
   }
 
   const targets = (S.notes || []).filter(x => !x.workflowState);
@@ -5030,14 +5036,8 @@ window.wfBulkInitWorkflow = function() {
   const count = targets.length;
   targets.forEach(n => { n.workflowState = 'STEP1完了'; });
 
-  // Firebase直接書き込み（_fbRef経由 → fallback: firebase.database()直接）
-  try {
-    const ref = (_fbRef) ? _fbRef : firebase.database().ref('beyan_v6');
-    ref.set(JSON.parse(JSON.stringify(S)));
-  } catch(err) {
-    console.warn('[wfBulkInit] Firebase書き込みエラー:', err);
-    try { localStorage.setItem('beyan_v6', JSON.stringify(S)); } catch(e2) {}
-  }
+  // save()経由で書き込み（_fbWritePendingを立てることでonValueの即時発火を防ぐ）
+  save();
 
   // UI再描画
   if (typeof renderNotes === 'function') renderNotes();
