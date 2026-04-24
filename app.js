@@ -4687,7 +4687,8 @@ function _wfStepDone(si, tasks) {
 }
 
 function _wfEsc(str) {
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const s = (str === null || str === undefined) ? '' : (typeof str === 'string' ? str : String(str));
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function _wfRefreshUI() {
@@ -4852,7 +4853,7 @@ function _wfFallback(text) {
 // ================================================================
 // Gemini API 共通送信ユーティリティ（リトライ・タイムアウト対応）
 // ================================================================
-const WF_GEMINI_MODEL   = 'gemini-3.1-pro-preview';
+const WF_GEMINI_MODEL   = 'gemini-2.5-flash';
 const WF_GEMINI_TIMEOUT = 30000;
 const WF_GEMINI_RETRIES = 3;
 
@@ -4962,7 +4963,7 @@ function _renderWfAutoPanel(n, inModal) {
     if (!art.jimmyBoneOK) {
       return `<div style="${wrap}">
         <div style="${ttl}">🔍 骨子確認（①〜④） ― 差し戻し ${retries}/3回</div>
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:220px;overflow-y:auto;font-size:11.5px;line-height:1.7;white-space:pre-wrap;margin-bottom:12px">${_wfEsc(art.jimmyBoneResult)}</div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:220px;overflow-y:auto;font-size:11.5px;line-height:1.7;white-space:pre-wrap;margin-bottom:12px">${_wfEsc(art.jimmyBoneResult && art.jimmyBoneResult.result !== undefined ? art.jimmyBoneResult.result : art.jimmyBoneResult)}</div>
         <div style="display:flex;gap:8px">
           <button style="${bS};background:var(--accent);flex:1" onclick="wfStep4BoneOK()">✅ 骨子OK</button>
           <button style="flex:1;min-height:40px;border:1px solid #c84646;border-radius:10px;color:#c84646;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;background:transparent" onclick="wfStep4BoneReject()">↩ 差し戻し</button>
