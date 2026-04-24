@@ -4710,7 +4710,19 @@ function renderWorkflowNav() {
   document.getElementById('wf-progress-fill').style.width = (doneCount / WF_STEPS.length * 100) + '%';
 
   const _n = S.notes.find(x => x.id === noteId);
-  let html = _n ? _renderWfAutoPanel(_n) : '';
+  let html = _n ? _renderWfAutoPanel(_n, true) : '';
+
+  // 手動workflowState変更UI
+  const curWs = (_n && _n.workflowState) || '';
+  const wsOptions = ['', ...WF_STEP_STATES].map(v =>
+    `<option value="${v}"${v === curWs ? ' selected' : ''}>${v || '（未設定）'}</option>`
+  ).join('');
+  html += `<div style="background:rgba(0,0,0,.15);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:.75rem;color:var(--text3);flex-shrink:0">🔧 状態を手動変更：</span>
+    <select id="wf-state-select" style="flex:1;min-width:160px;background:var(--bg4);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.8rem;font-family:inherit">${wsOptions}</select>
+    <button onclick="wfSetWorkflowState()" style="min-height:32px;padding:0 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">💾 保存</button>
+  </div>`;
+
   html += '<hr class="wf-auto-sep">';
   html += '<div style="font-size:10px;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">タスクチェックリスト（手動）</div>';
   for (let si = 0; si < WF_STEPS.length; si++) {
@@ -4905,7 +4917,7 @@ function _wfEl(name) {
       || document.getElementById('wf-' + name);
 }
 
-function _renderWfAutoPanel(n) {
+function _renderWfAutoPanel(n, inModal) {
   if (!n) return '';
   const ws  = n.workflowState || '';
   const art = n.article || {};
@@ -4982,6 +4994,13 @@ function _renderWfAutoPanel(n) {
   }
 
   if (ws === 'STEP1完了') {
+    // モーダル内ではopenWorkflowNavボタンを出さない（既に開いているため再帰になる）
+    if (inModal) {
+      return `<div style="${wrap}">
+        <div style="${ttl}">✅ STEP1完了 → 次：STEP2 執筆指示文を作成</div>
+        <div style="${sub}">クロとのセッションでnb2Promptを生成し、記事カードの「執筆指示文」欄に貼り付けてください。完了後にワークフローのSTEP2タスクを全チェックするとSTEP2完了になります。</div>
+      </div>`;
+    }
     return `<div style="${wrap}">
       <div style="${ttl}">✅ STEP1完了 → 次：STEP2 執筆指示文を作成</div>
       <div style="${sub}">クロとのセッションでnb2Promptを生成し、記事カードの「執筆指示文」欄に貼り付けてください。完了後にワークフローでSTEP2完了を記録すると被りチェックが使えるようになります。</div>
@@ -4999,6 +5018,12 @@ function _renderWfAutoPanel(n) {
   }
 
   // 不明な値（上記どれにも該当しない）
+  if (inModal) {
+    return `<div style="${wrap}">
+      <div style="${ttl}">⚠️ 不明な状態: ${_wfEsc(ws)}</div>
+      <div style="${sub}">下の「状態を手動変更」から正しいSTEPを選んで保存してください。</div>
+    </div>`;
+  }
   return `<div style="${wrap}">
     <div style="${ttl}">⚠️ 不明な状態: ${_wfEsc(ws)}</div>
     <div style="${sub}">ワークフローを開いて状態を確認してください。</div>
@@ -5013,6 +5038,17 @@ function wfStartWorkflow() {
   save();
   _wfRefreshUI();
   toast('✅ ワークフローを開始しました（STEP1完了）');
+}
+
+function wfSetWorkflowState() {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) return;
+  const sel = document.getElementById('wf-state-select');
+  if (!sel) return;
+  n.workflowState = sel.value || undefined;
+  save();
+  _wfRefreshUI();
+  toast('✅ workflowStateを「' + (sel.value || '未設定') + '」に変更しました');
 }
 
 window.wfBulkInitWorkflow = function() {
