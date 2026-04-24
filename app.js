@@ -5016,12 +5016,33 @@ function wfStartWorkflow() {
 }
 
 window.wfBulkInitWorkflow = function() {
+  function _showToast(msg) {
+    const e = document.getElementById('toast');
+    if (!e) { alert(msg); return; }
+    e.textContent = msg;
+    e.classList.add('show');
+    setTimeout(() => e.classList.remove('show'), 2800);
+  }
+
   const targets = (S.notes || []).filter(x => !x.workflowState);
-  if (targets.length === 0) { toast('ℹ️ 未設定の記事はありません'); return; }
+  if (targets.length === 0) { _showToast('ℹ️ 未設定の記事はありません'); return; }
+
+  const count = targets.length;
   targets.forEach(n => { n.workflowState = 'STEP1完了'; });
-  save();
-  renderNotes();
-  toast(`✅ ${targets.length}件を初期化しました（STEP1完了）`);
+
+  // Firebase直接書き込み（_fbRef経由 → fallback: firebase.database()直接）
+  try {
+    const ref = (_fbRef) ? _fbRef : firebase.database().ref('beyan_v6');
+    ref.set(JSON.parse(JSON.stringify(S)));
+  } catch(err) {
+    console.warn('[wfBulkInit] Firebase書き込みエラー:', err);
+    try { localStorage.setItem('beyan_v6', JSON.stringify(S)); } catch(e2) {}
+  }
+
+  // UI再描画
+  if (typeof renderNotes === 'function') renderNotes();
+
+  _showToast('✅ ' + count + '件を初期化しました（STEP1完了）');
 };
 
 function wfCopyPapeReq(btn) {
