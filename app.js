@@ -1550,6 +1550,7 @@ function openEditModal() {
   document.getElementById('me-management-connection').value=m.connection||n.prevLink||'';
   document.getElementById('me-management-next').value=m.next||n.nextLink||'';
   document.getElementById('me-management-schemaVersion').value=m.schemaVersion||'V6';
+  document.getElementById('me-workflowState').value=n.workflowState||'未着手';
   openOverlay('modal-edit');
 }
 document.getElementById('me-save').addEventListener('click',()=>{
@@ -5237,6 +5238,248 @@ function wfSavePapeResult() {
   save();
   _wfRefreshUI();
   toast('✅ パペ結果を保存 - STEP4完了に自動更新しました');
+}
+
+// ----------------------------------------------------------------
+// STEP1: 軸の事前チェック / 完了
+// ----------------------------------------------------------------
+function wfStep1Check() {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const axis = n.axis || {};
+  const art  = n.article || {};
+  const published = getPublishedArticles().slice(0, 3);
+  const thisExp   = axis.expansionAxis  || '';
+  const thisEmo   = axis.emotionAxis    || '';
+  const thisThink = art.thinkingPattern || '';
+  const conflicts = [];
+  published.forEach(function(a, i) {
+    const hits = [];
+    if (thisExp   && a.expansionAxis   === thisExp)   hits.push('展開軸「' + thisExp   + '」');
+    if (thisEmo   && a.emotionAxis     === thisEmo)   hits.push('感情軸「' + thisEmo   + '」');
+    if (thisThink && a.thinkingPattern === thisThink) hits.push('思考の型「' + thisThink + '」');
+    if (hits.length) conflicts.push('直近' + (i+1) + '本目「' + a.publishedTitle.slice(0,18) + '…」と' + hits.join('・') + 'が被っています');
+  });
+  if (conflicts.length === 0) {
+    _wfStep1Result = '<div style="background:rgba(74,136,56,.1);border:1px solid rgba(74,136,56,.3);border-radius:8px;padding:10px;font-size:.78rem;color:var(--green)">✅ 直近3本と被りなし。STEP1完了にできます。</div>';
+    _wfStep1AllOk = true;
+  } else {
+    _wfStep1Result = '<div style="background:rgba(200,70,70,.1);border:1px solid rgba(200,70,70,.3);border-radius:8px;padding:10px;font-size:.78rem;color:#c84646"><div style="font-weight:700;margin-bottom:6px">⚠️ 被りあり - 詳細編集で修正してください：</div>' + conflicts.map(function(c){ return '・' + c; }).join('<br>') + '</div>';
+    _wfStep1AllOk = false;
+  }
+  renderWorkflowNav();
+}
+
+function wfStep1Complete() {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) return;
+  n.workflowState = WS_ORDER[1];
+  save();
+  _wfStep1Result = null;
+  _wfStep1AllOk  = false;
+  _wfRefreshUI();
+  toast('✅ STEP1完了にしました');
+}
+
+// ----------------------------------------------------------------
+// STEP2: 思考枠チェック / 完了
+// ----------------------------------------------------------------
+function wfStep2Check() {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const art       = n.article || {};
+  const published = getPublishedArticles().slice(0, 3);
+  const thisThink = art.thinkingPattern  || '';
+  const thisPersp = art.readerPerspective || '';
+  const warnings  = [];
+  if (thisThink) {
+    const cnt = published.filter(function(a){ return a.thinkingPattern === thisThink; }).length;
+    if (cnt >= 3) warnings.push({ msg: '思考の型「' + thisThink + '」が直近3本すべてで使用されています。変更してください。', fatal: true });
+    else if (cnt >= 2) warnings.push({ msg: '思考の型「' + thisThink + '」が直近' + cnt + '本で使用中（連続上限3本まで）', fatal: false });
+  }
+  if (thisPersp) {
+    const cnt = published.filter(function(a){ return a.readerPerspective === thisPersp; }).length;
+    if (cnt >= 3) warnings.push({ msg: '読者視点「' + thisPersp + '」が直近3本すべてで使用されています。変更してください。', fatal: true });
+    else if (cnt >= 2) warnings.push({ msg: '読者視点「' + thisPersp + '」が直近' + cnt + '本で使用中（連続上限3本まで）', fatal: false });
+  }
+  const hasFatal = warnings.some(function(w){ return w.fatal; });
+  if (warnings.length === 0) {
+    _wfStep2Result = '<div style="background:rgba(74,136,56,.1);border:1px solid rgba(74,136,56,.3);border-radius:8px;padding:10px;font-size:.78rem;color:var(--green)">✅ 3連続なし。STEP2完了にできます。</div>';
+    _wfStep2AllOk = true;
+  } else if (!hasFatal) {
+    _wfStep2Result = '<div style="background:rgba(255,160,0,.1);border:1px solid rgba(255,160,0,.4);border-radius:8px;padding:10px;font-size:.78rem;color:var(--orange,#b45309)"><div style="font-weight:700;margin-bottom:6px">⚠️ 注意（3連続ではないのでOK）：</div>' + warnings.map(function(w){ return '・' + w.msg; }).join('<br>') + '</div>';
+    _wfStep2AllOk = true;
+  } else {
+    _wfStep2Result = '<div style="background:rgba(200,70,70,.1);border:1px solid rgba(200,70,70,.3);border-radius:8px;padding:10px;font-size:.78rem;color:#c84646"><div style="font-weight:700;margin-bottom:6px">❌ 3連続NG - 詳細編集で変更してください：</div>' + warnings.map(function(w){ return '・' + w.msg; }).join('<br>') + '</div>';
+    _wfStep2AllOk = false;
+  }
+  renderWorkflowNav();
+}
+
+function wfStep2Complete() {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) return;
+  n.workflowState = WS_ORDER[2];
+  save();
+  _wfStep2Result = null;
+  _wfStep2AllOk  = false;
+  _wfRefreshUI();
+  toast('✅ STEP2完了にしました');
+}
+
+// ----------------------------------------------------------------
+// STEP3: ジミー被りチェック依頼文コピー / JimmyOK
+// ----------------------------------------------------------------
+function wfStep3CopyRequest(btn) {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const axis = n.axis || {};
+  const art  = n.article || {};
+  const mgmt = n.management || {};
+  const kws  = (n.titleKeywords || mgmt.titleKeywords || []).join('、');
+  const published = getPublishedArticles().slice(0, 5).map(function(a, i) {
+    return (i+1) + '. 「' + a.publishedTitle.slice(0,25) + '…」展開軸:' + (a.expansionAxis||'') + ' 感情軸:' + (a.emotionAxis||'') + ' 思考の型:' + (a.thinkingPattern||'');
+  }).join('\n');
+  const text = '【ジミーへの被りチェック依頼】\n\n今回の記事候補：\nタイトル：' + (n.title||'') + '\n展開軸：' + (axis.expansionAxis||'') + '\n感情軸：' + (axis.emotionAxis||'') + '\n思考の型：' + (art.thinkingPattern||'') + '\n読者視点：' + (art.readerPerspective||'') + '\nタイトルキーワード：' + kws + '\n\n直近の公開記事（参考）：\n' + (published || '（なし）') + '\n\n上記の今回の記事候補が、直近の公開記事と展開軸・感情軸・思考の型で被っていないかチェックしてください。被りがなければ「判定：OK」、被りがあれば「判定：要修正」と具体的な修正案を回答してください。';
+  _wfCopyAndFeedback(btn, text);
+}
+
+function wfStep3JimmyOK() {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) return;
+  n.workflowState = WS_ORDER[3];
+  save();
+  _wfRefreshUI();
+  toast('✅ ジミーOK - STEP3完了にしました');
+}
+
+// ----------------------------------------------------------------
+// STEP4: パペリサーチ依頼文コピー
+// ----------------------------------------------------------------
+function wfStep4CopyPapeReq(btn) {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  _wfCopyAndFeedback(btn, _buildWfPapeRequest(n));
+}
+
+// ----------------------------------------------------------------
+// STEP5: ジミー素材整理依頼文コピー / 完了
+// ----------------------------------------------------------------
+function wfStep5CopyRequest(btn) {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const tmpl = (_geminiTmpl !== null && _geminiTmpl !== undefined) ? _geminiTmpl : getDefaultGeminiTmpl();
+  const axis = n.axis    || {};
+  const art  = n.article || {};
+  const con  = n.concept || {};
+  const _v = function(v) { return v || '（未入力）'; };
+  const papeResult = (n.management || {}).papeResult || n.researchNote || '';
+  const text = tmpl
+    .replace(/\$\{n\.title\}|\{n\.title\}/g,                   n.title || _v(''))
+    .replace(/\$\{n\.type\|\|'エッセイ'\}|\{n\.type\}/g,       n.type || 'エッセイ')
+    .replace(/\$\{n\.cat\|\|'未設定'\}|\{n\.cat\}/g,           n.category || n.cat || '未設定')
+    .replace(/\$\{n\.memo\|\|'なし'\}|\{n\.memo\}/g,           con.coreProblem || n.memo || _v(''))
+    .replace(/\$\{n\.axis\.expansionAxis\}|\{n\.axis\.expansionAxis\}/g,           _v(axis.expansionAxis))
+    .replace(/\$\{n\.axis\.emotionAxis\}|\{n\.axis\.emotionAxis\}/g,               _v(axis.emotionAxis))
+    .replace(/\$\{n\.axis\.diffFromLast\}|\{n\.axis\.diffFromLast\}/g,             _v(axis.diffFromLast))
+    .replace(/\$\{n\.article\.thinkingPattern\}|\{n\.article\.thinkingPattern\}/g, _v(art.thinkingPattern))
+    .replace(/\$\{n\.article\.readerPerspective\}|\{n\.article\.readerPerspective\}/g, _v(art.readerPerspective))
+    .replace(/\$\{n\.axis\.readerBeliefToBreak\}|\{n\.axis\.readerBeliefToBreak\}/g,   _v(axis.readerBeliefToBreak || con.readerBeliefToBreak))
+    .replace(/\$\{n\.axis\.readerChangeAfterReading\}|\{n\.axis\.readerChangeAfterReading\}/g, _v(axis.readerChangeAfterReading || con.readerChangeAfterReading))
+    .replace(/\$\{n\.article\.seriesName\|\|'単発'\}|\{n\.article\.seriesName\}/g, art.seriesName || '単発')
+    .replace(/\$\{n\.article\.prevConnection\}|\{n\.article\.prevConnection\}/g,   _v(art.prevConnection))
+    .replace(/\$\{n\.researchNote\?'\\n特記事項：'\+n\.researchNote:''\}|\{n\.researchNote\}/g,
+      papeResult ? '\n特記事項：' + papeResult : '');
+  _wfCopyAndFeedback(btn, text);
+}
+
+function wfStep5Complete() {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const jimmyResult = (document.getElementById('wf-jimmy-result') || {}).value || '';
+  const jimmyText   = jimmyResult.trim();
+  if (!jimmyText) { toast('ジミーの返答を入力してください'); return; }
+  if (!n.article) n.article = {};
+  n.article.jimmyBoneResult = jimmyText;
+  n.workflowState = WS_ORDER[5];
+  save();
+  _wfRefreshUI();
+  toast('✅ ジミー結果を保存 - STEP5完了にしました');
+}
+
+// ----------------------------------------------------------------
+// STEP6: クロ執筆依頼文コピー / サマリーJSONコピー / 公開完了
+// ----------------------------------------------------------------
+function wfStep6CopyClaude(btn) {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const art = n.article || {};
+  const con = n.concept || {};
+  const mgmt = n.management || {};
+  const isYuryou    = n.type === '有料note';
+  const jimmyRaw    = art.jimmyBoneResult || '';
+  const jimmyText   = (jimmyRaw && typeof jimmyRaw === 'object') ? (jimmyRaw.result || JSON.stringify(jimmyRaw)) : jimmyRaw;
+  const claudeSaved = S.claudeTmpl;
+  let claudePrompt;
+  if (claudeSaved) {
+    claudePrompt = claudeSaved
+      .replace(/\$\{n\.title\}/g, n.title || '')
+      .replace(/\$\{n\.memo\|\|'このテーマに関心がある人'\}/g, con.coreProblem || n.memo || 'このテーマに関心がある人')
+      .replace(/\$\{isYuryou\?'有料記事（1,980円）：具体的ノウハウと再現手順を網羅':'無料記事（X導線用）：共感→気づき→有料記事への自然な導線'\}/g,
+        isYuryou ? '有料記事（1,980円）：具体的ノウハウと再現手順を網羅' : '無料記事（X導線用）：共感→気づき→有料記事への自然な導線')
+      .replace(/\$\{isYuryou\?'3,000〜4,000':'2,000〜2,500'\}/g, isYuryou ? '3,000〜4,000' : '2,000〜2,500')
+      .replace(/\$\{result\}/g, jimmyText)
+      .replace(/\$\{n\.nextLink\?`\\n   →「\$\{n\.nextLink\}」につながるひと言を最後に入れる`:''}/g,
+        (mgmt.next || n.nextLink) ? '\n   →「' + (mgmt.next || n.nextLink) + '」につながるひと言を最後に入れる' : '');
+  } else {
+    claudePrompt = 'あなたはべーやん（3交代勤務×副業ライター）として、以下の条件でnote記事を執筆してください。\n\n■ タイトル\n「' + (n.title||'') + '」\n\n■ 読者設定\n・' + (con.coreProblem||n.memo||'このテーマに関心がある人') + '\n\n■ 記事の方向性\n・' + (isYuryou?'有料記事（1,980円）：具体的ノウハウと再現手順を網羅':'無料記事（X導線用）：共感→気づき→有料記事への自然な導線') + '\n・文字数：' + (isYuryou?'3,000〜4,000':'2,000〜2,500') + '文字\n・体験談ベース。具体的な数字・固有名詞を必ず入れる\n\n■ ジミーの骨子・詳細設計\n' + (jimmyText||'（未入力）') + '\n\n■ 文体の絶対ルール\n・ですます調。親しみやすいが馴れ馴れしすぎない\n・「しみじみ思う。」「笑」など口語表現OK\n・「〜が大切です」「〜を心がけましょう」などAI的な説教口調は禁止\n・「まとめると」「ポイントは」系の見出しも禁止\n・# ※ ** などの記号は一切使わない\n・抽象論・精神論で終わらない。必ず具体で締める' + ((mgmt.next||n.nextLink)?'\n→「'+(mgmt.next||n.nextLink)+'」につながるひと言を最後に入れる':'');
+  }
+  _wfCopyAndFeedback(btn, claudePrompt);
+}
+
+function wfStep6CopySummaryJSON(btn) {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const axis = n.axis    || {};
+  const art  = n.article || {};
+  const mgmt = n.management || {};
+  const con  = n.concept || {};
+  const summary = {
+    publishedTitle:    n.title || '',
+    titleKeywords:     n.titleKeywords || mgmt.titleKeywords || [],
+    expansionAxis:     axis.expansionAxis    || '',
+    emotionAxis:       axis.emotionAxis      || '',
+    thinkingPattern:   art.thinkingPattern   || '',
+    readerPerspective: art.readerPerspective || '',
+    coreLearning:      art.soulSentence || con.coreProblem || '',
+    publishedAt:       new Date().toISOString().slice(0, 10),
+    headlineKeywords:  { catch: '', main: '', sub: '' },
+    humanTechUsed:     art.humanTechUsed || [],
+    nextHook:          art.nextHook || mgmt.next || ''
+  };
+  _wfCopyAndFeedback(btn, JSON.stringify(summary, null, 2));
+}
+
+function wfStep6PublishComplete() {
+  wfStep6Complete();
+}
+
+// ----------------------------------------------------------------
+// 共通: コピー＋ボタンフィードバック
+// ----------------------------------------------------------------
+function _wfCopyAndFeedback(btn, text) {
+  const orig = btn ? btn.textContent : '';
+  const feedback = function() {
+    if (!btn) return;
+    btn.textContent = '✅ コピーしました';
+    setTimeout(function() { btn.textContent = orig; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(feedback).catch(function() { _wfFallback(text); feedback(); });
+  } else {
+    _wfFallback(text);
+    feedback();
+  }
 }
 
 // ----------------------------------------------------------------
