@@ -2178,18 +2178,40 @@ input:focus, textarea:focus, select:focus {
 
 <!-- ===== MODAL: 失敗パターン 編集 ===== -->
 <div class="overlay" id="modal-failurepattern" onclick="if(event.target===this)closeOverlay('modal-failurepattern')">
-  <div class="modal" style="max-width:440px">
+  <div class="modal" style="max-width:480px;max-height:90vh;display:flex;flex-direction:column;overflow-y:hidden;padding-bottom:0">
     <div class="modal-handle"></div>
     <div class="modal-header">
       <div class="modal-title" id="fp-modal-title">失敗パターンを追加</div>
       <button class="modal-close" onclick="closeOverlay('modal-failurepattern')">✕</button>
     </div>
+    <div style="overflow-y:auto;flex:1;-webkit-overflow-scrolling:touch;padding-bottom:8px">
     <input type="hidden" id="fp-edit-id">
-    <div class="input-group"><label class="input-label">タイトル *</label><input type="text" id="fp-title" placeholder="例: リサーチ不足による内容の薄さ"></div>
-    <div class="input-group"><label class="input-label">内容・詳細 *</label><textarea id="fp-detail" rows="4" placeholder="例: ぺぺのリサーチ結果を使わずに執筆した結果…"></textarea></div>
-    <div class="input-group"><label class="input-label">再発防止策 *</label><textarea id="fp-prevention" rows="3" placeholder="例: 執筆前に必ずリサーチ結果を確認する"></textarea></div>
-    <div class="input-group"><label class="input-label">発生日</label><input type="text" id="fp-date" placeholder="例: 2026-04-15"></div>
-    <div class="btn-row">
+    <div class="input-group"><label class="input-label">失敗種別 *</label>
+      <select id="fp-failureType">
+        <option value="">選択してください</option>
+        <option value="差し戻し">差し戻し</option>
+        <option value="修正指示">修正指示</option>
+        <option value="エンゲージ低下">エンゲージ低下</option>
+      </select>
+    </div>
+    <div class="input-2col">
+      <div><label class="input-label">展開軸</label><input type="text" id="fp-expansion" placeholder="例: 原因追及"></div>
+      <div><label class="input-label">感情軸</label><input type="text" id="fp-emotion" placeholder="例: 焦り"></div>
+    </div>
+    <div class="input-2col">
+      <div><label class="input-label">思考の型</label><input type="text" id="fp-thinking" placeholder="例: 落とし穴型"></div>
+      <div><label class="input-label">読者視点</label><input type="text" id="fp-perspective" placeholder="例: 始めた直後の人の目線"></div>
+    </div>
+    <div class="input-group"><label class="input-label">失敗の理由 *</label><textarea id="fp-reason" rows="3" placeholder="なぜ失敗したかを具体的に記入する"></textarea></div>
+    <div class="input-group"><label class="input-label">絶対禁止フラグ</label>
+      <select id="fp-absFlag">
+        <option value="対象外">対象外（通常の失敗パターン）</option>
+        <option value="絶対禁止">🚫 絶対禁止（この組み合わせは使用不可）</option>
+      </select>
+    </div>
+    <div class="input-group"><label class="input-label">記録日</label><input type="text" id="fp-date" placeholder="例: 2026-04-29"></div>
+    </div>
+    <div class="btn-row" style="flex-shrink:0;margin-top:0;padding:12px 0 calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border)">
       <button class="btn btn-ghost" onclick="closeOverlay('modal-failurepattern')">キャンセル</button>
       <button class="btn btn-accent" onclick="saveFailurePattern()">保存</button>
     </div>
@@ -2385,6 +2407,7 @@ input:focus, textarea:focus, select:focus {
     <input type="hidden" id="me-id">
     <!-- 基本情報 -->
     <div class="input-group"><label class="input-label">タイトル</label><input type="text" id="me-title"></div>
+    <div class="input-group"><label class="input-label">タイトルキーワード</label><input type="text" id="me-titleKeywords" placeholder="例: 副業,夜勤,諦め,3交代（カンマ区切り）"></div>
     <div class="input-2col">
       <div><label class="input-label">タイプ</label>
         <select id="me-type"><option>エッセイ(A)</option><option>ハウツー(B)</option><option>AI活用</option><option>有料note</option><option>振り返り</option></select></div>
@@ -2422,10 +2445,11 @@ input:focus, textarea:focus, select:focus {
     <div style="font-size:.72rem;font-weight:700;color:var(--text3);margin:10px 0 4px;letter-spacing:.04em;">ARTICLE</div>
     <div class="input-group"><label class="input-label">魂の一文</label><input type="text" id="me-article-soulSentence" placeholder="例: 副業は足し算より引き算の方が続く"></div>
     <div class="input-2col">
-      <div><label class="input-label">思考パターン</label><input type="text" id="me-article-thinkingPattern" placeholder="例: 落とし穴型"></div>
+      <div><label class="input-label">思考の型</label><input type="text" id="me-article-thinkingPattern" placeholder="例: 落とし穴型"></div>
       <div><label class="input-label">読者視点</label><input type="text" id="me-article-readerPerspective" placeholder="例: 始めた直後"></div>
     </div>
     <div class="input-group"><label class="input-label">アフィ文脈</label><input type="text" id="me-article-affiliateContext" placeholder="例: 楽天で購入したグッズ紹介"></div>
+    <div class="input-group"><label class="input-label">次回伏線</label><textarea id="me-article-nextHook" rows="2" placeholder="例: 次回：習慣化の具体的な方法を書く予定"></textarea></div>
     <div class="input-group"><label class="input-label">2本先への種まき</label><input type="text" id="me-article-seedingTwoAhead" placeholder="例: 習慣化の話につながる種を撒く"></div>
     <div class="input-2col">
       <div><label class="input-label">シリーズ名</label><input type="text" id="me-article-seriesName" placeholder="例: 副業初心者シリーズ"></div>
@@ -2437,17 +2461,6 @@ input:focus, textarea:focus, select:focus {
     <div class="input-group"><label class="input-label">使用状況</label><input type="text" id="me-management-usageStatus" placeholder="例: X投稿済み・note未公開"></div>
     <div class="input-group"><label class="input-label">既存記事との接続</label><input type="text" id="me-management-connection" placeholder="例: 「提案文47件」の続編"></div>
     <div class="input-group"><label class="input-label">次の記事への引き継ぎ</label><input type="text" id="me-management-next" placeholder="例: 2件目案件の話へつなぐ"></div>
-    <div class="input-group"><label class="input-label">進行状態</label>
-      <select id="me-management-progressStatus">
-        <option value="">未着手</option>
-        <option value="step1">STEP1完了</option>
-        <option value="step2">STEP2完了</option>
-        <option value="step3">STEP3ジミー被りチェックOK</option>
-        <option value="step4">STEP4パペリサーチ完了</option>
-        <option value="step5">STEP5ジミー構成完了</option>
-        <option value="step6">STEP6記事完了</option>
-      </select>
-    </div>
     <div class="input-group"><label class="input-label">スキーマバージョン</label><input type="text" id="me-management-schemaVersion" placeholder="V6" style="color:var(--text3)"></div>
     </div>
     <div class="btn-row" style="flex-shrink:0;margin-top:0;padding:12px 0 calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border)">

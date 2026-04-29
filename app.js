@@ -1534,10 +1534,12 @@ function openEditModal() {
   document.getElementById('me-research-sourceNote').value=r.sourceNote||'';
   // article
   const ar=n.article||{};
+  document.getElementById('me-titleKeywords').value=(n.titleKeywords||[]).join('、');
   document.getElementById('me-article-soulSentence').value=ar.soulSentence||'';
   document.getElementById('me-article-thinkingPattern').value=ar.thinkingPattern||'';
   document.getElementById('me-article-readerPerspective').value=ar.readerPerspective||'';
   document.getElementById('me-article-affiliateContext').value=ar.affiliateContext||'';
+  document.getElementById('me-article-nextHook').value=ar.nextHook||'';
   document.getElementById('me-article-seedingTwoAhead').value=ar.seedingTwoAhead||'';
   document.getElementById('me-article-seriesName').value=ar.seriesName||'';
   document.getElementById('me-article-seriesOrder').value=ar.seriesOrder||'';
@@ -1547,7 +1549,6 @@ function openEditModal() {
   document.getElementById('me-management-usageStatus').value=m.usageStatus||'';
   document.getElementById('me-management-connection').value=m.connection||n.prevLink||'';
   document.getElementById('me-management-next').value=m.next||n.nextLink||'';
-  document.getElementById('me-management-progressStatus').value=m.progressStatus||'';
   document.getElementById('me-management-schemaVersion').value=m.schemaVersion||'V6';
   openOverlay('modal-edit');
 }
@@ -1558,12 +1559,15 @@ document.getElementById('me-save').addEventListener('click',()=>{
   const n = S.notes.find(x=>x.id===id); if(!n) return;
   const newStatus = document.getElementById('me-status').value;
   const doSave = () => {
+    const tkRaw = document.getElementById('me-titleKeywords').value.trim();
+    const tkArr = tkRaw ? tkRaw.split(/[,、，]/).map(s=>s.trim()).filter(Boolean) : [];
     Object.assign(n,{
       title,
       type: document.getElementById('me-type').value,
       category: document.getElementById('me-category').value,
       status: newStatus,
       publishDate: document.getElementById('me-pubdate').value.trim(),
+      titleKeywords: tkArr,
       concept: {
         coreProblem:              document.getElementById('me-concept-coreProblem').value.trim(),
         targetReader:             document.getElementById('me-concept-targetReader').value.trim(),
@@ -1589,17 +1593,17 @@ document.getElementById('me-save').addEventListener('click',()=>{
         thinkingPattern:   document.getElementById('me-article-thinkingPattern').value.trim(),
         readerPerspective: document.getElementById('me-article-readerPerspective').value.trim(),
         affiliateContext:  document.getElementById('me-article-affiliateContext').value.trim(),
+        nextHook:          document.getElementById('me-article-nextHook').value.trim(),
         seedingTwoAhead:   document.getElementById('me-article-seedingTwoAhead').value.trim(),
         seriesName:        document.getElementById('me-article-seriesName').value.trim(),
         seriesOrder:       document.getElementById('me-article-seriesOrder').value.trim(),
         prevConnection:    document.getElementById('me-article-prevConnection').value.trim(),
       },
       management: {
-        usageStatus:    document.getElementById('me-management-usageStatus').value.trim(),
-        connection:     document.getElementById('me-management-connection').value.trim(),
-        next:           document.getElementById('me-management-next').value.trim(),
-        progressStatus: document.getElementById('me-management-progressStatus').value,
-        schemaVersion:  document.getElementById('me-management-schemaVersion').value.trim() || 'V6',
+        usageStatus:   document.getElementById('me-management-usageStatus').value.trim(),
+        connection:    document.getElementById('me-management-connection').value.trim(),
+        next:          document.getElementById('me-management-next').value.trim(),
+        schemaVersion: document.getElementById('me-management-schemaVersion').value.trim() || 'V6',
       },
     });
     save(); renderNotes();  closeOverlay('modal-edit');
@@ -3890,31 +3894,48 @@ function openFailurePatternModal(id) {
   document.getElementById('fp-modal-title').textContent = id ? '失敗パターンを編集' : '失敗パターンを追加';
   document.getElementById('fp-edit-id').value = id || '';
   if (id) {
-    const item = getFailurePatterns().find(x => x.id === id);
-    if (!item) return;
-    document.getElementById('fp-title').value      = item.タイトル || '';
-    document.getElementById('fp-detail').value     = item.内容 || '';
-    document.getElementById('fp-prevention').value = item.再発防止策 || '';
-    document.getElementById('fp-date').value       = item.発生日 || '';
+    const r = getFailurePatterns().find(x => x.id === id);
+    if (!r) return;
+    // V6フィールド（旧データはフォールバック）
+    document.getElementById('fp-failureType').value  = r.失敗種別 || '';
+    document.getElementById('fp-expansion').value    = r.展開軸 || r.expansionAxis || '';
+    document.getElementById('fp-emotion').value      = r.感情軸 || r.emotionAxis || '';
+    document.getElementById('fp-thinking').value     = r.思考の型 || r.thinkingPattern || '';
+    document.getElementById('fp-perspective').value  = r.読者視点 || '';
+    document.getElementById('fp-reason').value       = r.失敗の理由 || r.内容 || r.タイトル || '';
+    document.getElementById('fp-absFlag').value      = r.絶対禁止フラグ || '対象外';
+    document.getElementById('fp-date').value         = r.記録日 || r.発生日 || '';
   } else {
-    ['fp-title','fp-detail','fp-prevention','fp-date'].forEach(i => { document.getElementById(i).value = ''; });
+    ['fp-expansion','fp-emotion','fp-thinking','fp-perspective','fp-reason'].forEach(i => {
+      document.getElementById(i).value = '';
+    });
+    document.getElementById('fp-failureType').value = '';
+    document.getElementById('fp-absFlag').value = '対象外';
     document.getElementById('fp-date').value = new Date().toISOString().slice(0,10);
   }
   openOverlay('modal-failurepattern');
 }
 function saveFailurePattern() {
-  const title      = document.getElementById('fp-title').value.trim();
-  const detail     = document.getElementById('fp-detail').value.trim();
-  const prevention = document.getElementById('fp-prevention').value.trim();
-  const date       = document.getElementById('fp-date').value.trim();
-  if (!title || !detail || !prevention) { toast('タイトル・内容・再発防止策は必須です'); return; }
-  const list  = getFailurePatterns();
+  const reason = document.getElementById('fp-reason').value.trim();
+  if (!reason) { toast('失敗の理由は必須です'); return; }
+  const list   = getFailurePatterns();
   const editId = document.getElementById('fp-edit-id').value;
+  const item = {
+    失敗種別:     document.getElementById('fp-failureType').value,
+    展開軸:       document.getElementById('fp-expansion').value.trim(),
+    感情軸:       document.getElementById('fp-emotion').value.trim(),
+    思考の型:     document.getElementById('fp-thinking').value.trim(),
+    読者視点:     document.getElementById('fp-perspective').value.trim(),
+    失敗の理由:   reason,
+    絶対禁止フラグ: document.getElementById('fp-absFlag').value,
+    記録日:       document.getElementById('fp-date').value.trim(),
+    棚卸し済み:   false,
+  };
   if (editId) {
     const idx = list.findIndex(x => x.id === editId);
-    if (idx >= 0) list[idx] = { ...list[idx], タイトル:title, 内容:detail, 再発防止策:prevention, 発生日:date };
+    if (idx >= 0) list[idx] = { ...list[idx], ...item };
   } else {
-    list.unshift({ id: String(Date.now()), タイトル:title, 内容:detail, 再発防止策:prevention, 発生日:date, 棚卸し済み:false });
+    list.unshift({ id: String(Date.now()), ...item });
   }
   _saveFailurePatterns(list);
   closeOverlay('modal-failurepattern');
@@ -3940,24 +3961,35 @@ function renderFailurePatterns() {
   if (_fpFilter === 'active') list = list.filter(x => !x.棚卸し済み);
   const el  = document.getElementById('failurepatterns-list');
   const lbl = document.getElementById('failurepatterns-count-label');
-  const all = getFailurePatterns().length;
-  if (lbl) lbl.textContent = all + '件';
+  if (lbl) lbl.textContent = getFailurePatterns().length + '件';
   if (!el) return;
-  if (!list.length) { el.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">' + (_fpFilter==='active'?'棚卸し済みを除くと0件です':'記録がありません') + '</div>'; return; }
-  el.innerHTML = list.map(r => `
-    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px 14px;${r.棚卸し済み?'opacity:.55':''}">
+  if (!list.length) {
+    el.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">' + (_fpFilter==='active'?'棚卸し済みを除くと0件です':'記録がありません') + '</div>';
+    return;
+  }
+  el.innerHTML = list.map(r => {
+    const isAbs = r.絶対禁止フラグ === '絶対禁止';
+    const axisLine = [r.展開軸||r.expansionAxis, r.感情軸||r.emotionAxis, r.思考の型||r.thinkingPattern].filter(Boolean).join(' × ');
+    const mainText = r.失敗の理由 || r.内容 || r.タイトル || '';
+    const dateLabel = r.記録日 || r.発生日 || '';
+    const typeLabel = r.失敗種別 || '';
+    return `<div style="background:${isAbs?'rgba(184,50,50,.05)':'var(--bg3)'};border:1px solid ${isAbs?'rgba(184,50,50,.35)':'var(--border)'};border-radius:10px;padding:12px 14px;margin-bottom:6px;${r.棚卸し済み?'opacity:.55':''}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);flex:1">${_escHtml(r.タイトル||'')}</div>
+        <div style="flex:1">
+          ${isAbs?'<span style="font-size:.7rem;font-weight:700;color:var(--red,#984040);background:rgba(184,50,50,.12);padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:3px">🚫 絶対禁止</span><br>':''}
+          ${typeLabel?`<span style="font-size:.7rem;color:var(--text3)">[${_escHtml(typeLabel)}]</span> `:''}
+          ${axisLine?`<span style="font-size:.82rem;font-weight:700;color:var(--text)">${_escHtml(axisLine)}</span>`:''}
+        </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
-          <button onclick="toggleFpInventory('${r.id}')" title="${r.棚卸し済み?'棚卸し済みを解除':'棚卸し済みにする'}" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:${r.棚卸し済み?'rgba(74,136,56,.2)':'var(--bg2)'};color:${r.棚卸し済み?'var(--green)':'var(--text2)'};cursor:pointer;font-family:inherit">${r.棚卸し済み?'✅ 棚卸済':'棚卸し'}</button>
+          <button onclick="toggleFpInventory('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:${r.棚卸し済み?'rgba(74,136,56,.2)':'var(--bg2)'};color:${r.棚卸し済み?'var(--green)':'var(--text2)'};cursor:pointer;font-family:inherit">${r.棚卸し済み?'✅ 棚卸済':'棚卸し'}</button>
           <button onclick="openFailurePatternModal('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">編集</button>
           <button onclick="deleteFailurePattern('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--orange);cursor:pointer;font-family:inherit">削除</button>
         </div>
       </div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.6;margin-bottom:4px">${_escHtml(r.内容||'')}</div>
-      <div style="font-size:11px;color:var(--green);line-height:1.5">🛡 ${_escHtml(r.再発防止策||'')}</div>
-      ${r.発生日?`<div style="font-size:10px;color:var(--text3);margin-top:4px">${r.発生日}</div>`:''}
-    </div>`).join('');
+      <div style="font-size:12px;color:var(--text2);line-height:1.6">${_escHtml(mainText)}</div>
+      ${dateLabel?`<div style="font-size:10px;color:var(--text3);margin-top:4px">${dateLabel}</div>`:''}
+    </div>`;
+  }).join('');
 }
 
 // ================================================================
@@ -5570,10 +5602,14 @@ function wfOpenFailure(si) {
   const art = n.article || {};
   document.getElementById('fp-modal-title').textContent = '差し戻し - 失敗パターン登録';
   document.getElementById('fp-edit-id').value = '';
-  document.getElementById('fp-title').value = '[' + stepTitle + '] ' + (n.title || '');
-  document.getElementById('fp-detail').value = '展開軸：' + (axis.expansionAxis || '') + '\n感情軸：' + (axis.emotionAxis || '') + '\n思考の型：' + (art.thinkingPattern || '');
-  document.getElementById('fp-prevention').value = '';
-  document.getElementById('fp-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('fp-failureType').value = '差し戻し';
+  document.getElementById('fp-expansion').value   = axis.expansionAxis || '';
+  document.getElementById('fp-emotion').value     = axis.emotionAxis || '';
+  document.getElementById('fp-thinking').value    = art.thinkingPattern || '';
+  document.getElementById('fp-perspective').value = art.readerPerspective || '';
+  document.getElementById('fp-reason').value      = '[' + stepTitle + '] ' + (n.title || '');
+  document.getElementById('fp-absFlag').value     = '対象外';
+  document.getElementById('fp-date').value        = new Date().toISOString().slice(0, 10);
   document.getElementById('modal-workflow').classList.remove('open');
   openOverlay('modal-failurepattern');
 }
