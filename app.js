@@ -4701,86 +4701,185 @@ function _wfRefreshUI() {
   }
 }
 
+// ----------------------------------------------------------------
+// V6ワークフロー STEP1-6パネル構成
+// ----------------------------------------------------------------
+const WS_ORDER = [
+  '',
+  'STEP1完了',
+  'STEP2完了',
+  'STEP3ジミー被りチェックOK',
+  'STEP4パペリサーチ完了',
+  'STEP5ジミー構成完了',
+  'STEP6記事完了',
+];
+let _wfStep1Result = null;
+let _wfStep1AllOk  = false;
+let _wfStep2Result = null;
+let _wfStep2AllOk  = false;
+
+function _wfStepStatus(activeIdx, stepIdx) {
+  if (activeIdx < 0) return 'locked';
+  if (activeIdx === 6 || stepIdx < activeIdx) return 'done';
+  if (stepIdx === activeIdx) return 'active';
+  return 'locked';
+}
+function _wfPanelWrap(s) {
+  if (s==='done')   return 'background:rgba(74,136,56,.06);border:1.5px solid rgba(74,136,56,.35);border-radius:12px;margin-bottom:8px;overflow:hidden';
+  if (s==='active') return 'background:rgba(58,102,80,.09);border:1.5px solid var(--accent);border-radius:12px;margin-bottom:8px;overflow:hidden';
+  return 'background:rgba(0,0,0,.02);border:1.5px solid var(--border);border-radius:12px;margin-bottom:8px;overflow:hidden;opacity:.55';
+}
+function _wfPanelHead(num, title, s) {
+  const badge = s==='done'?'✅完了':s==='active'?'🔄進行中':'⬜未着手';
+  const bc = s==='done'?'rgba(74,136,56,.15);color:var(--green)':s==='active'?'rgba(58,102,80,.15);color:var(--accent)':'rgba(0,0,0,.06);color:var(--text3)';
+  return `<div style="display:flex;align-items:center;gap:10px;padding:12px 14px"><div style="font-size:.88rem;font-weight:700;color:var(--text);flex:1">STEP${num} ${title}</div><span style="font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:20px;background:${bc};flex-shrink:0">${badge}</span></div>`;
+}
+function _wfNextStep(txt) {
+  return `<div style="padding:10px 14px 14px;background:rgba(58,102,80,.04);border-top:1px solid var(--border)"><div style="font-size:.72rem;font-weight:700;color:var(--accent);margin-bottom:5px">━━ 次のSTEPへ ━━</div><div style="font-size:.75rem;color:var(--text3);line-height:1.7;white-space:pre-line">${txt}</div></div>`;
+}
+function _wfActBtn(lbl, fn, color) {
+  return `<button style="min-height:40px;border:none;border-radius:10px;background:${color||'var(--accent)'};color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;padding:0 16px;width:100%;margin-bottom:8px" onclick="${fn}">${lbl}</button>`;
+}
+function _wfCpBtn(lbl, fn) {
+  return `<button style="min-height:40px;border:1.5px solid var(--border2);border-radius:10px;background:var(--bg4);color:var(--text);font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;padding:0 16px;width:100%;margin-bottom:8px" onclick="${fn}">${lbl}</button>`;
+}
+
+function _wfBuildStep1(n, ai) {
+  const s = _wfStepStatus(ai, 0);
+  let h = `<div style="${_wfPanelWrap(s)}">${_wfPanelHead(1,'軸の事前チェック',s)}`;
+  if (s==='active') {
+    h += `<div style="padding:0 14px 14px"><div style="font-size:.78rem;color:var(--text3);line-height:1.6;margin-bottom:10px">記事候補の展開軸・感情軸・思考の型が直近3本の公開記事と被っていないかを確認します。被りがあれば詳細編集で変更してください。</div>
+    ${_wfActBtn('🔍 STEP1チェックを実行する','wfStep1Check()','#1a73e8')}
+    ${_wfStep1Result?`<div style="margin-bottom:8px">${_wfStep1Result}</div>`:''}
+    ${_wfStep1AllOk?_wfActBtn('✅ STEP1完了にする','wfStep1Complete()','var(--green)'):''}
+    </div>`;
+  } else if (s==='done') {
+    h += _wfNextStep('STEP2では思考の型・読者視点の連続使用チェックを行います。\n詳細編集で以下のフィールドが入力されていることを確認してください：\n・思考の型（例：落とし穴型）\n・読者視点（例：始めた直後の人の目線）\n入力が完了したら下のSTEP2パネルを開いてください。');
+  }
+  return h+'</div>';
+}
+
+function _wfBuildStep2(n, ai) {
+  const s = _wfStepStatus(ai, 1);
+  let h = `<div style="${_wfPanelWrap(s)}">${_wfPanelHead(2,'思考枠チェック',s)}`;
+  if (s==='active') {
+    h += `<div style="padding:0 14px 14px"><div style="font-size:.78rem;color:var(--text3);line-height:1.6;margin-bottom:10px">思考の型・読者視点が直近3本と連続していないかを確認します。3連続している場合は詳細編集で変更が必要です。</div>
+    ${_wfActBtn('🔍 STEP2チェックを実行する','wfStep2Check()','#1a73e8')}
+    ${_wfStep2Result?`<div style="margin-bottom:8px">${_wfStep2Result}</div>`:''}
+    ${_wfStep2AllOk?_wfActBtn('✅ STEP2完了にする','wfStep2Complete()','var(--green)'):''}
+    </div>`;
+  } else if (s==='done') {
+    h += _wfNextStep('STEP3ではジミーに被りチェックを依頼します。\n以下の手順で進めてください：\n① 下のSTEP3パネルの「📋 ジミー被りチェック依頼文をコピー」を押す\n② Gemini（https://gemini.google.com/）を開く\n③ コピーした依頼文を貼り付けて送信する\n④ ジミーから「判定：OK」が返ってきたら STEP3パネルの「✅ ジミーOK → STEP3完了にする」を押す\n　「判定：要修正」が返ってきたら修正案に従って詳細編集で軸を変更し再度STEP1から確認する');
+  }
+  return h+'</div>';
+}
+
+function _wfBuildStep3(n, ai) {
+  const s = _wfStepStatus(ai, 2);
+  let h = `<div style="${_wfPanelWrap(s)}">${_wfPanelHead(3,'ジミー被りチェック',s)}`;
+  if (s==='active') {
+    h += `<div style="padding:0 14px 14px">
+    ${_wfCpBtn('📋 ジミー被りチェック依頼文をコピー','wfStep3CopyRequest(this)')}
+    ${_wfActBtn('✅ ジミーOK → STEP3完了にする','wfStep3JimmyOK()','var(--green)')}
+    <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px">または Gemini自動送信（Gemini APIキー設定済みの場合）：</div>
+    ${_wfActBtn('🤖 Geminiに自動被りチェックを投げる','wfStep3AutoSend()','#1a73e8')}
+    <div id="wf-step3-result" style="margin-top:4px"></div>
+    <button onclick="wfOpenFailure(2)" style="margin-top:4px;font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--orange,#b45309);background:transparent;color:var(--orange,#b45309);cursor:pointer;font-family:inherit">⚠️ 差し戻し登録</button>
+    </div>`;
+  } else if (s==='done') {
+    h += _wfNextStep('STEP4ではパペ（Perplexity）にリサーチを依頼します。\n以下の手順で進めてください：\n① 詳細編集で崩すべき前提認識・読了後の変化・タイトルキーワードが入力されていることを確認する\n② 下のSTEP4パネルの「📋 パペへのリサーチ依頼文をコピー」を押す\n③ Perplexity（https://www.perplexity.ai/）を開いてコピーした依頼文を貼り付けて送信する\n④ リサーチ結果が返ってきたら STEP4パネルの「リサーチ結果を貼り付け」欄に全文貼り付ける\n⑤「✅ STEP4完了にする」を押す');
+  }
+  return h+'</div>';
+}
+
+function _wfBuildStep4(n, ai) {
+  const s = _wfStepStatus(ai, 3);
+  const savedPape = (n.management||{}).papeResult || n.researchNote || '';
+  let h = `<div style="${_wfPanelWrap(s)}">${_wfPanelHead(4,'パペリサーチ',s)}`;
+  if (s==='active') {
+    h += `<div style="padding:0 14px 14px">
+    ${_wfCpBtn('📋 パペへのリサーチ依頼文をコピー','wfStep4CopyPapeReq(this)')}
+    <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:6px">パペのリサーチ結果を貼り付け（原文・要約禁止）</div>
+    <textarea id="wf-pape-result" rows="7" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg2);color:var(--text);resize:vertical;box-sizing:border-box;font-family:inherit;margin-bottom:8px" placeholder="Perplexityのリサーチ結果をここに原文のまま貼り付け...">${_wfEsc(savedPape)}</textarea>
+    ${_wfActBtn('✅ STEP4完了にする','wfSavePapeResult()','var(--accent)')}
+    </div>`;
+  } else if (s==='done') {
+    h += _wfNextStep('STEP5ではジミーにリサーチ結果を渡して記事の骨格を作ってもらいます。\n以下の手順で進めてください：\n① 下のSTEP5パネルの「📋 ジミーへの素材整理依頼文をコピー」を押す\n　（パペのリサーチ結果が自動で埋め込まれます）\n② Gemini（https://gemini.google.com/）を開いてコピーした依頼文を貼り付けて送信する\n③ ジミーから骨子・詳細設計が返ってきたら\n　STEP5パネルの「ジミーの返答を貼り付け」欄に全文貼り付けて\n　「✅ STEP5完了にする」を押す');
+  }
+  return h+'</div>';
+}
+
+function _wfBuildStep5(n, ai) {
+  const s = _wfStepStatus(ai, 4);
+  const art = n.article || {};
+  const boneResultRaw = art.jimmyBoneResult;
+  const boneText = boneResultRaw ? (boneResultRaw.result !== undefined ? boneResultRaw.result : boneResultRaw) : null;
+  let h = `<div style="${_wfPanelWrap(s)}">${_wfPanelHead(5,'ジミー素材整理',s)}`;
+  if (s==='active') {
+    h += `<div style="padding:0 14px 14px">
+    ${_wfCpBtn('📋 ジミーへの素材整理依頼文をコピー','wfStep5CopyRequest(this)')}
+    ${boneText?`<div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:4px">保存済みのジミー骨子：</div><div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px;max-height:180px;overflow-y:auto;font-size:11.5px;line-height:1.7;white-space:pre-wrap;margin-bottom:8px">${_wfEsc(boneText)}</div>`:''}
+    <div style="font-size:.78rem;font-weight:600;color:var(--text);margin-bottom:6px">ジミーの返答を貼り付け（骨子＋詳細設計）</div>
+    <textarea id="wf-jimmy-result" rows="7" style="width:100%;font-size:12px;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg2);color:var(--text);resize:vertical;box-sizing:border-box;font-family:inherit;margin-bottom:8px" placeholder="ジミーの骨子・詳細設計の返答全文をここに貼り付け..."></textarea>
+    ${_wfActBtn('✅ STEP5完了にする','wfStep5Complete()','var(--accent)')}
+    <hr style="border:none;border-top:1px solid var(--border);margin:8px 0">
+    <div style="font-size:.72rem;color:var(--text3);margin-bottom:4px">Gemini自動生成（骨子を自動送信する場合）：</div>
+    ${_wfActBtn('🤖 ジミーに自動送信（骨子①〜④）','wfStep4BoneSend()','#1a73e8')}
+    <div id="wf-bone-result" style="margin-top:4px"></div>
+    <div id="wf-material-result" style="margin-top:4px"></div>
+    <button onclick="wfOpenFailure(4)" style="margin-top:4px;font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--orange,#b45309);background:transparent;color:var(--orange,#b45309);cursor:pointer;font-family:inherit">⚠️ 差し戻し登録</button>
+    </div>`;
+  } else if (s==='done') {
+    h += _wfNextStep('STEP6では記事制作チャットのクロに執筆を依頼します。\n以下の手順で進めてください：\n① 下のSTEP6パネルの「📋 クロへの執筆依頼文をコピー」を押す\n② Claude（https://claude.ai/）の記事制作プロジェクトを開く\n③ コピーした依頼文を貼り付けて「執筆開始」と伝える\n④ 記事が完成したら内容を確認してnoteに投稿する\n⑤ 投稿完了後、下のSTEP6パネルで\n　「公開記事サマリーJSONをコピー」→nabebaseのJSONインポートに登録\n　「✅ 公開済みに更新する」を押してステータスを完了にする');
+  }
+  return h+'</div>';
+}
+
+function _wfBuildStep6(n, ai) {
+  const s = _wfStepStatus(ai, 5);
+  let h = `<div style="${_wfPanelWrap(s)}">${_wfPanelHead(6,'記事完了・公開',s)}`;
+  if (s==='active') {
+    h += `<div style="padding:0 14px 14px">
+    ${_wfCpBtn('📋 クロへの執筆依頼文をコピー','wfStep6CopyClaude(this)')}
+    ${_wfCpBtn('📋 公開記事サマリーJSONをコピー','wfStep6CopySummaryJSON(this)')}
+    ${_wfActBtn('✅ 公開済みに更新する','wfStep6PublishComplete()','var(--orange,#c07030)')}
+    </div>`;
+  } else if (s==='done') {
+    h += `<div style="padding:12px 14px"><div style="font-size:.78rem;color:var(--green);font-weight:700">🎉 全ワークフロー完了！公開記事サマリーに登録されています。</div></div>`;
+  }
+  return h+'</div>';
+}
+
 function renderWorkflowNav() {
   const noteId = _wfNoteId;
   if (!noteId) return;
-  const tasks = _wfLoadTasks(noteId);
-  let doneCount = 0;
-  for (let i = 0; i < WF_STEPS.length; i++) { if (_wfStepDone(i, tasks)) doneCount++; }
-  document.getElementById('wf-progress-fill').style.width = (doneCount / WF_STEPS.length * 100) + '%';
-
   const _n = S.notes.find(x => x.id === noteId);
-  let html = _n ? _renderWfAutoPanel(_n, true) : '';
+  if (!_n) { document.getElementById('wf-body').innerHTML = '<div style="padding:16px;color:var(--text3)">記事が見つかりません</div>'; return; }
 
-  // 手動workflowState変更UI
-  const curWs = (_n && _n.workflowState) || '';
+  const ws = _n.workflowState || '';
+  const ai = WS_ORDER.indexOf(ws);
+  const completedCount = ai < 0 ? 0 : Math.min(ai, 6);
+  document.getElementById('wf-progress-fill').style.width = (completedCount / 6 * 100) + '%';
+
+  const eff = ai < 0 ? 0 : ai;
+  let html = '';
+  html += _wfBuildStep1(_n, eff);
+  html += _wfBuildStep2(_n, eff);
+  html += _wfBuildStep3(_n, eff);
+  html += _wfBuildStep4(_n, eff);
+  html += _wfBuildStep5(_n, eff);
+  html += _wfBuildStep6(_n, eff);
+
+  const curWs = ws;
   const wsOptions = ['', ...WF_STEP_STATES].map(v =>
     `<option value="${v}"${v === curWs ? ' selected' : ''}>${v || '（未設定）'}</option>`
   ).join('');
-  html += `<div style="background:rgba(0,0,0,.15);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <span style="font-size:.75rem;color:var(--text3);flex-shrink:0">🔧 状態を手動変更：</span>
+  html += `<div style="background:rgba(0,0,0,.08);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:.72rem;color:var(--text3);flex-shrink:0">🔧 状態を手動変更：</span>
     <select id="wf-state-select" style="flex:1;min-width:160px;background:var(--bg4);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:.8rem;font-family:inherit">${wsOptions}</select>
     <button onclick="wfSetWorkflowState()" style="min-height:32px;padding:0 14px;background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">💾 保存</button>
   </div>`;
 
-  html += '<hr class="wf-auto-sep">';
-  html += '<div style="font-size:10px;color:var(--text3);letter-spacing:.5px;margin-bottom:4px">タスクチェックリスト（手動）</div>';
-  for (let si = 0; si < WF_STEPS.length; si++) {
-    const step = WF_STEPS[si];
-    const isDone = _wfStepDone(si, tasks);
-    const prevDone = si === 0 || _wfStepDone(si - 1, tasks);
-    const isActive = !isDone && prevDone;
-    const stateClass = isDone ? 'done' : isActive ? 'active' : 'locked';
-    const checkedCount = step.tasks.filter((_, ti) => !!tasks[si + '_' + ti]).length;
-
-    html += '<div class="wf-step ' + stateClass + '">'
-      + '<div class="wf-step-header">'
-      + '<div class="wf-badge">' + (isDone ? '✓' : si + 1) + '</div>'
-      + '<div class="wf-step-title-wrap">'
-      + '<div class="wf-step-title">' + _wfEsc(step.title) + '</div>'
-      + '<div class="wf-step-sub">' + _wfEsc(step.sub) + '</div>'
-      + '</div>'
-      + '<div class="wf-step-count">' + checkedCount + '/' + step.tasks.length + '</div>'
-      + '</div>';
-
-    if (isActive) {
-      html += '<div class="wf-content">'
-        + '<div class="wf-desc-box">'
-        + '<div class="wf-desc-label">このSTEPでやること</div>'
-        + '<div class="wf-desc-text">' + _wfEsc(step.desc) + '</div>'
-        + '</div>';
-      if (step.warn) html += '<div class="wf-warn-box">⚠️ ' + _wfEsc(step.warn) + '</div>';
-      if (step.info) html += '<div class="wf-info-box">📌 ' + _wfEsc(step.info) + '</div>';
-      if (step.copyBtn) {
-        const bid = 'wf-cbtn-' + si;
-        html += '<button class="wf-copy-btn" id="' + bid + '" onclick="wfCopyText(' + si + ',\'' + bid + '\')">' + _wfEsc(step.copyBtn.label) + '</button>';
-      }
-      // STEP3: Gemini自動送信ボタン
-      if (si === 2) {
-        html += '<button class="wf-copy-btn" id="wf-step3-send-btn" style="background:var(--blue,#1a73e8);color:#fff;margin-top:6px" onclick="wfStep3AutoSend()">🤖 Geminiに自動送信</button>'
-          + '<div id="wf-step3-result" style="margin-top:8px"></div>';
-      }
-      // 差し戻し登録ボタン（全STEP共通）
-      html += '<button onclick="wfOpenFailure(' + si + ')" style="margin-top:8px;font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--orange,#b45309);background:transparent;color:var(--orange,#b45309);cursor:pointer;font-family:inherit">⚠️ 差し戻し登録</button>';
-      html += '<div class="wf-checklist">';
-      step.tasks.forEach(function(task, ti) {
-        const checked = !!tasks[si + '_' + ti];
-        const dis = stateClass === 'locked' ? ' disabled' : '';
-        html += '<label class="wf-check-item">'
-          + '<input type="checkbox"' + (checked ? ' checked' : '') + dis + ' onchange="wfToggleCheck(_wfNoteId,' + si + ',' + ti + ',this.checked)">'
-          + '<span class="wf-check-label' + (checked ? ' checked' : '') + '">' + _wfEsc(task) + '</span>'
-          + '</label>';
-      });
-      html += '</div></div>';
-    }
-    html += '</div>';
-  }
-  if (doneCount === WF_STEPS.length) {
-    html += '<div class="wf-complete-banner">'
-      + '<div class="wf-complete-title">✅ 全STEP完了</div>'
-      + '<div class="wf-complete-sub">公開記事サマリーJSONのnabebase登録を確認してください</div>'
-      + '</div>';
-  }
   document.getElementById('wf-body').innerHTML = html;
 }
 
@@ -5539,9 +5638,9 @@ function renderTopDashboard() {
   _renderTopTwoCol();
 }
 
-const DONE_STATUSES = ['done', '公開済み', 'archived'];
+const DONE_STATUSES = ['done', '公開済み'];
 function _getUnusedCandidates() {
-  return (S.notes || []).filter(n => !n.used && !DONE_STATUSES.includes(n.status));
+  return (S.notes || []).filter(n => !DONE_STATUSES.includes(n.status));
 }
 
 function _renderTopCurrentArticle() {
