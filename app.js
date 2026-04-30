@@ -1550,7 +1550,7 @@ function openEditModal() {
   document.getElementById('me-management-connection').value=m.connection||n.prevLink||'';
   document.getElementById('me-management-next').value=m.next||n.nextLink||'';
   document.getElementById('me-management-schemaVersion').value=m.schemaVersion||'V6';
-  document.getElementById('me-workflowState').value=n.workflowState||'未着手';
+  document.getElementById('me-workflow-state-display').textContent=n.workflowState||'未着手';
   openOverlay('modal-edit');
 }
 document.getElementById('me-save').addEventListener('click',()=>{
@@ -4680,9 +4680,11 @@ function openWorkflowNav(noteId) {
   const n = S.notes.find(x => x.id === id);
   if (!n) return;
   _wfNoteId = id;
+  const modal = document.getElementById('modal-workflow');
+  modal.dataset.noteId = id;
   document.getElementById('wf-article-title').textContent = n.title || '（未設定）';
   renderWorkflowNav();
-  document.getElementById('modal-workflow').classList.add('open');
+  modal.classList.add('open');
 }
 
 function closeWorkflowNav() {
@@ -5365,32 +5367,59 @@ function wfStep4CopyPapeReq(btn) {
 // ----------------------------------------------------------------
 // STEP5: ジミー素材整理依頼文コピー / 完了
 // ----------------------------------------------------------------
-function wfStep5CopyRequest(btn) {
-  const n = S.notes.find(x => x.id === _wfNoteId);
-  if (!n) { toast('記事が見つかりません'); return; }
+async function wfStep5CopyRequest(btn) {
+  // noteId取得: _wfNoteId優先、なければモーダルのdata-note-id属性から
+  const noteId = _wfNoteId
+    || Number(document.getElementById('modal-workflow')?.dataset?.noteId);
+  if (!noteId) {
+    alert('記事IDが取得できませんでした。ページを再読み込みしてください。');
+    return;
+  }
+  const note = S.notes.find(x => x.id === noteId);
+  if (!note) {
+    alert('記事データが見つかりませんでした（ID: ' + noteId + '）');
+    return;
+  }
   const tmpl = (_geminiTmpl !== null && _geminiTmpl !== undefined) ? _geminiTmpl : getDefaultGeminiTmpl();
-  const axis = n.axis    || {};
-  const art  = n.article || {};
-  const con  = n.concept || {};
-  const _v = function(v) { return v || '（未入力）'; };
-  const papeResult = (n.management || {}).papeResult || n.researchNote || '';
+  if (!tmpl) {
+    alert('ジミー指示文テンプレートが空です。設定画面から入力してください。');
+    return;
+  }
+  const safe = function(v) { return (v && String(v).trim()) ? String(v).trim() : '（未入力）'; };
+  const axis = note.axis    || {};
+  const art  = note.article || {};
+  const con  = note.concept || {};
+  const papeResult = (note.management || {}).papeResult || note.researchNote || '';
   const text = tmpl
-    .replace(/\$\{n\.title\}|\{n\.title\}/g,                   n.title || _v(''))
-    .replace(/\$\{n\.type\|\|'エッセイ'\}|\{n\.type\}/g,       n.type || 'エッセイ')
-    .replace(/\$\{n\.cat\|\|'未設定'\}|\{n\.cat\}/g,           n.category || n.cat || '未設定')
-    .replace(/\$\{n\.memo\|\|'なし'\}|\{n\.memo\}/g,           con.coreProblem || n.memo || _v(''))
-    .replace(/\$\{n\.axis\.expansionAxis\}|\{n\.axis\.expansionAxis\}/g,           _v(axis.expansionAxis))
-    .replace(/\$\{n\.axis\.emotionAxis\}|\{n\.axis\.emotionAxis\}/g,               _v(axis.emotionAxis))
-    .replace(/\$\{n\.axis\.diffFromLast\}|\{n\.axis\.diffFromLast\}/g,             _v(axis.diffFromLast))
-    .replace(/\$\{n\.article\.thinkingPattern\}|\{n\.article\.thinkingPattern\}/g, _v(art.thinkingPattern))
-    .replace(/\$\{n\.article\.readerPerspective\}|\{n\.article\.readerPerspective\}/g, _v(art.readerPerspective))
-    .replace(/\$\{n\.axis\.readerBeliefToBreak\}|\{n\.axis\.readerBeliefToBreak\}/g,   _v(axis.readerBeliefToBreak || con.readerBeliefToBreak))
-    .replace(/\$\{n\.axis\.readerChangeAfterReading\}|\{n\.axis\.readerChangeAfterReading\}/g, _v(axis.readerChangeAfterReading || con.readerChangeAfterReading))
-    .replace(/\$\{n\.article\.seriesName\|\|'単発'\}|\{n\.article\.seriesName\}/g, art.seriesName || '単発')
-    .replace(/\$\{n\.article\.prevConnection\}|\{n\.article\.prevConnection\}/g,   _v(art.prevConnection))
-    .replace(/\$\{n\.researchNote\?'\\n特記事項：'\+n\.researchNote:''\}|\{n\.researchNote\}/g,
-      papeResult ? '\n特記事項：' + papeResult : '');
-  _wfCopyAndFeedback(btn, text);
+    .replace(/\$?\{n\.title\}/g,                                              safe(note.title))
+    .replace(/\$?\{n\.type\|\|'エッセイ'\}|\$?\{n\.type\}/g,                 note.type || 'エッセイ')
+    .replace(/\$?\{n\.cat\|\|'未設定'\}|\$?\{n\.cat\}/g,                     note.category || note.cat || '未設定')
+    .replace(/\$?\{n\.memo\|\|'なし'\}|\$?\{n\.memo\}/g,                     safe(con.coreProblem || note.memo))
+    .replace(/\$?\{n\.axis\??\.expansionAxis\}/g,                             safe(axis.expansionAxis))
+    .replace(/\$?\{n\.axis\??\.emotionAxis\}/g,                               safe(axis.emotionAxis))
+    .replace(/\$?\{n\.axis\??\.diffFromLast\}/g,                              safe(axis.diffFromLast))
+    .replace(/\$?\{n\.article\??\.thinkingPattern\}/g,                        safe(art.thinkingPattern))
+    .replace(/\$?\{n\.article\??\.readerPerspective\}/g,                      safe(art.readerPerspective))
+    .replace(/\$?\{n\.axis\??\.readerBeliefToBreak\}/g,                       safe(axis.readerBeliefToBreak || con.readerBeliefToBreak))
+    .replace(/\$?\{n\.axis\??\.readerChangeAfterReading\}/g,                  safe(axis.readerChangeAfterReading || con.readerChangeAfterReading))
+    .replace(/\$?\{n\.article\??\.seriesName\|\|'単発'\}|\$?\{n\.article\??\.seriesName\}/g, art.seriesName || '単発')
+    .replace(/\$?\{n\.article\??\.prevConnection\}/g,                         safe(art.prevConnection))
+    .replace(/\$?\{n\.researchNote\?[^}]+\}|\$?\{n\.researchNote\}/g,        papeResult ? '\n特記事項：' + papeResult : '');
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;top:-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  const original = btn.innerHTML;
+  btn.innerHTML = '✅ コピーしました';
+  btn.disabled = true;
+  setTimeout(function() { btn.innerHTML = original; btn.disabled = false; }, 1500);
 }
 
 function wfStep5Complete() {

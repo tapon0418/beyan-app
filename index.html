@@ -2461,7 +2461,7 @@ input:focus, textarea:focus, select:focus {
     <div class="input-group"><label class="input-label">使用状況</label><input type="text" id="me-management-usageStatus" placeholder="例: X投稿済み・note未公開"></div>
     <div class="input-group"><label class="input-label">既存記事との接続</label><input type="text" id="me-management-connection" placeholder="例: 「提案文47件」の続編"></div>
     <div class="input-group"><label class="input-label">次の記事への引き継ぎ</label><input type="text" id="me-management-next" placeholder="例: 2件目案件の話へつなぐ"></div>
-    <div class="input-group"><label class="input-label">進行状態</label><input type="text" id="me-workflowState" readonly style="color:var(--accent);font-weight:700;background:var(--bg2);cursor:default;pointer-events:none"></div>
+    <div class="input-group"><label class="input-label">進行状態（現在のSTEP）</label><div id="me-workflow-state-display" style="padding:8px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;font-weight:700;color:var(--accent);font-size:.85rem">（読み込み中）</div></div>
     <div class="input-group"><label class="input-label">スキーマバージョン</label><input type="text" id="me-management-schemaVersion" placeholder="V6" style="color:var(--text3)"></div>
     </div>
     <div class="btn-row" style="flex-shrink:0;margin-top:0;padding:12px 0 calc(16px + env(safe-area-inset-bottom));border-top:1px solid var(--border)">
@@ -2601,7 +2601,7 @@ input:focus, textarea:focus, select:focus {
 
 <div id="toast"></div>
 
-<script src="app.js"></script>
+<script src="app.js?v=20260430"></script>
 
 </body>
 </html>
