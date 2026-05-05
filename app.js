@@ -197,6 +197,16 @@ function _fbEnsureFields(data) {
     if (raw) { data.imggenPrompt = raw; _migrated = true; }
     else data.imggenPrompt = null;
   }
+  // xPostsNew の英語ステータスを日本語に一括変換（マイグレーション）
+  if (data.xPostsNew && Array.isArray(data.xPostsNew)) {
+    let xpMigrated = false;
+    data.xPostsNew = data.xPostsNew.map(function(p) {
+      if (p.status === 'stock')  { xpMigrated = true; return Object.assign({}, p, { status: 'ストック' }); }
+      if (p.status === 'posted') { xpMigrated = true; return Object.assign({}, p, { status: '投稿済み' }); }
+      return p;
+    });
+    if (xpMigrated) _migrated = true;
+  }
   // workflowProgress の不正キー（未設定タイトル）を削除
   if (data.workflowProgress) {
     const BAD_KEYS = ['（未設定）', '', 'undefined', 'null'];
@@ -6442,7 +6452,8 @@ async function autoGenXPosts(noteId, btn) {
   const promptTmpl   = getXPromptText();
   const prompt       = promptTmpl
     .replace('${materialText}', materialText)
-    .replace('${type}', typeLabel);
+    .replace('${type}', typeLabel) +
+    '\n\n【必須制約】必ず【タイプA】を1件、【タイプB】を1件、合計2件のみ生成してください。【タイプA】を複数生成しないこと。各投稿文の前に必ず「【タイプA】」または「【タイプB】」を明記してください。';
 
   try {
     const res = await fetch(
