@@ -616,7 +616,7 @@ function renderNotes() {
           <!-- PCホバーアクション -->
           <div class="ni-hover-btns" onclick="event.stopPropagation()">
             ${(n.status==='review'||n.status==='done')?`<button class="ni-hover-btn" onclick="event.stopPropagation();openFinishModal(${n.id})">🎯 仕上げ</button>`:''}
-            <button class="ni-hover-btn" onclick="event.stopPropagation();window.open(CLAUDE_PROJECT_URL,'_blank')">✍ クロ</button>
+            <button class="ni-hover-btn" id="ni-autostep2-${n.id}" onclick="event.stopPropagation();autoGenStep2(${n.id},this)">🤖 軸生成</button>
             <button class="ni-hover-btn" onclick="event.stopPropagation();openWork(${n.id})">✍ 執筆開始</button>
           </div>
           <button class="ni-work-mobile" onclick="event.stopPropagation();openWork(${n.id})">✍ 執筆開始</button>
@@ -646,6 +646,8 @@ function renderNotes() {
               <button class="ni-action-btn" onclick="event.stopPropagation();openWorkflowNav(${n.id})" style="background:var(--bg3);color:var(--text2)">📋 ワークフロー</button>
               <button class="ni-action-btn" onclick="event.stopPropagation();openOverlay('modal-howto')" style="background:var(--bg3);color:var(--text2)">📖 使い方</button>
               ${(n.status==='review'||n.status==='done')?`<button class="ni-action-btn finish" onclick="event.stopPropagation();openFinishModal(${n.id})">🎯 仕上げ</button>`:''}
+              <button class="ni-action-btn" id="ni-autostep2-detail-${n.id}" onclick="event.stopPropagation();autoGenStep2(${n.id},this)" style="background:rgba(26,115,232,.1);color:#1a73e8;border:1px solid rgba(26,115,232,.25)">🤖 軸自動生成</button>
+              <button class="ni-action-btn" id="ni-autox-${n.id}" onclick="event.stopPropagation();autoGenXPosts(${n.id},this)" style="background:rgba(200,80,20,.1);color:var(--orange,#b45309);border:1px solid rgba(200,80,20,.25)">🔥 X投稿生成</button>
             </div>
             ${_buildOverlapBtn(n)}
             <div id="overlap-result-${n.id}">${_overlapResults[n.id] || ''}</div>
@@ -6341,5 +6343,153 @@ function applyOverlapOK(noteId, btn) {
   btn.disabled = true;
   delete _overlapResults[noteId];
   renderNotes();
+}
+
+// ================================================================
+// 依頼①: STEP2執筆指示文自動生成（Gemini API）
+// ================================================================
+async function autoGenStep2(noteId, btn) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  if (!apiKey) { toast('⚠️ Gemini APIキーが設定されていません（設定画面から登録してください）'); return; }
+
+  const origLabel = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '生成中...'; btn.disabled = true; }
+
+  const published = getPublishedArticles().slice(0, 10).map(function(a) {
+    return '・「' + (a.publishedTitle || '') + '」展開軸:' + (a.expansionAxis||'') + ' 感情軸:' + (a.emotionAxis||'') + ' 思考の型:' + (a.thinkingPattern||'') + ' 読者視点:' + (a.readerPerspective||'');
+  }).join('\n');
+
+  const failures = getFailurePatterns()
+    .filter(function(x) { return !(x.archived ?? x.棚卸し済み ?? false); })
+    .map(function(x) {
+      const ban = x.absoluteBanFlag || x.絶対禁止フラグ || '対象外';
+      return '・' + (x.expansionAxis||x.展開軸||'') + '×' + (x.emotionAxis||x.感情軸||'') + '×' + (x.thinkingPattern||x.思考の型||'') + ' [' + ban + '] ' + (x.reason||x.失敗の理由||'');
+    }).join('\n');
+
+  const mgmt = n.management || {};
+  const kws  = (n.titleKeywords || mgmt.titleKeywords || []).join('、');
+  const con  = n.concept || {};
+  const memo = con.coreProblem || n.memo || '';
+
+  const prompt = 'あなたはnoteコンテンツ戦略AIです。以下の記事候補についてSTEP2執筆指示文を生成してください。\n\n【記事タイトル】' + (n.title||'') + '\n【タイプ】' + (n.type||'エッセイ') + '\n【メモ】' + memo + '\n【タイトルキーワード】' + kws + '\n\n【直近10件の使用済み軸】\n' + (published||'（なし）') + '\n\n【失敗パターン】\n' + (failures||'（なし）') + '\n\n以下の形式で出力してください。JSON・マークダウン記法不要。\n\n展開軸：\n感情軸：\n思考の型：\n読者視点：\n崩すべき前提認識：\n読了後の変化：\n前回との差分：（直近1件との差分を1行で）';
+
+  try {
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 1024, temperature: 0.7 }
+        })
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || String(res.status));
+    const parts  = data.candidates?.[0]?.content?.parts || [];
+    const rawText = parts.filter(function(p) { return !p.thought; }).map(function(p) { return p.text || ''; }).join('').trim();
+    if (!rawText) throw new Error('空のレスポンスが返されました');
+
+    const _ex = function(label) {
+      const m = rawText.match(new RegExp(label + '[：:] *([^\n]+)'));
+      return m ? m[1].trim() : '';
+    };
+    if (!n.axis)     n.axis     = {};
+    if (!n.article)  n.article  = {};
+    if (!n.research) n.research = {};
+    const eAxis  = _ex('展開軸');   const emoAxis = _ex('感情軸');
+    const think  = _ex('思考の型'); const persp   = _ex('読者視点');
+    const belief = _ex('崩すべき前提認識'); const change = _ex('読了後の変化');
+    const diff   = _ex('前回との差分');
+    if (eAxis)   n.axis.expansionAxis            = eAxis;
+    if (emoAxis) n.axis.emotionAxis              = emoAxis;
+    if (belief)  n.axis.readerBeliefToBreak      = belief;
+    if (change)  n.axis.readerChangeAfterReading = change;
+    if (diff)    n.axis.diffFromLast             = diff;
+    if (think)   n.article.thinkingPattern       = think;
+    if (persp)   n.article.readerPerspective     = persp;
+    n.research.researchPrompt = rawText;
+    n.workflowState = WS_ORDER[2]; // 'STEP2完了'
+    save();
+    renderNotes();
+    _wfRefreshUI();
+    toast('✅ 執筆指示文を生成しました（STEP2完了に更新）');
+  } catch(e) {
+    toast('⚠️ 生成エラー：' + (e.message || '通信に失敗しました'));
+  } finally {
+    if (btn) { btn.textContent = origLabel; btn.disabled = false; }
+  }
+}
+
+// ================================================================
+// 依頼②: X投稿自動生成（記事カードから）
+// ================================================================
+async function autoGenXPosts(noteId, btn) {
+  const n = S.notes.find(x => x.id === noteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE) || '';
+  if (!apiKey) { toast('⚠️ Gemini APIキーが設定されていません（設定画面から登録してください）'); return; }
+
+  const origLabel = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = '生成中...'; btn.disabled = true; }
+
+  const con          = n.concept || {};
+  const materialText = (n.title || '') + '\n' + (con.coreProblem || n.memo || '');
+  const typeLabel    = 'タイプA（朝7時・拡散）とタイプB（夜21時・note誘導）の両方';
+  const promptTmpl   = getXPromptText();
+  const prompt       = promptTmpl
+    .replace('${materialText}', materialText)
+    .replace('${type}', typeLabel);
+
+  try {
+    const res = await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + apiKey,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 2048, temperature: 0.9 }
+        })
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || String(res.status));
+    const parts   = data.candidates?.[0]?.content?.parts || [];
+    const rawText = parts.filter(function(p) { return !p.thought; }).map(function(p) { return p.text || ''; }).join('');
+
+    const matches = [...rawText.matchAll(/【(タイプ[AB])】\s*([\s\S]*?)(?=【タイプ[AB]】|$)/g)];
+    let results = matches
+      .map(function(m) { return { type: m[1].includes('A') ? 'A' : 'B', content: m[2].trim() }; })
+      .filter(function(r) { return r.content.length > 0; });
+    if (results.length === 0 && rawText.trim()) {
+      results = [{ type: 'A', content: rawText.trim() }];
+    }
+
+    const posts = getNewXPosts();
+    const base  = Date.now();
+    results.forEach(function(r, i) {
+      posts.unshift({
+        id:           String(base + i),
+        type:         r.type,
+        content:      r.content,
+        status:       'ストック',
+        sourceTitle:  n.title || '',
+        createdAt:    new Date().toISOString(),
+        postedAt:     null,
+        usedCount:    0
+      });
+    });
+    setNewXPosts(posts);
+    if (typeof renderXManage === 'function') renderXManage();
+    toast('✅ X投稿タブに' + results.length + '件追加しました');
+  } catch(e) {
+    toast('⚠️ X投稿生成エラー：' + (e.message || '通信に失敗しました'));
+  } finally {
+    if (btn) { btn.textContent = origLabel; btn.disabled = false; }
+  }
 }
 
