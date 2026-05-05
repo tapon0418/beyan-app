@@ -553,8 +553,8 @@ function updateStats() {
   }
   // 機能⑤：ダッシュボードストックカード更新
   _updateStockCard(unusedCnt);
-  const stk = S.xposts.filter(p=>p.status==='stock').length;
-  document.getElementById('xposts-count-label').textContent = `ストック${stk}本`;
+  const stk = getNewXPosts().filter(p=>p.status==='ストック').length;
+  document.getElementById('xposts-count-label').textContent = `ストック ${stk}件`;
   renderWipBanner();
   renderWipPickup();
 }
@@ -6496,6 +6496,7 @@ async function autoGenXPosts(noteId, btn) {
     });
     setNewXPosts(posts);
     if (typeof renderXManage === 'function') renderXManage();
+    if (typeof renderXPosts  === 'function') renderXPosts();
     toast('✅ X投稿タブに' + results.length + '件追加しました');
   } catch(e) {
     toast('⚠️ X投稿生成エラー：' + (e.message || '通信に失敗しました'));
