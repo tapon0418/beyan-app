@@ -3897,15 +3897,15 @@ function openFailurePatternModal(id) {
   if (id) {
     const r = getFailurePatterns().find(x => x.id === id);
     if (!r) return;
-    // V6フィールド（旧データはフォールバック）
-    document.getElementById('fp-failureType').value  = r.失敗種別 || '';
-    document.getElementById('fp-expansion').value    = r.展開軸 || r.expansionAxis || '';
-    document.getElementById('fp-emotion').value      = r.感情軸 || r.emotionAxis || '';
-    document.getElementById('fp-thinking').value     = r.思考の型 || r.thinkingPattern || '';
-    document.getElementById('fp-perspective').value  = r.読者視点 || '';
-    document.getElementById('fp-reason').value       = r.失敗の理由 || r.内容 || r.タイトル || '';
-    document.getElementById('fp-absFlag').value      = r.絶対禁止フラグ || '対象外';
-    document.getElementById('fp-date').value         = r.記録日 || r.発生日 || '';
+    // 英語キー優先、旧日本語キーフォールバック
+    document.getElementById('fp-failureType').value  = r.failureType      || r.失敗種別         || '';
+    document.getElementById('fp-expansion').value    = r.expansionAxis    || r.展開軸            || '';
+    document.getElementById('fp-emotion').value      = r.emotionAxis      || r.感情軸            || '';
+    document.getElementById('fp-thinking').value     = r.thinkingPattern  || r.思考の型          || '';
+    document.getElementById('fp-perspective').value  = r.readerPerspective|| r.読者視点          || '';
+    document.getElementById('fp-reason').value       = r.reason           || r.失敗の理由 || r.内容 || r.タイトル || '';
+    document.getElementById('fp-absFlag').value      = r.absoluteBanFlag  || r.絶対禁止フラグ    || '対象外';
+    document.getElementById('fp-date').value         = r.date             || r.記録日 || r.発生日 || '';
   } else {
     ['fp-expansion','fp-emotion','fp-thinking','fp-perspective','fp-reason'].forEach(i => {
       document.getElementById(i).value = '';
@@ -3922,21 +3922,21 @@ function saveFailurePattern() {
   const list   = getFailurePatterns();
   const editId = document.getElementById('fp-edit-id').value;
   const item = {
-    失敗種別:     document.getElementById('fp-failureType').value,
-    展開軸:       document.getElementById('fp-expansion').value.trim(),
-    感情軸:       document.getElementById('fp-emotion').value.trim(),
-    思考の型:     document.getElementById('fp-thinking').value.trim(),
-    読者視点:     document.getElementById('fp-perspective').value.trim(),
-    失敗の理由:   reason,
-    絶対禁止フラグ: document.getElementById('fp-absFlag').value,
-    記録日:       document.getElementById('fp-date').value.trim(),
-    棚卸し済み:   false,
+    failureType:      document.getElementById('fp-failureType').value,
+    expansionAxis:    document.getElementById('fp-expansion').value.trim(),
+    emotionAxis:      document.getElementById('fp-emotion').value.trim(),
+    thinkingPattern:  document.getElementById('fp-thinking').value.trim(),
+    readerPerspective: document.getElementById('fp-perspective').value.trim(),
+    reason:           reason,
+    absoluteBanFlag:  document.getElementById('fp-absFlag').value,
+    date:             document.getElementById('fp-date').value.trim(),
+    archived:         false,
   };
   if (editId) {
     const idx = list.findIndex(x => x.id === editId);
     if (idx >= 0) list[idx] = { ...list[idx], ...item };
   } else {
-    list.unshift({ id: String(Date.now()), ...item });
+    list.unshift({ id: 'fp_' + String(Date.now()), ...item });
   }
   _saveFailurePatterns(list);
   closeOverlay('modal-failurepattern');
@@ -3947,7 +3947,9 @@ function toggleFpInventory(id) {
   const list = getFailurePatterns();
   const idx  = list.findIndex(x => x.id === id);
   if (idx < 0) return;
-  list[idx].棚卸し済み = !(list[idx].棚卸し済み ?? false);
+  const current = list[idx].archived ?? list[idx].棚卸し済み ?? false;
+  list[idx].archived   = !current;
+  list[idx].棚卸し済み = list[idx].archived; // 旧データ互換
   _saveFailurePatterns(list);
   renderFailurePatterns();
 }
@@ -3958,8 +3960,21 @@ function deleteFailurePattern(id) {
   toast('削除しました');
 }
 function renderFailurePatterns() {
-  let list = getFailurePatterns().map(x => ({ 棚卸し済み: x.棚卸し済み ?? false, ...x }));
-  if (_fpFilter === 'active') list = list.filter(x => !x.棚卸し済み);
+  // 英語キー優先・旧日本語キーフォールバックで正規化
+  let list = getFailurePatterns().map(function(x) {
+    return {
+      ...x,
+      _archived:    x.archived ?? x.棚卸し済み ?? false,
+      _isAbs:       (x.absoluteBanFlag === '絶対禁止') || (x.絶対禁止フラグ === '絶対禁止'),
+      _expansion:   x.expansionAxis    || x.展開軸    || '',
+      _emotion:     x.emotionAxis      || x.感情軸    || '',
+      _thinking:    x.thinkingPattern  || x.思考の型  || '',
+      _type:        x.failureType      || x.失敗種別  || '',
+      _reason:      x.reason           || x.失敗の理由 || x.内容 || x.タイトル || '',
+      _date:        x.date             || x.記録日 || x.発生日 || '',
+    };
+  });
+  if (_fpFilter === 'active') list = list.filter(function(x) { return !x._archived; });
   const el  = document.getElementById('failurepatterns-list');
   const lbl = document.getElementById('failurepatterns-count-label');
   if (lbl) lbl.textContent = getFailurePatterns().length + '件';
@@ -3968,28 +3983,23 @@ function renderFailurePatterns() {
     el.innerHTML = '<div style="text-align:center;color:var(--text3);font-size:13px;padding:16px">' + (_fpFilter==='active'?'棚卸し済みを除くと0件です':'記録がありません') + '</div>';
     return;
   }
-  el.innerHTML = list.map(r => {
-    const isAbs = r.絶対禁止フラグ === '絶対禁止';
-    const axisLine = [r.展開軸||r.expansionAxis, r.感情軸||r.emotionAxis, r.思考の型||r.thinkingPattern].filter(Boolean).join(' × ');
-    const mainText = r.失敗の理由 || r.内容 || r.タイトル || '';
-    const dateLabel = r.記録日 || r.発生日 || '';
-    const typeLabel = r.失敗種別 || '';
-    return `<div style="background:${isAbs?'rgba(184,50,50,.05)':'var(--bg3)'};border:1px solid ${isAbs?'rgba(184,50,50,.35)':'var(--border)'};border-radius:10px;padding:12px 14px;margin-bottom:6px;${r.棚卸し済み?'opacity:.55':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
-        <div style="flex:1">
-          ${isAbs?'<span style="font-size:.7rem;font-weight:700;color:var(--red,#984040);background:rgba(184,50,50,.12);padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:3px">🚫 絶対禁止</span><br>':''}
-          ${typeLabel?`<span style="font-size:.7rem;color:var(--text3)">[${_escHtml(typeLabel)}]</span> `:''}
-          ${axisLine?`<span style="font-size:.82rem;font-weight:700;color:var(--text)">${_escHtml(axisLine)}</span>`:''}
-        </div>
-        <div style="display:flex;gap:4px;flex-shrink:0">
-          <button onclick="toggleFpInventory('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:${r.棚卸し済み?'rgba(74,136,56,.2)':'var(--bg2)'};color:${r.棚卸し済み?'var(--green)':'var(--text2)'};cursor:pointer;font-family:inherit">${r.棚卸し済み?'✅ 棚卸済':'棚卸し'}</button>
-          <button onclick="openFailurePatternModal('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">編集</button>
-          <button onclick="deleteFailurePattern('${r.id}')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--orange);cursor:pointer;font-family:inherit">削除</button>
-        </div>
-      </div>
-      <div style="font-size:12px;color:var(--text2);line-height:1.6">${_escHtml(mainText)}</div>
-      ${dateLabel?`<div style="font-size:10px;color:var(--text3);margin-top:4px">${dateLabel}</div>`:''}
-    </div>`;
+  el.innerHTML = list.map(function(r) {
+    const axisLine = [r._expansion, r._emotion, r._thinking].filter(Boolean).join(' × ') || '（旧フォーマット）';
+    return '<div style="background:' + (r._isAbs?'rgba(184,50,50,.05)':'var(--bg3)') + ';border:1px solid ' + (r._isAbs?'rgba(184,50,50,.35)':'var(--border)') + ';border-radius:10px;padding:12px 14px;margin-bottom:6px;' + (r._archived?'opacity:.55':'') + '">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">'
+      + '<div style="flex:1">'
+      + (r._isAbs?'<span style="font-size:.7rem;font-weight:700;color:var(--red,#984040);background:rgba(184,50,50,.12);padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:3px">🚫 絶対禁止</span><br>':'')
+      + (r._type?'<span style="font-size:.7rem;color:var(--text3)">[' + _escHtml(r._type) + ']</span> ':'')
+      + '<span style="font-size:.82rem;font-weight:700;color:var(--text)">' + _escHtml(axisLine) + '</span>'
+      + '</div>'
+      + '<div style="display:flex;gap:4px;flex-shrink:0">'
+      + '<button onclick="toggleFpInventory(\'' + r.id + '\')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:' + (r._archived?'rgba(74,136,56,.2)':'var(--bg2)') + ';color:' + (r._archived?'var(--green)':'var(--text2)') + ';cursor:pointer;font-family:inherit">' + (r._archived?'✅ 棚卸済':'棚卸し') + '</button>'
+      + '<button onclick="openFailurePatternModal(\'' + r.id + '\')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;font-family:inherit">編集</button>'
+      + '<button onclick="deleteFailurePattern(\'' + r.id + '\')" style="font-size:11px;padding:3px 9px;border-radius:6px;border:1px solid var(--border2);background:var(--bg2);color:var(--orange);cursor:pointer;font-family:inherit">削除</button>'
+      + '</div></div>'
+      + '<div style="font-size:12px;color:var(--text2);line-height:1.6">' + _escHtml(r._reason) + '</div>'
+      + (r._date?'<div style="font-size:10px;color:var(--text3);margin-top:4px">' + r._date + '</div>':'')
+      + '</div>';
   }).join('');
 }
 
@@ -5342,7 +5352,19 @@ function wfStep3CopyRequest(btn) {
   const published = getPublishedArticles().slice(0, 5).map(function(a, i) {
     return (i+1) + '. 「' + a.publishedTitle.slice(0,25) + '…」展開軸:' + (a.expansionAxis||'') + ' 感情軸:' + (a.emotionAxis||'') + ' 思考の型:' + (a.thinkingPattern||'');
   }).join('\n');
-  const text = '【ジミーへの被りチェック依頼】\n\n今回の記事候補：\nタイトル：' + (n.title||'') + '\n展開軸：' + (axis.expansionAxis||'') + '\n感情軸：' + (axis.emotionAxis||'') + '\n思考の型：' + (art.thinkingPattern||'') + '\n読者視点：' + (art.readerPerspective||'') + '\nタイトルキーワード：' + kws + '\n\n直近の公開記事（参考）：\n' + (published || '（なし）') + '\n\n上記の今回の記事候補が、直近の公開記事と展開軸・感情軸・思考の型で被っていないかチェックしてください。被りがなければ「判定：OK」、被りがあれば「判定：要修正」と具体的な修正案を回答してください。';
+  const failures = getFailurePatterns()
+    .filter(function(x) { return !(x.archived ?? x.棚卸し済み ?? false); })
+    .map(function(x) {
+      return {
+        expansionAxis:   x.expansionAxis   || x.展開軸   || '',
+        emotionAxis:     x.emotionAxis     || x.感情軸   || '',
+        thinkingPattern: x.thinkingPattern || x.思考の型 || '',
+        absoluteBanFlag: x.absoluteBanFlag || x.絶対禁止フラグ || '対象外',
+        reason:          x.reason || x.失敗の理由 || x.内容 || x.タイトル || '',
+      };
+    });
+  const failuresJson = failures.length ? JSON.stringify(failures, null, 2) : '（登録なし）';
+  const text = '【ジミーへの被りチェック依頼】\n\n今回の記事候補：\nタイトル：' + (n.title||'') + '\n展開軸：' + (axis.expansionAxis||'') + '\n感情軸：' + (axis.emotionAxis||'') + '\n思考の型：' + (art.thinkingPattern||'') + '\n読者視点：' + (art.readerPerspective||'') + '\nタイトルキーワード：' + kws + '\n\n直近の公開記事（参考）：\n' + (published || '（なし）') + '\n\n失敗パターン（JSON）：\n' + failuresJson + '\n\n判定基準：\n・絶対禁止フラグが「絶対禁止」のパターンと一致 → 即NG（最優先）\n・展開軸・感情軸・思考の型が公開記事と完全一致 → NG\n・失敗パターンとの軸の組み合わせ一致（絶対禁止以外） → 要修正\n・問題なし → OK\n\n被りがなければ「判定：OK」、あれば「判定：要修正」または「判定：NG」と具体的な修正案を回答してください。';
   _wfCopyAndFeedback(btn, text);
 }
 
@@ -5530,7 +5552,17 @@ async function wfStep3AutoSend() {
     title: a.publishedTitle, expansionAxis: a.expansionAxis, emotionAxis: a.emotionAxis,
     thinkingPattern: a.thinkingPattern, readerPerspective: a.readerPerspective, coreLearning: a.coreLearning
   }));
-  const failures = getFailurePatterns().map(x => ({ タイトル: x.タイトル, 内容: x.内容, 絶対禁止: x.棚卸し済み ? false : true }));
+  const failures = getFailurePatterns()
+    .filter(function(x) { return !(x.archived ?? x.棚卸し済み ?? false); })
+    .map(function(x) {
+      return {
+        expansionAxis:   x.expansionAxis   || x.展開軸   || '',
+        emotionAxis:     x.emotionAxis     || x.感情軸   || '',
+        thinkingPattern: x.thinkingPattern || x.思考の型 || '',
+        absoluteBanFlag: x.absoluteBanFlag || x.絶対禁止フラグ || '対象外',
+        reason:          x.reason || x.失敗の理由 || x.内容 || x.タイトル || '',
+      };
+    });
 
   const prompt = `【ジミーへの被りチェック依頼】
 
