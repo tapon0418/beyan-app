@@ -401,26 +401,21 @@ function initFirebase() {
     {
       let _gmFirst = true;
       const _gmLocalBak = _geminiTmpl; // script初期化時のlocalStorage値
-      db.ref(GEMINI_TMPL_KEY).on('value', snap => {
+      db.ref(GEMINI_TMPL_FB_PATH).on('value', snap => {
         const fbVal = snap.val();
         if (_gmFirst) {
           _gmFirst = false;
           if (fbVal === null && _gmLocalBak !== null) {
             // Firebase空・localStorage有 → 移行
-            db.ref(GEMINI_TMPL_KEY).set(_gmLocalBak);
-            db.ref(GEMINI_TMPL_KEY + '_ts').set(new Date().toISOString());
+            db.ref(GEMINI_TMPL_FB_PATH).set(_gmLocalBak);
+            db.ref(GEMINI_TMPL_FB_PATH + '_ts').set(new Date().toISOString());
             localStorage.removeItem(GEMINI_TMPL_KEY);
             toast('📤 Geminiテンプレートをクラウドに移行しました');
             return; // 次のonValueで値が入ってくる
           }
           if (fbVal !== null && _gmLocalBak !== null) {
-            // 両方あり → 長い方（カスタムが多い）を採用
-            const winner = _gmLocalBak.length >= fbVal.length ? _gmLocalBak : fbVal;
-            if (_gmLocalBak.length > fbVal.length) {
-              db.ref(GEMINI_TMPL_KEY).set(_gmLocalBak);
-              db.ref(GEMINI_TMPL_KEY + '_ts').set(new Date().toISOString());
-            }
-            _geminiTmpl = winner;
+            // 両方あり → Firebase優先（ユーザーが設定画面から更新した最新値を使う）
+            _geminiTmpl = fbVal;
             localStorage.removeItem(GEMINI_TMPL_KEY);
           } else {
             _geminiTmpl = fbVal; // Firebaseのみ or 両方null
@@ -433,7 +428,7 @@ function initFirebase() {
           ta.value = _geminiTmpl !== null ? _geminiTmpl : getDefaultGeminiTmpl();
         }
       });
-      db.ref(GEMINI_TMPL_KEY + '_ts').on('value', snap => {
+      db.ref(GEMINI_TMPL_FB_PATH + '_ts').on('value', snap => {
         _geminiTmplUpdatedAt = snap.val();
         _updateGeminiTsDisplay();
       });
@@ -1976,7 +1971,8 @@ function saveManualClaudeResult() {
 // ================================================================
 const APP_VERSION       = '4.0.0';
 const GEMINI_KEY_STORAGE = 'beyan_gemini_key';
-const GEMINI_TMPL_KEY = 'beyan_gemini_tmpl';
+const GEMINI_TMPL_KEY    = 'beyan_gemini_tmpl';           // localStorage キー
+const GEMINI_TMPL_FB_PATH = 'beyan_v6/beyan_gemini_tmpl'; // Firebase パス（正規保存場所）
 const CLAUDE_TMPL_KEY = 'beyan_claude_tmpl';
 // Firebase同期テンプレートキャッシュ（null = デフォルト使用）
 let _geminiTmpl = localStorage.getItem(GEMINI_TMPL_KEY); // Firebase接続前のフォールバック
@@ -2844,8 +2840,8 @@ function saveGeminiTmpl() {
   const ts = new Date().toISOString();
   _geminiTmplUpdatedAt = ts;
   if (_fbRef) {
-    firebase.database().ref(GEMINI_TMPL_KEY).set(val);
-    firebase.database().ref(GEMINI_TMPL_KEY + '_ts').set(ts);
+    firebase.database().ref(GEMINI_TMPL_FB_PATH).set(val);
+    firebase.database().ref(GEMINI_TMPL_FB_PATH + '_ts').set(ts);
   } else { localStorage.setItem(GEMINI_TMPL_KEY, val); }
   _updateGeminiTsDisplay();
   const msg = document.getElementById('settings-gemini-msg');
@@ -2856,7 +2852,7 @@ function saveGeminiTmpl() {
 function resetGeminiTmpl() {
   if (!confirm('デフォルトに戻しますか？')) return;
   _geminiTmpl = null;
-  if (_fbRef) { firebase.database().ref(GEMINI_TMPL_KEY).remove(); }
+  if (_fbRef) { firebase.database().ref(GEMINI_TMPL_FB_PATH).remove(); }
   else { localStorage.removeItem(GEMINI_TMPL_KEY); }
   document.getElementById('settings-gemini-tmpl').value = getDefaultGeminiTmpl();
   const msg = document.getElementById('settings-gemini-msg');
@@ -5418,7 +5414,7 @@ async function wfStep5CopyRequest(btn) {
   let tmpl = null;
   try {
     if (typeof firebase !== 'undefined' && firebase.database) {
-      const snap = await firebase.database().ref(GEMINI_TMPL_KEY).once('value');
+      const snap = await firebase.database().ref(GEMINI_TMPL_FB_PATH).once('value');
       tmpl = snap.val();
     }
   } catch(e) {}
