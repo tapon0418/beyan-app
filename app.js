@@ -4803,6 +4803,8 @@ function _wfBuildStep1(n, ai) {
   if (s==='active') {
     h += `<div style="padding:0 14px 14px"><div style="font-size:.78rem;color:var(--text3);line-height:1.6;margin-bottom:10px">記事候補の展開軸・感情軸・思考の型が直近3本の公開記事と被っていないかを確認します。被りがあれば詳細編集で変更してください。</div>
     ${_wfActBtn('🔍 STEP1チェックを実行する','wfStep1Check()','#1a73e8')}
+    <button style="min-height:40px;border:none;border-radius:10px;background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;font-family:inherit;padding:0 16px;width:100%;margin-bottom:8px" id="wf-step1-autoaxis-btn" onclick="wfStep1AutoAxis(this)">🤖 クロに軸を自動設定させる</button>
+    <div id="wf-step1-autoaxis-msg" style="font-size:.75rem;color:var(--text3);margin-bottom:8px;display:none"></div>
     ${_wfStep1Result?`<div style="margin-bottom:8px">${_wfStep1Result}</div>`:''}
     ${_wfStep1AllOk?_wfActBtn('✅ STEP1完了にする','wfStep1Complete()','var(--green)'):''}
     </div>`;
@@ -5045,23 +5047,105 @@ async function _wfGeminiSend(prompt, opts) {
 // _renderWfAutoPanel: workflowState に応じた自動化UIパネル
 // ================================================================
 function _buildWfPapeRequest(n) {
-  const re = n.research || {};
-  if (re.researchPrompt) return re.researchPrompt;
-  const ax = n.axis || {};
-  const co = n.concept || {};
+  const ax  = n.axis    || {};
   const art = n.article || {};
-  return `【パペへのリサーチ依頼】
-記事タイトル：${n.title || ''}
-展開軸：${ax.expansionAxis || ''}
-感情軸：${ax.emotionAxis || ''}
-思考の型：${art.thinkingPattern || ''}
-読者視点：${art.readerPerspective || ''}
-解決する問題：${co.coreProblem || ''}
-崩すべき前提認識：${ax.readerBeliefToBreak || co.readerBeliefToBreak || ''}
-読了後の変化：${ax.readerChangeAfterReading || co.readerChangeAfterReading || ''}
+  const kw  = n.titleKeywords || [];
 
-上記の軸・視点に沿った一次情報（個人の生の声・体験談・失敗談）を大量に収集してください。
-要約・まとめサイトは不要。Reddit・note・X・5ch等の個人の声を原文引用してください。`;
+  // フィールド不足の場合は⚠️で強調
+  function _fw(val, fieldName) {
+    return (val && String(val).trim())
+      ? String(val).trim()
+      : '⚠️ ' + fieldName + 'が未入力です。機能①「クロに軸を自動設定させる」を先に実行してください。';
+  }
+
+  const emotionAxis       = _fw(ax.emotionAxis,              '感情軸');
+  const readerPerspective = _fw(art.readerPerspective,       '読者視点');
+  const beliefToBreak     = _fw(ax.readerBeliefToBreak,      '崩すべき前提認識');
+  const changeAfter       = _fw(ax.readerChangeAfterReading, '読了後の変化');
+  const thinkingPattern   = _fw(art.thinkingPattern,         '思考の型');
+  const xKw1 = kw[0] || n.title || '';
+  const xKw2 = kw[1] || '副業';
+
+  return `【記事タイトル】
+${n.title || ''}
+
+【この記事が解決する問題】
+${beliefToBreak}
+
+【ターゲット読者の感情状態】
+${emotionAxis}の状態にある、${readerPerspective}
+
+【読者が持っている崩すべき前提認識】
+${beliefToBreak}
+
+【読了後に読者に起きる変化】
+${changeAfter}
+
+【今回使う思考の型】
+${thinkingPattern}
+
+【今回使う視点】
+${readerPerspective}
+
+【パペへの検索クエリ候補】
+・X検索用：${xKw1}　${xKw2}　3交代　体験
+・note・ブログ検索用：${xKw1}　失敗　悩み　${ax.emotionAxis || ''}
+
+【集めてほしい情報　5種類】
+
+① 問題をリアルに体験した人の声
+・対象：X・Reddit・Yahoo知恵袋・note・個人ブログ
+・条件：感情が乗っている投稿のみ。まとめ記事・ハウツー記事は除外
+・件数：5件以上（理想は10件）
+・選定基準（3つ全部一致を優先）
+　状況：3交代勤務または時間が限られている社会人
+　感情：${ax.emotionAxis || '焦り・諦め・悔しさ'}のいずれかが明示されている
+　タイミング：副業を始める前・始めた直後・続かなくなった時のいずれか
+・出力形式：ソースURL + 投稿内容（原文引用） + 感情タグ
+
+② 読者がすでに試して失敗した方法
+・条件：「やってみたけどダメだった」という具体的な失敗体験
+・件数：3件以上
+・出力形式：ソースURL + 失敗内容 + なぜ失敗したか
+
+③ この問題に対して一般的に言われている解決策
+・条件：上位記事でよく見かける「定番の答え」を5つ以上集める
+・用途：読者の前提認識「${ax.readerBeliefToBreak || '定番の解決策'}」を崩すための素材
+・出力形式：解決策の内容 + 出典URL
+
+④ 「なぜそうなるのか」の因果関係が書かれている情報
+・条件：体験談ではなく「構造の説明」が書かれているものを探す
+・対象：専門ブログ・note・長文X投稿
+・用途：「なぜ定番の解決策が機能しないのか」の理由を1文にまとめるための素材
+・出力形式：ソースURL + 構造の説明の要点
+
+⑤ この切り口の空白地帯
+・同テーマの上位記事タイトルを10本リストアップする
+・そこに「ない視点」を1つ特定して明記する
+・参考：今回使う思考の型は「${art.thinkingPattern || '（未設定）'}」
+
+【除外】
+・前回記事と同じソース・同じ切り口
+・統計データ・専門家コメント・企業PR
+・「頑張れば解決する」系の精神論投稿
+
+【出力形式】（このままジミーに渡すこと）
+## リサーチ結果
+
+### ① 体験談
+（ソースURL・投稿内容原文・感情タグをセットで 5件以上）
+
+### ② 失敗した方法
+（ソースURL・失敗内容・失敗の理由 3件以上）
+
+### ③ 定番の解決策
+（内容・出典URL 5つ以上）
+
+### ④ 因果関係の情報
+（ソースURL・構造の説明の要点）
+
+### ⑤ 空白地帯
+（上位10記事タイトル一覧・特定した空白の視点）`;
 }
 
 function _wfEl(name) {
@@ -5302,6 +5386,178 @@ function wfStep1Complete() {
 }
 
 // ----------------------------------------------------------------
+// STEP1: クロに軸を自動設定させる
+// ----------------------------------------------------------------
+async function wfStep1AutoAxis(btn) {
+  const n = S.notes.find(x => x.id === _wfNoteId);
+  if (!n) { toast('記事が見つかりません'); return; }
+  const apiKey = localStorage.getItem(CLAUDE_API_KEY_STORAGE) || '';
+  if (!apiKey) { toast('⚠️ Claude APIキーが設定されていません（設定画面から登録してください）'); return; }
+
+  const origLabel = btn ? btn.textContent : '';
+  const msgEl = document.getElementById('wf-step1-autoaxis-msg');
+  if (btn) { btn.textContent = '🤖 棚卸しログを読んでいます...'; btn.disabled = true; }
+  if (msgEl) { msgEl.textContent = '🤖 棚卸しログを読んでいます...'; msgEl.style.display = 'block'; }
+
+  try {
+    // ── データ収集 ──
+    const published = getPublishedArticles().slice(0, 3);
+    const failures  = getFailurePatterns()
+      .filter(function(x) { return (x.absoluteBanFlag || x.絶対禁止フラグ) === '絶対禁止'; })
+      .map(function(x) {
+        return {
+          expansionAxis:   x.expansionAxis   || x.展開軸   || '',
+          emotionAxis:     x.emotionAxis     || x.感情軸   || '',
+          thinkingPattern: x.thinkingPattern || x.思考の型 || '',
+          reason:          x.reason || x.失敗の理由 || '',
+        };
+      });
+
+    // 棚卸しログ取得（promptVault → 固定フォールバック）
+    const vault = S.promptVault || [];
+    const vaultEntry = vault.find(function(v) {
+      const t = (v.title || v.name || v.tag || '').toLowerCase();
+      return t.includes('棚卸') || t.includes('profile') || t.includes('プロフィール');
+    });
+    const DEFAULT_INVENTORY =
+`3交代勤務（日勤・準夜勤・夜勤）の会社員。39歳男性。
+半年で2社辞めた後にユニクロで6年、眼鏡屋3年、車屋7年勤務。
+スクール残債あり、一軒家持ち、副業を本格的に始めている現在進行形。
+完璧主義の悪い面が出やすく、指摘されることへの感受性が高い。
+人に見られると硬直するが、1人になるとすらすら動ける特性がある。
+副業でHTMLやCSS等を学んだが一円にもならず、さらに借金が増えた経験あり。
+クリーンセンターで3交代勤務をしながら副業に取り組んでいる。
+準夜勤・夜勤で副業に取り組める時間を確保している。
+都会への移住を夢見ている。時間とお金にゆとりを持つことが目標。`;
+    const inventoryText = vaultEntry
+      ? (vaultEntry.text || vaultEntry.content || vaultEntry.prompt || DEFAULT_INVENTORY)
+      : DEFAULT_INVENTORY;
+
+    // ── プロンプト構築 ──
+    const pubLines = published.map(function(a, i) {
+      return (i+1) + '本目：展開軸=' + (a.expansionAxis||'不明') + ' 感情軸=' + (a.emotionAxis||'不明') + ' 思考の型=' + (a.thinkingPattern||'不明');
+    }).join('\n') || '（公開記事なし）';
+    const failuresJson = failures.length ? JSON.stringify(failures, null, 2) : '（絶対禁止パターンなし）';
+    const con = n.concept || {};
+    const memoText = con.coreProblem || n.memo || '';
+    const prevExp  = published[0] ? published[0].expansionAxis + '×' + published[0].emotionAxis : '（なし）';
+
+    const systemPrompt = 'あなたはべーやんのnote記事制作を支援するAIです。\n棚卸しログと公開記事履歴を読んで、今回の記事候補に最適な軸を設定してください。\n必ずJSON形式のみで返答してください。説明文・マークダウンは一切不要です。';
+
+    const userPrompt = `【今回の記事タイトル】
+${n.title || ''}
+
+【記事のメモ・概要】
+${memoText || '（未入力）'}
+
+【べーやんの棚卸しログ】
+${inventoryText}
+
+【直近3本の公開記事の軸（被り禁止）】
+${pubLines}
+
+【絶対禁止の失敗パターン】
+${failuresJson}
+
+【指示】
+上記の情報をもとに、以下のフィールドを設定してください。
+条件：
+・直近3本の展開軸・感情軸・思考の型と被らないこと
+・絶対禁止フラグのパターンと一致しないこと
+・棚卸しログの体験から読者の感情に刺さる設定にすること
+・読者は副業×3交代勤務で時間が限られている社会人
+
+以下のJSON形式で返答してください（キー名は完全一致で）：
+{
+  "expansionAxis": "（原因追及/比較/手順/落とし穴/再定義/タイムライン のいずれかと具体的な説明）",
+  "emotionAxis": "（焦り/怒り/安堵/諦め/悔しさ のいずれか）",
+  "thinkingPattern": "（原因追及型/比較型/手順型/落とし穴型/再定義型/タイムライン型 のいずれか）",
+  "readerPerspective": "（始める前の人の目線/途中で諦めた人の目線/続けられている人の目線/全く別の業界で同じ問題を抱えている人の目線/3ヶ月後の読者の目線 のいずれか）",
+  "readerBeliefToBreak": "（読者が今持っている崩すべき思い込みを1文で）",
+  "readerChangeAfterReading": "（記事を読んだ後に読者に起きる変化を1文で）",
+  "diffFromLast": "前回：${prevExp} → 今回：（設定した展開軸）×（感情軸）",
+  "titleKeywordsCandidate": ["キーワード1", "キーワード2", "キーワード3", "キーワード4", "キーワード5"]
+}`;
+
+    // ── Claude API 呼び出し（30秒タイムアウト）──
+    if (msgEl) msgEl.textContent = '🤖 Claude が軸を考えています...';
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(function() { controller.abort(); }, 30000);
+    let rawText = '';
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'x-api-key':           apiKey,
+          'anthropic-version':   '2023-06-01',
+          'content-type':        'application/json',
+        },
+        body: JSON.stringify({
+          model:      'claude-sonnet-4-6',
+          max_tokens: 2000,
+          system:     systemPrompt,
+          messages:   [{ role: 'user', content: userPrompt }],
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!res.ok) {
+        const errData = await res.json().catch(function() { return {}; });
+        throw new Error(errData.error?.message || 'HTTP ' + res.status);
+      }
+      const data = await res.json();
+      rawText = (data.content || []).map(function(b) { return b.text || ''; }).join('');
+    } catch(fetchErr) {
+      clearTimeout(timeoutId);
+      if (fetchErr.name === 'AbortError') {
+        toast('⚠️ タイムアウトしました。もう一度試してください。');
+      } else {
+        toast('⚠️ Claude API エラー：' + (fetchErr.message || '通信失敗'));
+      }
+      return;
+    }
+
+    // ── JSON パース ──
+    let parsed;
+    try {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
+    } catch(e) {
+      toast('⚠️ 返答の形式が不正でした。再試行してください。');
+      return;
+    }
+
+    // ── Firebase 書き込み ──
+    if (!n.axis)    n.axis    = {};
+    if (!n.article) n.article = {};
+    if (parsed.expansionAxis)          n.axis.expansionAxis          = parsed.expansionAxis;
+    if (parsed.emotionAxis)            n.axis.emotionAxis            = parsed.emotionAxis;
+    if (parsed.thinkingPattern)        n.article.thinkingPattern     = parsed.thinkingPattern;
+    if (parsed.readerPerspective)      n.article.readerPerspective   = parsed.readerPerspective;
+    if (parsed.readerBeliefToBreak)    n.axis.readerBeliefToBreak    = parsed.readerBeliefToBreak;
+    if (parsed.readerChangeAfterReading) n.axis.readerChangeAfterReading = parsed.readerChangeAfterReading;
+    if (parsed.diffFromLast)           n.axis.diffFromLast           = parsed.diffFromLast;
+    if (Array.isArray(parsed.titleKeywordsCandidate)) {
+      n.titleKeywords = parsed.titleKeywordsCandidate;
+    }
+    try {
+      save();
+    } catch(saveErr) {
+      toast('⚠️ 保存に失敗しました：' + (saveErr.message || String(saveErr)));
+      return;
+    }
+
+    // ── 結果を STEP1 チェックで反映 ──
+    wfStep1Check();
+    if (msgEl) { msgEl.textContent = ''; msgEl.style.display = 'none'; }
+    toast('✅ クロが軸を設定しました。内容を確認してSTEP1を完了にしてください。');
+
+  } finally {
+    if (btn) { btn.textContent = origLabel; btn.disabled = false; }
+  }
+}
+
+// ----------------------------------------------------------------
 // STEP2: 思考枠チェック / 完了
 // ----------------------------------------------------------------
 function wfStep2Check() {
@@ -5392,6 +5648,10 @@ function wfStep4CopyPapeReq(btn) {
   const n = S.notes.find(x => x.id === _wfNoteId);
   if (!n) { toast('記事が見つかりません'); return; }
   _wfCopyAndFeedback(btn, _buildWfPapeRequest(n));
+  // コピー後に papaStatus を「依頼済み」に更新
+  if (!n.research) n.research = {};
+  n.research.papaStatus = '依頼済み';
+  save();
 }
 
 // ----------------------------------------------------------------
