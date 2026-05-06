@@ -5361,7 +5361,7 @@ function wfStep3CopyRequest(btn) {
   const art  = n.article || {};
   const mgmt = n.management || {};
   const kws  = (n.titleKeywords || mgmt.titleKeywords || []).join('、');
-  const published = getPublishedArticles().slice(0, 5).map(function(a, i) {
+  const published = getPublishedArticles().slice(0, 30).map(function(a, i) {
     return (i+1) + '. 「' + a.publishedTitle.slice(0,25) + '…」展開軸:' + (a.expansionAxis||'') + ' 感情軸:' + (a.emotionAxis||'') + ' 思考の型:' + (a.thinkingPattern||'');
   }).join('\n');
   const failures = getFailurePatterns()
@@ -5414,7 +5414,16 @@ async function wfStep5CopyRequest(btn) {
     alert('記事データが見つかりませんでした（ID: ' + noteId + '）');
     return;
   }
-  const tmpl = (_geminiTmpl !== null && _geminiTmpl !== undefined) ? _geminiTmpl : getDefaultGeminiTmpl();
+  // Firebase から最新テンプレートを直接取得（キャッシュ汚染を防ぐ）
+  let tmpl = null;
+  try {
+    if (typeof firebase !== 'undefined' && firebase.database) {
+      const snap = await firebase.database().ref(GEMINI_TMPL_KEY).once('value');
+      tmpl = snap.val();
+    }
+  } catch(e) {}
+  if (!tmpl) tmpl = _geminiTmpl; // Firebase 未接続時はキャッシュにフォールバック
+  if (!tmpl) tmpl = getDefaultGeminiTmpl();
   if (!tmpl) {
     alert('ジミー指示文テンプレートが空です。設定画面から入力してください。');
     return;
