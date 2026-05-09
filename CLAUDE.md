@@ -1,85 +1,307 @@
-# nabebase ルールブック
+# nabebase CLAUDE.md
+# コディ（Claude Code）専用コンテキストファイル
+# 過去のやり取りから抽出した確定ルール・失敗パターン・実装仕様
 
-## 基本姿勢
-- 確認なしで作業を進める。YES/NOを聞かない
-- 「〜してもいいですか？」「〜でよろしいですか？」は禁止
-- 判断に迷ったら最善と思われる方法で実行し、完了後に報告する
-- 作業は最後まで止まらずやり切る
+---
 
-## エラー対処
-- エラーが出たら自分で原因を調べて修正する
-- 修正できない場合のみ、原因と試したことをまとめて報告する
-- 同じエラーは二度出さない
+## 【プロジェクト概要】
 
-## 出力ルール
-- コードや説明はプレーンテキストで出力する
-- マークダウン記号（##、**、---など）は使わない
-- コピーしてそのまま使える状態にすること
+| 項目 | 内容 |
+|------|------|
+| アプリ名 | nabebase |
+| 用途 | note記事候補の管理・ワークフロー自動化Webアプリ |
+| ホスティング | GitHub Pages |
+| 本番URL | https://tapon0418.github.io/beyan-app/ |
+| リポジトリ | https://github.com/tapon0418/beyan-app |
+| バックエンド | Firebase Realtime Database |
+| Firebaseパス | `/beyan_v6/` |
+| Gemini API | gemini-2.5-flash（無料枠）|
+| GeminiキーのURL | localStorage.getItem('beyan_gemini_key') |
 
-## プロジェクト概要
-- nabebaseはAI複数連携のコンテンツ自動化ツール
-- 開発者：tapon0418（なべちゃん）
+---
 
-## 記事執筆ワークフロー（8ステップ）
-1. リサーチ：ジミー（Gemini API）に記事テーマを調査させる
-2. 執筆：クロ（Claude）に執筆指示文を送り本文を書かせる
-3. 整形：AI記号（# ※ ** 等）を除去してnote入稿用に整形する
-4. 見出し画像：ジミーが下記テンプレートでプロンプトを生成 → Imagen APIで1280×720px画像を作成
-5. 画像チェック：クロが記事本文と見出し画像の内容一致を確認（手動）
-6. note執筆：整形済み本文をnoteエディタに貼り付けて投稿
-7. 楽天アフィ：記事に紹介する楽天商品のアフィリエイトリンクを生成して記事に追加
-8. X投稿：記事告知のX投稿文を生成して投稿
+## 【絶対ルール　違反したらやり直し】
 
-## 見出し画像プロンプトテンプレート
-ジミー（Gemini API）が記事情報をもとに以下テンプレートの変数を埋めてプロンプトを生成する。
+### ① 実装後は必ずGitHubにpushする
+GitHub Pagesで動いているため、**ローカルで修正してもpushしないと本番に反映されない。**
+「リロードで確認できます」という案内は絶対にしない。
+実装完了 → push → キャッシュバスターで確認、この順番を必ず守る。
 
-note記事用アイキャッチ画像、1280x720px、プロフェッショナル・クリック欲求高めるデザイン --ar 16:9 --v 6 --style raw
+### ② キャッシュバスターを付けて確認する
+GitHub Pagesはブラウザキャッシュが強い。
+pushしても古いコードが読まれることがある。
+確認URLは必ず `?v=YYYYMMDD` 形式のクエリを付ける。
+例：`https://tapon0418.github.io/beyan-app/?v=20260509`
 
-【[カテゴリ/実績]】[数字]を[期間]で達成！
-[メイン成果]！[ターゲット]のための[解決策]
-[感情に訴えるサブタイトル]
+### ③ 指示文は最後まで全部読んでから実装開始する
+過去に「指示文を途中まで読んで別ファイルの実装を始めてしまう」ミスが複数回発生した。
+指示文を全件読み込んで内容を理解してから、実装に着手する。
 
-レイアウト：
-- 上段：【タイトル】太字[メインカラー1]、白抜き縁取り
-- 中段：[メイン文] [アクセントカラー]グラデ強調、成果数字特大
-- 下段：[サブタイトル]太字、励まし/疑問トーン
-- 右側：[テーマアイコン1]+[テーマアイコン2]（グラフ/電球/ハート等）、シャープ
+### ④ 既存の機能・データ構造を壊さない
+- 既存のGemini API被りチェック機能を壊さない
+- Firebase `/beyan_v6/` のデータ構造を壊さない
+- 既存のUIデザイン・レイアウトを変更しない（指示がない限り）
+- 既存のキー名・フィールド名を変更しない
 
-視覚要素：
-- 背景：[明るめグラデ]（[カラー1]-[カラー2]、70%ベース）、クリーン
-- 配色：[メインカラー1](70%) × [アクセントカラー](25%) × 白(5%)、3色厳守
-- noteロゴ：左上微か配置、余白バランス最適化
-- 全体：信頼感+注目度UP、初見で「読みたい！」となる構図
+### ⑤ pushする前に動作確認チェックリストを実行する
+実装完了後、以下を全て確認してからpushする：
+- [ ] コンソールエラーが出ていないか
+- [ ] 既存機能が壊れていないか
+- [ ] 対象の新機能が期待通りに動くか
+- [ ] Firebase読み書きが成功しているか
 
-変数の選択基準：
-[カテゴリ/実績]：実体験 / 検証済み / 初心者必見
-[数字+期間]：記事の具体的な成果（例：PV80・5日、売上30万・1ヶ月）
-[メイン成果]：短い成果フレーズ（例：初動80%UP、無から利益）
-[ターゲット]：読者像（例：心折れそうなあなた、忙しい会社員）
-[解決策]：行動促進フレーズ（例：1週間で！、コピペ術）
-[メインカラー1]：ネイビー / 深緑 / 濃紺 など記事カテゴリに合う濃色
-[アクセントカラー]：オレンジ / ゴールド / ブルー など
+---
 
-## researchPrompt生成ルール（記事候補JSON登録時）
+## 【Firebase実装パターン　確立済み】
 
-クロが記事候補JSONを生成してnabebaseに登録する際、research.researchPromptフィールドは必ず以下の要素を反映して毎回新規で書き下ろす。
+### 非同期データ取得（信頼性が高いパターン）
 
-- 今回確定した展開軸
-- 今回確定した感情軸
-- 今回確定した思考の型
-- 今回確定した読者視点
-- readerBeliefToBreak（崩すべき前提認識）
-- readerChangeAfterReading（読了後の変化）
+```javascript
+// NG：単一callでreturnしようとするとタイミング問題が発生する
+// OK：window変数に格納して別callで取得する
 
-禁止事項：
-- 定型文・前回の使い回し・空欄での登録
-- researchPromptが空欄のJSONはnabebaseに登録しない
+// Step1: データ格納
+firebase.database().ref('/beyan_v6/notes').once('value', snap => {
+  window._fbResult = snap.val();
+});
 
-## AI役割分担
-- ジミー（Gemini API）：リサーチ・プロンプト生成・画像プロンプト生成
-- クロ（Claude）：記事執筆・画像チェック・構成レビュー
+// Step2: 別のjavascript_execで取得
+window._fbResult; // これで取得
+```
 
-## 技術スタック
-- 単一HTMLファイル（index.html）、バニラJS、フレームワークなし
-- データ保存：localStorage（キー：beyan_v6）
-- Gemini API（AIStudio APIキー）、Imagen 3 API（同キー）
+### Firebase書き込みパターン
+
+```javascript
+// PATCHで特定フィールドのみ更新（他フィールドを壊さない）
+firebase.database().ref('/beyan_v6/notes/' + index).update({
+  workflowState: 'STEP3ジミー被りチェックOK'
+});
+
+// 配列への追加
+firebase.database().ref('/beyan_v6/publishedArticles').push(summaryJSON);
+```
+
+### Firebaseパス一覧
+
+| データ | パス |
+|--------|------|
+| 記事候補 | `/beyan_v6/notes` |
+| 公開記事サマリー | `/beyan_v6/publishedArticles` |
+| 失敗パターン | `/beyan_v6/failurePatterns` |
+| X投稿ストック | `/beyan_v6/xposts` |
+| Xドラフト | `/beyan_v6/xDraftPosts` |
+| Xカスタムプロンプト | `/beyan_v6/xPromptCustom` |
+| プロンプトVault | `/beyan_v6/promptVault` |
+| 週次レビュー日時 | `/beyan_v6/weeklyReviewTs` |
+| ワークフロー進行 | `/beyan_v6/workflowProgress` |
+
+---
+
+## 【Gemini API実装パターン　確立済み】
+
+### 使用モデル
+**必ず `gemini-2.5-flash` を使う。**
+- `gemini-3.1-pro-preview` → 存在しないモデル名。使用禁止。タイムアウトが発生する。
+- `gemini-2.5-flash` → 動作確認済み。無料枠（1分60リクエスト）で安定稼働。
+
+### エンドポイント
+
+```
+https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={apiKey}
+```
+
+### 呼び出しパターン
+
+```javascript
+const apiKey = localStorage.getItem('beyan_gemini_key');
+if (!apiKey) {
+  alert('設定画面からGemini APIキーを登録してください');
+  return;
+}
+
+const response = await fetch(
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+  {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: promptText }] }]
+    })
+  }
+);
+const data = await response.json();
+const result = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+```
+
+### トークン上限対策
+公開記事のペイロードは**直近30件に制限**する。全件送るとトークン上限に引っかかる。
+
+```javascript
+const recent30 = publishedArticles
+  .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
+  .slice(0, 30);
+```
+
+---
+
+## 【過去の失敗パターン　同じミスを繰り返すな】
+
+### ❌ パターン1：pushを忘れてリロードで確認を指示した
+**状況**：ローカルで実装完了 → 「リロードして確認してください」と案内した
+**結果**：GitHub Pagesは本番反映されず、べーやんが何度確認しても動かない
+**対策**：実装完了後は必ずpush。「リロードで反映」という言葉を使わない。
+
+### ❌ パターン2：関数をグローバルスコープに公開しなかった
+**状況**：`function wfBulkInitWorkflow() {}` と定義 → onclickから呼び出せない
+**エラー**：`Uncaught ReferenceError: wfBulkInitWorkflow is not defined`
+**対策**：onclickから呼ぶ関数は `window.wfBulkInitWorkflow = function() {}` で公開する。
+
+### ❌ パターン3：.replace()の型チェックなし
+**状況**：テンプレート文字列にFirebaseから取得した値を埋め込む際、undefinedのまま`.replace()`を呼んだ
+**エラー**：`str.replace is not a function`
+**対策**：必ず型チェックを入れる。
+```javascript
+const safe = typeof val === 'string' ? val : String(val || '（未入力）');
+```
+
+### ❌ パターン4：X投稿のstatusが日本語/英語で不一致
+**状況**：新規登録時に `status: "stock"` で保存 → UIが `"ストック"` でフィルターするため表示されない
+**対策**：X投稿のstatusは必ず `"ストック"`（日本語）で統一する。
+
+### ❌ パターン5：進行状態をdisabled属性のinputで実装した
+**状況**：進行状態フィールドをdisabled inputで実装 → 詳細編集の保存時にnullで上書きされた
+**対策**：進行状態は`<div>`や`<span>`の表示専用要素で実装する。保存対象のformに含めない。
+
+### ❌ パターン6：存在しないGeminiモデル名を使用
+**状況**：`gemini-3.1-pro-preview` を指定 → 30秒タイムアウトが無限ループ
+**対策**：モデルは必ず `gemini-2.5-flash` を使う。他のモデル名は使用禁止。
+
+### ❌ パターン7：別の指示文ファイルを読んで実装してしまった
+**状況**：複数の指示文ファイルが存在する状況で、今回の指示文ではなく過去のファイルの内容を実装した
+**対策**：指示文は会話の中で渡されたものを正とする。ファイル名を確認してから実装開始する。
+
+### ❌ パターン8：Firebase非同期の結果を同一callでreturnしようとした
+**状況**：`firebase.database().ref(...).once('value').then(snap => { return snap.val(); })` で値を返そうとした
+**結果**：非同期タイミングのズレで常にundefinedが返る
+**対策**：`window._result` に格納して別callで取得するパターンを使う。
+
+### ❌ パターン9：動作確認を省略して「完了」と報告した
+**状況**：実装してpushしたが実際の動作確認をせずに「完了しました」と報告した
+**結果**：べーやんが確認すると動いていなかった
+**対策**：必ずキャッシュバスターURLで実際に動作確認してから完了報告する。
+
+---
+
+## 【V6スキーマ定義　Firebaseに保存するデータ構造】
+
+### 記事候補（notes配列の各要素）
+
+```json
+{
+  "概要": {
+    "タイトル": "",
+    "タイトルキーワード": []
+  },
+  "軸設定": {
+    "展開軸": "",
+    "感情軸": "",
+    "思考の型": "",
+    "読者視点": "",
+    "前回との差分": "",
+    "崩すべき前提認識": "",
+    "読了後の変化": ""
+  },
+  "リサーチ": {
+    "X検索クエリ": [],
+    "note検索クエリ": [],
+    "パペ依頼状況": "未依頼 / 依頼済み / 完了"
+  },
+  "記事": {
+    "学びの核心": "",
+    "次回伏線": "",
+    "2本先への種まき": "",
+    "シリーズ名": "",
+    "シリーズ内順番": "",
+    "前の記事との接続点": "",
+    "使用状況": "未使用 / 使用済み"
+  },
+  "管理": {
+    "進行状態": "未着手 / STEP1完了 / STEP2完了 / STEP3ジミー被りチェックOK / STEP4パペリサーチ完了 / STEP5ジミー構成完了 / STEP6記事完了",
+    "スキーマバージョン": "V6",
+    "登録日": "",
+    "公開日": ""
+  }
+}
+```
+
+### 失敗パターン（英語キーで統一）
+
+```json
+{
+  "failureType": "差し戻し / 修正指示 / エンゲージ低下",
+  "expansionAxis": "",
+  "emotionAxis": "",
+  "thinkingPattern": "",
+  "readerPerspective": "",
+  "failureReason": "",
+  "absoluteBanFlag": "対象外 / 絶対禁止",
+  "recordDate": ""
+}
+```
+
+### workflowState（進行状態）の正式な値一覧
+
+```
+未着手
+STEP1完了
+STEP2完了
+STEP3ジミー被りチェックOK
+STEP4パペリサーチ完了
+STEP5ジミー構成完了
+STEP6記事完了
+```
+**workflowState を正として管理する。`management.progressStatus` は廃止済み。**
+
+---
+
+## 【実装時の共通ルール】
+
+### エラーハンドリング
+全てのGemini API呼び出し・Firebase操作はtry-catchで囲む。
+エラー時はユーザーに分かる言葉でトースト表示する。
+
+### ローディング表示
+API呼び出し中はボタンを `disabled` にして「処理中...」と表示する。
+完了後にボタンを元に戻す。
+
+### コピーボタン
+コピー後は「✅ コピーしました」を1秒表示してから元のテキストに戻す。
+
+### 空値ガード
+Firebaseから取得した値をテンプレートに埋め込む前に必ず空値チェックする。
+```javascript
+const safe = val ? String(val) : '（未入力）';
+```
+
+### トースト表示
+既存の `showToast()` 関数を使う。存在しない場合は `window.showToast` として公開する。
+
+---
+
+## 【チーム構成（参考）】
+
+| 名前 | 正体 | 役割 |
+|------|------|------|
+| べーやん | オーナー | 最終確認のみ |
+| クロ | Claude（このチャット） | 記事執筆・指示文生成・nabebase監査 |
+| コディ | Claude Code | nabebase実装・GitHub管理 |
+| ジミー | Gemini | 被りチェック・ヘッダー画像生成 |
+| パペ | Perplexity | リサーチ |
+
+---
+
+## 【よく使うURL】
+
+- 本番アプリ：https://tapon0418.github.io/beyan-app/
+- Firebase DB：https://nabebase-896b6-default-rtdb.firebaseio.com/beyan_v6.json
+- Gemini APIエンドポイント：https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
