@@ -5624,7 +5624,7 @@ function wfStep3CopyRequest(btn) {
         emotionAxis:     x.emotionAxis     || x.感情軸   || '',
         thinkingPattern: x.thinkingPattern || x.思考の型 || '',
         absoluteBanFlag: x.absoluteBanFlag || x.絶対禁止フラグ || '対象外',
-        reason:          x.reason || x.失敗の理由 || x.内容 || x.タイトル || '',
+        reason:          x.reason || x.失敗の理由 || x.内容 || x.タイトル || x.failureReason || x.failureType || '',
       };
     });
   const failuresJson = failures.length ? JSON.stringify(failures, null, 2) : '（登録なし）';
@@ -5837,7 +5837,7 @@ async function wfStep3AutoSend() {
         emotionAxis:     x.emotionAxis     || x.感情軸   || '',
         thinkingPattern: x.thinkingPattern || x.思考の型 || '',
         absoluteBanFlag: x.absoluteBanFlag || x.絶対禁止フラグ || '対象外',
-        reason:          x.reason || x.失敗の理由 || x.内容 || x.タイトル || '',
+        reason:          x.reason || x.失敗の理由 || x.内容 || x.タイトル || x.failureReason || x.failureType || '',
       };
     });
 
@@ -6640,7 +6640,7 @@ async function autoGenStep2(noteId, btn) {
     .filter(function(x) { return !(x.archived ?? x.棚卸し済み ?? false); })
     .map(function(x) {
       const ban = x.absoluteBanFlag || x.絶対禁止フラグ || '対象外';
-      return '・' + (x.expansionAxis||x.展開軸||'') + '×' + (x.emotionAxis||x.感情軸||'') + '×' + (x.thinkingPattern||x.思考の型||'') + ' [' + ban + '] ' + (x.reason||x.失敗の理由||'');
+      return '・' + (x.expansionAxis||x.展開軸||'') + '×' + (x.emotionAxis||x.感情軸||'') + '×' + (x.thinkingPattern||x.思考の型||'') + ' [' + ban + '] ' + (x.reason||x.失敗の理由||x.failureReason||x.failureType||'');
     }).join('\n');
 
   const mgmt = n.management || {};
